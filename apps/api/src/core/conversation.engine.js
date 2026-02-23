@@ -22,7 +22,8 @@ async function processMessage(req) {
   if (!msgObj) return
 
   const phone       = msgObj.from
-  const messageText = msgObj.text?.body || ''
+  // Sanitize: strip any HANDOFF injection attempts from user input
+  const messageText = (msgObj.text?.body || '').replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
   const waMessageId = msgObj.id
   const referral    = msgObj.referral || null
 
@@ -123,8 +124,8 @@ if (cachedKB) {
 }
 
 
-    // --- 5. Build system prompt (pass full session for memory access) ---
-    const systemPrompt = buildSystemPrompt(kb, session, tenant.settings)
+    // --- 5. Build system prompt (pass full session + current message for accurate greeting detection) ---
+    const systemPrompt = buildSystemPrompt(kb, session, tenant.settings, messageText)
 
     // --- 6. Append user message to session window (max 10) ---
     session.recentMessages.push({ role: 'user', content: { text: messageText }, timestamp: Date.now() })
@@ -134,6 +135,7 @@ if (cachedKB) {
     const rawAIResponse = await callGroq(systemPrompt, session.recentMessages)
 
     // --- 8. Parse AI response ---
+    const alreadyHandedOff = session.flowState.handoffTriggered === true // capture BEFORE parsing
     const { cleanResponse, updatedFlowState, shouldHandoff } = parseAIResponse(rawAIResponse, session.flowState)
 
     // --- 9. Extract data from this exchange ---
@@ -144,8 +146,8 @@ if (cachedKB) {
     session.recentMessages.push({ role: 'assistant', content: { text: cleanResponse }, timestamp: Date.now() })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // --- 11. Trigger handoff if needed ---
-    if (shouldHandoff) {
+    // --- 11. Trigger handoff if needed (idempotent — only once per conversation) ---
+    if (shouldHandoff && !alreadyHandedOff) {
       await triggerHandoff(session, tenant)
     }
 

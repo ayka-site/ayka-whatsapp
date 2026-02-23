@@ -7,14 +7,31 @@ function parseAIResponse(rawResponse, flowState) {
   let updatedFlowState = JSON.parse(JSON.stringify(flowState)) // deep clone — never mutate original
   let shouldHandoff    = false
 
-  if (/HANDOFF:\s*YES/i.test(cleanResponse)) {
+  // Require HANDOFF: YES to appear on its own line — prevents embedded/quoted triggers
+  if (/(^|\n)\s*HANDOFF:\s*YES\s*($|\n)/i.test(cleanResponse)) {
     shouldHandoff = true
     updatedFlowState.handoffTriggered = true
     updatedFlowState.handoffAt        = new Date()
-    cleanResponse = cleanResponse.replace(/\n?HANDOFF:\s*YES/gi, '').trim()
+    cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '').trim()
   }
 
   return { cleanResponse, updatedFlowState, shouldHandoff }
+}
+
+// Hindi ordinal words → class number mapping
+const HINDI_CLASS_MAP = {
+  'pehli': 1,  'pehla': 1,  'pratham': 1,
+  'doosri': 2, 'doosra': 2,
+  'teesri': 3, 'teesra': 3,
+  'chauthi': 4, 'chautha': 4,
+  'paanchvi': 5, 'paanchwa': 5,
+  'chathi': 6,  'chhathi': 6,  'chhathvi': 6,
+  'saatvi': 7,  'saatwa': 7,
+  'aathvi': 8,  'aathwa': 8,
+  'nauvi': 9,   'nauwa': 9,
+  'dasvi': 10,  'daswa': 10,
+  'gyarhvi': 11, 'gyarhwa': 11,
+  'barahvi': 12, 'barahwa': 12,
 }
 
 function extractDataFromMessages(userMessage, aiResponse, flowState) {
@@ -41,6 +58,27 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     updated.goals.visitSuggested = true
   }
 
+  // Words that look like proper names but aren't parent names
+  const NOT_A_PARENT_NAME = new Set([
+    // English non-name verbs/participles
+    'interested', 'calling', 'looking', 'enquiring', 'enquiry', 'checking',
+    'wanting', 'planning', 'asking', 'writing', 'seeking', 'reaching',
+    'contacting', 'texting', 'messaging', 'wondering', 'hoping',
+    'speaking', 'coming', 'going', 'doing', 'having', 'getting',
+    // Common English filler words
+    'here', 'this', 'the', 'a', 'an', 'okay', 'ok', 'hi', 'hello',
+    // Roles and titles (not names)
+    'parent', 'guardian', 'sir', 'madam', 'ma', 'ji', 'bhai',
+    'system', 'administrator', 'admin', 'manager', 'director',
+    'principal', 'teacher', 'professor', 'doctor',
+    // School / admission terms
+    'class', 'grade', 'school', 'admission', 'student', 'child',
+    // Hindi pronouns and common words (Mein=I, Haan=yes, Nahi=no, etc.)
+    'mein', 'main', 'haan', 'nahi', 'theek', 'acha', 'accha',
+    'bas', 'woh', 'yeh', 'aap', 'tum', 'hum', 'kya', 'kab',
+    'kahan', 'kaisa', 'kaun', 'yaar',
+  ])
+
   // ── Extract parent name from user message ──
   if (!updated.collectedData.parentName) {
     const namePatterns = [
@@ -50,36 +88,85 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     for (const pattern of namePatterns) {
       const match = userMessage.match(pattern)
       if (match?.[1] && match[1].length > 2) {
-        updated.collectedData.parentName  = match[1].trim()
-        updated.goals.parentNameCollected = true
+        // Keep only words that are title-cased (real names) AND not blacklisted
+        // e.g. "calling about" → both lowercase → rejected entirely
+        // e.g. "Sunita here"  → "Sunita" passes (uppercase), "here" is blacklisted → "Sunita"
+        const rawWords = match[1].trim().split(/\s+/)
+        const cleanWords = rawWords.filter(w =>
+          /^[A-Z]/.test(w) && !NOT_A_PARENT_NAME.has(w.toLowerCase())
+        )
+        const candidate = cleanWords.join(' ')
+        if (candidate.length > 2) {
+          updated.collectedData.parentName  = candidate
+          updated.goals.parentNameCollected = true
+        }
         break
       }
     }
   }
 
+  // ── Class correction: user says "actually class 7" or "wrong class, it's class 9" ──
+  // Requires BOTH a correction signal AND a new class number in the same message
+  if (updated.collectedData.interestedClass) {
+    const hasCorrectionSignal = /\b(actually|i meant|i mean|wrong class|not class|meant to say|galti|correction|actually class)\b/i.test(userLc)
+    const hasNewClassMention  = /\b(?:class|grade|std|standard)?\s*([1-9]|1[0-2])\b/i.test(userMessage)
+    if (hasCorrectionSignal && hasNewClassMention) {
+      delete updated.collectedData.interestedClass
+    }
+  }
+
   // ── Extract class/grade interest ──
-  // Handles: "class 6", "6th", "6th class", "6", "nursery", "lkg", etc.
+  // Priority 0: Hindi ordinals → Tier 1: enrollment context → Tier 2: bare mention (guarded)
   if (!updated.collectedData.interestedClass) {
-    const classPatterns = [
-      /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\b/i,
-      /\b([1-9]|1[0-2])(?:st|nd|rd|th)?\s*(?:class|grade|standard|mein|me|mai)\b/i,
-      /\b(nursery|lkg|ukg|kindergarten|prep|pre-?school|play\s*group)\b/i,
-      // Bare number: "6th" or "6" as standalone message or after whitespace
-      /^\s*([1-9]|1[0-2])(?:st|nd|rd|th)?\s*$/i,
-    ]
-    for (const pattern of classPatterns) {
-      const match = userMessage.match(pattern)
-      if (match) {
-        // Normalize: always store as "Class X" or the pre-primary name
-        const raw = (match[1] || match[0]).trim()
-        const num = parseInt(raw, 10)
+
+    // Priority 0: Hindi ordinal class names (paanchvi, aathvi, barahvi, etc.)
+    for (const [hindi, num] of Object.entries(HINDI_CLASS_MAP)) {
+      if (new RegExp(`\\b${hindi}\\b`, 'i').test(userMessage)) {
+        updated.collectedData.interestedClass = `Class ${num}`
+        break
+      }
+    }
+
+    if (!updated.collectedData.interestedClass) {
+      // Tier 1: Enrollment-specific context — most reliable
+      const enrollmentPatterns = [
+        /\b(?:admission|enrol(?:l(?:ment)?)?|join|seeking|want|need|looking)\s+(?:for|in|into)?\s*(?:class|grade|std|standard)?\s*([1-9]|1[0-2])\b/i,
+        /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\s+(?:admission|enrol|join)/i,
+        /\b([1-9]|1[0-2])(?:st|nd|rd|th)?\s+(?:admission|enrol|class\s+mein\s+daakhila)/i,
+      ]
+
+      // Tier 2 guard: skip if message context is possessive or "currently studying"
+      // e.g. "class 5 ke teacher" | "mein padhta hai" | "currently in 8th grade"
+      const isPossessiveOrCurrent =
+        /mein\s+(?:padhta|padhti)\b|currently\s+in\b|\b(?:is|was|are|were)\s+in\s+(?:class|grade)?\s*\d|class\s*\d+\s*ke\b/i
+        .test(userMessage)
+
+      // Tier 2: Standard class mention (only if not possessive/current context)
+      const classPatterns = [
+        /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\b/i,
+        /\b([1-9]|1[0-2])(?:st|nd|rd|th)?\s*(?:class|grade|standard|mein|me|mai)\b/i,
+        /\b(nursery|lkg|ukg|kindergarten|prep|pre-?school|play\s*group)\b/i,
+        /^\s*([1-9]|1[0-2])(?:st|nd|rd|th)?\s*$/i,   // bare standalone number
+      ]
+
+      let rawClass = null
+      for (const pattern of enrollmentPatterns) {
+        const match = userMessage.match(pattern)
+        if (match) { rawClass = (match[1] || match[0]).trim(); break }
+      }
+      if (!rawClass && !isPossessiveOrCurrent) {
+        for (const pattern of classPatterns) {
+          const match = userMessage.match(pattern)
+          if (match) { rawClass = (match[1] || match[0]).trim(); break }
+        }
+      }
+      if (rawClass) {
+        const num = parseInt(rawClass, 10)
         if (!isNaN(num) && num >= 1 && num <= 12) {
           updated.collectedData.interestedClass = `Class ${num}`
         } else {
-          updated.collectedData.interestedClass = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
+          updated.collectedData.interestedClass = rawClass.charAt(0).toUpperCase() + rawClass.slice(1).toLowerCase()
         }
-        updated.goals.studentInfoCollected = true
-        break
       }
     }
   }
@@ -143,7 +230,8 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
   // Blacklist: words that look like names but are school/generic terms
   const NOT_A_NAME = new Set([
     'class', 'grade', 'standard', 'school', 'admission', 'enquiry',
-    'your', 'their', 'child', 'student', 'enroll', 'wants', 'need',
+    'your', 'their', 'child', 'student', 'enroll', 'wants', 'want',
+    'need', 'needs', 'has', 'have', 'gets', 'says', 'told', 'goes',
     'help', 'info', 'detail', 'please', 'thanks', 'okay', 'yes', 'no',
   ])
   if (!updated.collectedData.studentName) {
@@ -154,10 +242,13 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     for (const pattern of studentPatterns) {
       const match = userMessage.match(pattern)
       if (match?.[1]) {
-        const candidate = match[1].trim()
-        // Reject if any word in the candidate is a blacklisted term
-        const words = candidate.toLowerCase().split(/\s+/)
-        if (!words.some(w => NOT_A_NAME.has(w))) {
+        // Apply title-case + blacklist filter (same approach as parentName)
+        // The /i flag on the regex makes [A-Z] match any case in capture groups,
+        // so we must re-verify uppercase from the original matched text
+        const rawWords = match[1].trim().split(/\s+/)
+        const cleanWords = rawWords.filter(w => /^[A-Z]/.test(w) && !NOT_A_NAME.has(w.toLowerCase()))
+        const candidate = cleanWords.join(' ')
+        if (candidate.length > 2) {
           updated.collectedData.studentName  = candidate
           updated.goals.studentInfoCollected = true
         }
@@ -181,8 +272,9 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
       /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i,
       /\b(morning|afternoon|evening|subah|dopahar|shaam|10\s*(?:am|baje)|11\s*(?:am|baje)|12\s*(?:pm|baje))\b/i,
     ]
-    // Only extract if the message seems visit-related
-    if (/\b(visit|come|tour|dekh|milna|aa|campus)\b/i.test(userLc)) {
+    // Only extract if the message clearly has visit intent
+    // NOTE: bare 'aa' removed — it's too common in Hinglish ("aa raha tha", "aa gaya", etc.)
+    if (/\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)) {
       for (const pattern of timePatterns) {
         const match = userMessage.match(pattern)
         if (match) {
