@@ -112,15 +112,16 @@ async function processMessage(req) {
 
     // --- 4. Load Knowledge Base (Redis → MongoDB) ---
     const kbCacheKey = `kb:${tenant.businessId}`
-    let kb
+let kb
 
-    const cachedKB = await redis.get(kbCacheKey)
-    if (cachedKB) {
-      kb = typeof cachedKB === 'string' ? JSON.parse(cachedKB) : cachedKB
-    } else {
-      kb = await KnowledgeBase.findOne({ businessId: tenant.businessId }).lean()
-      if (kb) await redis.set(kbCacheKey, JSON.stringify(kb), 'EX', 3600)
-    }
+const cachedKB = await redis.get(kbCacheKey)
+if (cachedKB) {
+  kb = typeof cachedKB === 'string' ? JSON.parse(cachedKB) : cachedKB
+} else {
+  kb = await KnowledgeBase.findOne({ businessId: tenant.businessId }).lean()
+  if (kb) await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 })
+}
+
 
     // --- 5. Build system prompt ---
     const systemPrompt = buildSystemPrompt(kb, session.flowState, tenant.settings)

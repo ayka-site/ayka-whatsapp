@@ -1,6 +1,6 @@
 const { processMessage } = require('../core/conversation.engine')
 const logger = require('../utils/logger')
-
+module.exports = require('../config/logger')
 async function handleWhatsAppWebhook(req, res) {
   // Always respond 200 immediately — Meta will retry if we don't
   res.sendStatus(200)
@@ -53,5 +53,6 @@ async function handleWhatsAppWebhook(req, res) {
     logger.error({ err }, 'whatsapp.handler unhandled error')
   }
 }
+
 
 module.exports = { handleWhatsAppWebhook }

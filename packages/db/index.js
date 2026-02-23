@@ -4,4 +4,5 @@ module.exports = {
   Conversation:  require('./models/Conversation'),
   Message:       require('./models/Message'),
   KnowledgeBase: require('./models/KnowledgeBase'),
+  Reseller:      require('./models/Reseller.js'),
 }
