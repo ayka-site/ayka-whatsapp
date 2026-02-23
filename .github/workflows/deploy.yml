@@ -48,4 +48,8 @@ jobs:
             az containerapp update \
               --name ayka-api \
               --resource-group ayka-rg \
-              --image aykaregistry.azurecr.io/ayka-api:${{ github.sha }}
+              --image aykaregistry.azurecr.io/ayka-api:${{ github.sha }} \
+              --registry-server aykaregistry.azurecr.io \
+              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
+              --registry-password ${{ secrets.REGISTRY_PASSWORD }}
+
