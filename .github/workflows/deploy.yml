@@ -2,7 +2,7 @@ name: Deploy AyKa API
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'apps/api/**'
       - 'packages/db/**'
