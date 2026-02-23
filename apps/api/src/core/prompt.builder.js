@@ -57,58 +57,73 @@ If the parent asks to speak to someone, says call me, seems frustrated, or you c
 
 HANDOFF: YES`
 
-function buildKBSummary(content) {
-  if (!content) return 'School information not available.'
+function buildKBSummary(kb) {
+  if (!kb || !kb.content) return ''
+
+  const c = kb.content
   const lines = []
 
-  if (content.schoolName)  lines.push(`School: ${content.schoolName}`)
-  if (content.board)       lines.push(`Board: ${content.board}`)
-  if (content.established) lines.push(`Established: ${content.established}`)
-  if (content.principal)   lines.push(`Principal: ${content.principal}`)
-  if (content.address)     lines.push(`Location: ${content.address}`)
-  if (content.phone)       lines.push(`Contact: ${content.phone}`)
-
-  if (content.admissions) {
-    const a = content.admissions
-    lines.push(`\nAdmissions ${a.currentYear || ''}:`)
-    lines.push(`  Status: ${a.status || 'Open'}`)
-    if (a.lastDate)        lines.push(`  Last date: ${a.lastDate}`)
-    if (a.classesOffered)  lines.push(`  Classes: ${a.classesOffered.join(', ')}`)
-    if (a.process)         lines.push(`  Process: ${a.process.join(' → ')}`)
-    if (a.documentsNeeded) lines.push(`  Documents: ${a.documentsNeeded.join(', ')}`)
+  // About / identity
+  if (c.about?.name) {
+    lines.push(`School name: ${c.about.name}`)
+  }
+  if (c.about?.board) {
+    lines.push(`Board: ${c.about.board} (Affiliation No. ${c.about.affiliationNo || 'N/A'})`)
+  }
+  if (c.about?.address) {
+    lines.push(`Address: ${c.about.address}`)
   }
 
-  if (content.fees?.structure) {
-    lines.push(`\nFee Structure:`)
-    Object.entries(content.fees.structure).forEach(([cls, fee]) => {
-      lines.push(`  ${cls}: ${fee.annual}/year`)
-    })
-    if (content.fees.includes)      lines.push(`  Includes: ${content.fees.includes.join(', ')}`)
-    if (content.fees.paymentModes)  lines.push(`  Payment: ${content.fees.paymentModes.join(', ')}`)
-    if (content.fees.concessions)   lines.push(`  Concessions: ${content.fees.concessions}`)
+  // Classes and streams
+  if (c.classes) {
+    lines.push(
+      `Classes: ${c.classes.from || 'Nursery'} to ${c.classes.to || 'Class 12'}` +
+      (c.classes.streams ? `; Streams: ${c.classes.streams.join(', ')}` : '')
+    )
   }
 
-  if (content.timing) {
-    lines.push(`\nTimings:`)
-    if (content.timing.schoolHours) lines.push(`  School: ${content.timing.schoolHours}`)
-    if (content.timing.officeHours) lines.push(`  Office: ${content.timing.officeHours}`)
-    if (content.timing.daysOpen)    lines.push(`  Days: ${content.timing.daysOpen}`)
+  // Fees (short)
+  if (c.fees) {
+    if (c.fees.admissionFee) lines.push(`Admission fee: ${c.fees.admissionFee}`)
+    if (c.fees.tuitionFee) lines.push(`Tuition fee: ${c.fees.tuitionFee}`)
+    if (c.fees.registrationForm) lines.push(`Registration form fee: ${c.fees.registrationForm}`)
   }
 
-  if (content.facilities?.length) {
-    lines.push(`\nFacilities: ${content.facilities.slice(0, 6).join(', ')}`)
+  // Admissions
+  if (c.admissions) {
+    if (c.admissions.status) lines.push(`Admissions: ${c.admissions.status}`)
+    if (c.admissions.process) lines.push(`Admission process: ${c.admissions.process}`)
   }
 
-  if (content.faqs?.length) {
-    lines.push(`\nFrequently Asked:`)
-    content.faqs.slice(0, 4).forEach(faq => {
-      lines.push(`  Q: ${faq.q}`)
-      lines.push(`  A: ${faq.a}`)
-    })
+  // Timing
+  if (c.timing?.schoolHours) {
+    lines.push(`School hours: ${c.timing.schoolHours}`)
+  }
+
+  // Facilities (optional)
+  if (c.infrastructure) {
+    const fac = []
+    if (c.infrastructure.laboratories) fac.push(`${c.infrastructure.laboratories} labs`)
+    if (c.infrastructure.computerLab) fac.push('computer lab')
+    if (c.infrastructure.internet) fac.push('internet-enabled campus')
+    if (fac.length) lines.push(`Facilities: ${fac.join(', ')}`)
+  }
+
+  // Results (short)
+  if (c.results?.class10?.[0]) {
+    lines.push(
+      `Recent Class 10 result: ${c.results.class10[0].percentage} (${c.results.class10[0].year}).`
+    )
+  }
+  if (c.results?.class12?.[0]) {
+    lines.push(
+      `Recent Class 12 result: ${c.results.class12[0].percentage} (${c.results.class12[0].year}).`
+    )
   }
 
   return lines.join('\n')
 }
+
 
 function buildCollectedDataSummary(collectedData) {
   if (!collectedData) return 'No details collected yet.'
