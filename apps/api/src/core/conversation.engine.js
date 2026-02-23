@@ -123,8 +123,8 @@ if (cachedKB) {
 }
 
 
-    // --- 5. Build system prompt ---
-    const systemPrompt = buildSystemPrompt(kb, session.flowState, tenant.settings)
+    // --- 5. Build system prompt (pass full session for memory access) ---
+    const systemPrompt = buildSystemPrompt(kb, session, tenant.settings)
 
     // --- 6. Append user message to session window (max 10) ---
     session.recentMessages.push({ role: 'user', content: { text: messageText }, timestamp: Date.now() })
