@@ -12,7 +12,26 @@ async function getSession(businessId, phone) {
   const key = sessionKey(businessId, phone)
 
   const cached = await redis.get(key)
-  if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached
+  if (cached) {
+    const session = typeof cached === 'string' ? JSON.parse(cached) : cached
+    // Validate the cached conversation still exists & is active in MongoDB.
+    // If it was deleted (e.g. during testing), wipe the stale Redis entry and
+    // fall through to rebuild the session from scratch.
+    if (session.conversationId) {
+      const stillActive = await Conversation.exists({
+        _id: session.conversationId,
+        status: 'active',
+      })
+      if (!stillActive) {
+        await redis.del(key)
+        // fall through ↓
+      } else {
+        return session
+      }
+    } else {
+      return session
+    }
+  }
 
   const convo = await Conversation.findOne({ businessId, phone, status: 'active' }).lean()
   if (!convo) return null

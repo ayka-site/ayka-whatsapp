@@ -140,16 +140,27 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
   }
 
   // ── Extract student name ──
+  // Blacklist: words that look like names but are school/generic terms
+  const NOT_A_NAME = new Set([
+    'class', 'grade', 'standard', 'school', 'admission', 'enquiry',
+    'your', 'their', 'child', 'student', 'enroll', 'wants', 'need',
+    'help', 'info', 'detail', 'please', 'thanks', 'okay', 'yes', 'no',
+  ])
   if (!updated.collectedData.studentName) {
     const studentPatterns = [
       /\bmy\s+(?:son|daughter|child|beta|beti|bachcha)(?:'s name)?\s+(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\b/i,
-      /\b(?:admission for|enquiry for|enroll)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\b/i,
+      /\b(?:admission for|enquiry for)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\b/i,
     ]
     for (const pattern of studentPatterns) {
       const match = userMessage.match(pattern)
       if (match?.[1]) {
-        updated.collectedData.studentName  = match[1].trim()
-        updated.goals.studentInfoCollected = true
+        const candidate = match[1].trim()
+        // Reject if any word in the candidate is a blacklisted term
+        const words = candidate.toLowerCase().split(/\s+/)
+        if (!words.some(w => NOT_A_NAME.has(w))) {
+          updated.collectedData.studentName  = candidate
+          updated.goals.studentInfoCollected = true
+        }
         break
       }
     }
