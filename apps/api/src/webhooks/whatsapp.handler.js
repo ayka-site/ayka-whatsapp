@@ -1,8 +1,27 @@
 const { processMessage } = require('../core/conversation.engine')
-const logger = require('../utils/logger')
-module.exports = require('../config/logger')
+const { sendTextMessage } = require('../services/whatsapp.service')
+const { Message }         = require('@ayka/db')
+const logger              = require('../utils/logger')
+
+/**
+ * whatsapp.handler.js v4.0 — WhatsApp webhook entry point
+ *
+ * Fixes over v3.0:
+ *   1. REMOVED the erroneous `module.exports = require(...)` line that clobbered exports
+ *   2. Handles ALL message types (text, audio, image, document, location, contacts, interactive)
+ *      — actual processing/transcription happens in conversation.engine.js
+ *   3. Status updates handled gracefully (delivered, read, failed)
+ *   4. Rate limit responses are language-aware
+ */
+
+// Message types that conversation.engine.js knows how to handle
+const SUPPORTED_TYPES = new Set([
+  'text', 'audio', 'image', 'document', 'location', 'contacts',
+  'interactive', 'sticker',
+])
+
 async function handleWhatsAppWebhook(req, res) {
-  // Always respond 200 immediately — Meta will retry if we don't
+  // Always respond 200 immediately — Meta retries on non-2xx
   res.sendStatus(200)
 
   try {
@@ -12,47 +31,56 @@ async function handleWhatsAppWebhook(req, res) {
 
     if (!value) return
 
-    // Handle message status updates (delivered, read, failed)
+    // ── Handle message status updates (delivered, read, failed) ──
     if (value.statuses?.length) {
-      const status  = value.statuses[0]
-      const { Message } = require('@ayka/db')
-      await Message.updateOne(
+      const status = value.statuses[0]
+      Message.updateOne(
         { waMessageId: status.id },
         { $set: { status: status.status } }
-      ).catch(() => {}) // silent fail — status updates are not critical
+      ).catch(() => {}) // fire-and-forget — status updates are not critical
       return
     }
 
-    // Handle incoming messages
+    // ── Handle incoming messages ──
     if (!value.messages?.length) return
 
     const msgObj = value.messages[0]
+    const msgType = msgObj.type || 'text'
 
-    // Only process text messages for now
-    if (msgObj.type !== 'text') {
-      logger.info({ type: msgObj.type, from: msgObj.from }, 'Non-text message received — skipping')
+    // Log non-text messages for visibility
+    if (msgType !== 'text') {
+      logger.info({ type: msgType, from: msgObj.from }, 'Non-text message received')
+    }
+
+    // Check if we support this message type
+    if (!SUPPORTED_TYPES.has(msgType)) {
+      logger.info({ type: msgType }, 'Unsupported message type — skipping')
       return
     }
 
-    // Check rate limit flag set by rateLimiter middleware
+    // ── Rate limit check (set by rateLimiter middleware) ──
     if (req.isRateLimited) {
-      const { sendTextMessage } = require('../services/whatsapp.service')
       const tenant = req.tenant
+      const phone = msgObj.from
+      // Language-aware rate limit message
+      const isIndian = phone.startsWith('91')
+      const reply = isIndian
+        ? 'Aap bahut tezi se messages bhej rahe hain. Kripya ek minute ruk kar phir try karein.'
+        : 'You are sending messages too quickly. Please wait a moment and try again.'
+
       await sendTextMessage(
-        msgObj.from,
-        'You are sending messages too quickly. Please wait a moment and try again.',
-        tenant.phoneNumberId,
-        tenant.accessToken
+        phone, reply,
+        tenant.phoneNumberId, tenant.accessToken
       ).catch(() => {})
       return
     }
 
+    // ── Process the message through conversation engine ──
     await processMessage(req)
 
   } catch (err) {
     logger.error({ err }, 'whatsapp.handler unhandled error')
   }
 }
-
 
 module.exports = { handleWhatsAppWebhook }

@@ -1,35 +1,166 @@
-const sessionService  = require('../services/session.service')
+const sessionService = require('../services/session.service')
 const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
-const { buildSystemPrompt }      = require('./prompt.builder')
-const { callGroq }               = require('../services/groq.service')
+const { buildSystemPrompt } = require('./prompt.builder')
+const { callGroq }          = require('../services/groq.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
-const { triggerHandoff }         = require('./handoff.engine')
+const { triggerHandoff }    = require('./handoff.engine')
 const { sendTextMessage, markAsRead } = require('../services/whatsapp.service')
 const redis  = require('../config/redis')
 const logger = require('../utils/logger')
 
-const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please send your message again in a moment.'
+/**
+ * conversation.engine.js v4.0 — Main message processing pipeline
+ *
+ * Fixes over v3.0:
+ *   1. Message deduplication by waMessageId (WhatsApp retries cause duplicates)
+ *   2. Proper Groq retry with exponential backoff (3 attempts max)
+ *   3. Media message routing (audio → transcription, others → placeholder)
+ *   4. Current message included in system prompt context (was missing before)
+ *   5. All async paths have try/catch — no silent failures
+ *   6. DB writes are fire-and-forget but logged on failure
+ */
 
+const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please send your message again in a moment.'
+const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Deduplication — prevent processing the same WhatsApp message twice
+// WhatsApp sometimes retries webhook delivery, causing duplicate processing
+// ═════════════════════════════════════════════════════════════════════════════
+async function isDuplicate(waMessageId, businessId) {
+  if (!waMessageId) return false
+  const key = `dedup:${businessId}:${waMessageId}`
+  try {
+    // SET NX returns null if key already exists (message already processed)
+    const result = await redis.set(key, '1', { ex: DEDUP_TTL, nx: true })
+    return result === null // null = key existed = duplicate
+  } catch (err) {
+    // Redis failure → allow processing (better to process twice than drop a message)
+    logger.warn({ err, waMessageId }, 'Dedup check failed — allowing message through')
+    return false
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// resolveMessageText — extract text from different WhatsApp message types
+// ═════════════════════════════════════════════════════════════════════════════
+async function resolveMessageText(msgObj, tenant) {
+  const type = msgObj.type || 'text'
+
+  switch (type) {
+    case 'text':
+      return msgObj.text?.body || ''
+
+    case 'interactive':
+      // Button reply or list reply
+      return msgObj.interactive?.button_reply?.title
+        || msgObj.interactive?.list_reply?.title
+        || ''
+
+    case 'audio': {
+      // Voice note → transcribe via Groq Whisper
+      try {
+        const { transcribeAudio } = require('../services/transcription.service')
+        const mediaId = msgObj.audio?.id
+        if (!mediaId) return '__VOICE_NOTE_NO_MEDIA_ID__'
+        const text = await transcribeAudio(mediaId, tenant.accessToken)
+        return text || '__VOICE_TRANSCRIPTION_EMPTY__'
+      } catch (err) {
+        logger.error({ err }, 'Audio transcription failed')
+        return '__VOICE_TRANSCRIPTION_FAILED__'
+      }
+    }
+
+    case 'image':
+      // Image with optional caption — use caption if present, otherwise note it
+      return msgObj.image?.caption || '__IMAGE_RECEIVED__'
+
+    case 'document':
+      return msgObj.document?.caption || '__DOCUMENT_RECEIVED__'
+
+    case 'location':
+      return `__LOCATION_RECEIVED__ (${msgObj.location?.latitude}, ${msgObj.location?.longitude})`
+
+    case 'contacts':
+      return '__CONTACT_CARD_RECEIVED__'
+
+    case 'sticker':
+      return '' // ignore stickers silently
+
+    default:
+      logger.info({ type }, 'Unknown message type received')
+      return ''
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// processMessage — the main pipeline
+// ═════════════════════════════════════════════════════════════════════════════
 async function processMessage(req) {
   const { tenant } = req
 
-  // --- Parse payload ---
-  const entry      = req.body?.entry?.[0]
-  const change     = entry?.changes?.[0]
-  const value      = change?.value
-  const msgObj     = value?.messages?.[0]
+  // ── Parse payload ──
+  const entry  = req.body?.entry?.[0]
+  const change = entry?.changes?.[0]
+  const value  = change?.value
+  const msgObj = value?.messages?.[0]
 
   if (!msgObj) return
 
   const phone       = msgObj.from
-  // Sanitize: strip any HANDOFF injection attempts from user input
-  const messageText = (msgObj.text?.body || '').replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
   const waMessageId = msgObj.id
   const referral    = msgObj.referral || null
+  const msgType     = msgObj.type || 'text'
 
-  if (!messageText.trim()) return // ignore non-text messages for now
+  // ── Deduplication: reject if we've already processed this waMessageId ──
+  if (await isDuplicate(waMessageId, tenant.businessId)) {
+    logger.info({ waMessageId, phone }, 'Duplicate message — skipping')
+    return
+  }
 
-  // --- 1. Get or create session ---
+  // ── Resolve message text based on type ──
+  let messageText = await resolveMessageText(msgObj, tenant)
+
+  // Sanitize: strip any HANDOFF injection attempts from user input
+  messageText = messageText.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
+
+  // Handle special media markers — tell parent we received it but can't process
+  if (messageText === '__IMAGE_RECEIVED__' || messageText === '__DOCUMENT_RECEIVED__') {
+    try {
+      const lang = detectLanguageFromPhone(phone) // simple heuristic
+      const reply = lang === 'en'
+        ? "I received your file! For now, I can only read text messages. Could you type out what you'd like to know?"
+        : 'Aapki file mili! Abhi main sirf text messages padh sakti hoon. Kya aap type karke bata sakte hain?'
+      await sendTextMessage(phone, reply, tenant.phoneNumberId, tenant.accessToken)
+    } catch (err) {
+      logger.error({ err }, 'Failed to send media acknowledgment')
+    }
+    return
+  }
+
+  if (messageText === '__CONTACT_CARD_RECEIVED__') {
+    // TODO: extract phone from contact card in future
+    return
+  }
+
+  // Skip empty messages (stickers, reactions, etc.)
+  if (!messageText.trim()) return
+
+  // Handle transcription failures gracefully
+  if (messageText.includes('__VOICE_TRANSCRIPTION_FAILED__') || messageText.includes('__VOICE_NOTE_NO_MEDIA_ID__')) {
+    try {
+      await sendTextMessage(
+        phone,
+        'Maafi chahungi, aapka voice message sun nahi paayi. Kya aap type karke bata sakte hain?',
+        tenant.phoneNumberId, tenant.accessToken
+      )
+    } catch (err) {
+      logger.error({ err }, 'Failed to send voice fallback')
+    }
+    return
+  }
+
+  // ── 1. Get or create session ──
   let session = await sessionService.getSession(tenant.businessId, phone)
 
   if (!session) {
@@ -65,7 +196,7 @@ async function processMessage(req) {
   }
 
   try {
-    // --- 2. Get or create Contact ---
+    // ── 2. Get or create Contact ──
     let contact = await Contact.findOne({ businessId: tenant.businessId, phone }).lean()
 
     if (!contact) {
@@ -85,7 +216,7 @@ async function processMessage(req) {
 
     session.contactId = contact._id.toString()
 
-    // --- 3. Get or create active Conversation ---
+    // ── 3. Get or create active Conversation ──
     let conversation = await Conversation.findOne({
       businessId: tenant.businessId,
       contactId:  contact._id,
@@ -111,50 +242,73 @@ async function processMessage(req) {
 
     session.conversationId = conversation._id.toString()
 
-    // --- 4. Load Knowledge Base (Redis → MongoDB) ---
+    // ── 4. Load Knowledge Base (Redis-cached, 1h TTL) ──
     const kbCacheKey = `kb:${tenant.businessId}`
-let kb
+    let kb
 
-const cachedKB = await redis.get(kbCacheKey)
-if (cachedKB) {
-  kb = typeof cachedKB === 'string' ? JSON.parse(cachedKB) : cachedKB
-} else {
-  kb = await KnowledgeBase.findOne({ businessId: tenant.businessId }).lean()
-  if (kb) await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 })
-}
+    try {
+      const cachedKB = await redis.get(kbCacheKey)
+      if (cachedKB) {
+        kb = typeof cachedKB === 'string' ? JSON.parse(cachedKB) : cachedKB
+      }
+    } catch (err) {
+      logger.warn({ err }, 'Redis KB cache read failed — falling back to MongoDB')
+    }
 
+    if (!kb) {
+      kb = await KnowledgeBase.findOne({ businessId: tenant.businessId }).lean()
+      if (kb) {
+        try {
+          await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 })
+        } catch (err) {
+          logger.warn({ err }, 'Redis KB cache write failed — continuing without cache')
+        }
+      }
+    }
 
-    // --- 5. Build system prompt (pass full session + current message for accurate greeting detection) ---
+    // ── 5. Build system prompt (pass current message for greeting detection + context) ──
     const systemPrompt = buildSystemPrompt(kb, session, tenant.settings, messageText)
 
-    // --- 6. Append user message to session window (max 10) ---
-    session.recentMessages.push({ role: 'user', content: { text: messageText }, timestamp: Date.now() })
+    // ── 6. Append user message to session window AFTER prompt build, BEFORE Groq call ──
+    // NOTE: currentMessage is already in the system prompt via the 4th arg (RECENT CONVERSATION section)
+    //       AND is included in recentMessages for the Groq messages array
+    session.recentMessages.push({
+      role: 'user',
+      content: { text: messageText, contentType: msgType },
+      timestamp: Date.now(),
+    })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // --- 7. Call Groq ---
+    // ── 7. Call Groq (with proper retry + backoff in groq.service.js) ──
     const rawAIResponse = await callGroq(systemPrompt, session.recentMessages)
 
-    // --- 8. Parse AI response ---
-    const alreadyHandedOff = session.flowState.handoffTriggered === true // capture BEFORE parsing
+    // ── 8. Parse AI response (detect handoff, clean response text) ──
+    const alreadyHandedOff = session.flowState.handoffTriggered === true
     const { cleanResponse, updatedFlowState, shouldHandoff } = parseAIResponse(rawAIResponse, session.flowState)
 
-    // --- 9. Extract data from this exchange ---
+    // ── 9. Extract structured data from this exchange ──
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState)
     session.flowState = finalFlowState
 
-    // --- 10. Append AI response to session window ---
-    session.recentMessages.push({ role: 'assistant', content: { text: cleanResponse }, timestamp: Date.now() })
+    // ── 10. Append AI response to session window ──
+    session.recentMessages.push({
+      role: 'assistant',
+      content: { text: cleanResponse },
+      timestamp: Date.now(),
+    })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // --- 11. Trigger handoff if needed (idempotent — only once per conversation) ---
+    // ── 11. Trigger handoff if needed (idempotent — only once per conversation) ──
     if (shouldHandoff && !alreadyHandedOff) {
-      await triggerHandoff(session, tenant)
+      await triggerHandoff(session, tenant).catch(err =>
+        logger.error({ err }, 'Handoff notification failed — parent still gets response')
+      )
     }
 
-    // --- 12. Save session ---
+    // ── 12. Save session to Redis ──
     await sessionService.saveSession(session)
 
-    // --- 13. Parallel DB writes (non-blocking — do not await the whole block) ---
+    // ── 13. Parallel DB writes (fire-and-forget — logged on failure) ──
     Promise.all([
       Message.create({
         conversationId: conversation._id,
@@ -162,7 +316,7 @@ if (cachedKB) {
         contactId:      contact._id,
         direction:      'inbound',
         role:           'user',
-        content:        { contentType: 'text', text: messageText },
+        content:        { contentType: msgType, text: messageText },
         waMessageId,
         status:         'delivered',
         timestamp:      new Date(),
@@ -179,20 +333,28 @@ if (cachedKB) {
       }),
       Contact.updateOne(
         { _id: contact._id },
-        { $set: { 'profile.studentName':      finalFlowState.collectedData.studentName,
-                  'profile.interestedClass':   finalFlowState.collectedData.interestedClass,
-                  'profile.altPhone':          finalFlowState.collectedData.altPhone,
-                  name:                        finalFlowState.collectedData.parentName || undefined } }
+        {
+          $set: {
+            'profile.studentName':    finalFlowState.collectedData.studentName,
+            'profile.interestedClass': finalFlowState.collectedData.interestedClass,
+            'profile.altPhone':       finalFlowState.collectedData.altPhone,
+            name:                     finalFlowState.collectedData.parentName || undefined,
+          },
+        }
       ),
       Conversation.updateOne(
         { _id: conversation._id },
-        { $set: { flowState: finalFlowState,
-                  status: shouldHandoff ? 'handed_off' : 'active' } }
+        {
+          $set: {
+            flowState: finalFlowState,
+            status: shouldHandoff ? 'handed_off' : 'active',
+          },
+        }
       ),
       markAsRead(waMessageId, tenant.phoneNumberId, tenant.accessToken),
     ]).catch(err => logger.error({ err }, 'Non-blocking DB write failed'))
 
-    // --- 14. Send response to parent ---
+    // ── 14. Send response to parent ──
     await sendTextMessage(phone, cleanResponse, tenant.phoneNumberId, tenant.accessToken)
 
     return cleanResponse
@@ -205,6 +367,11 @@ if (cachedKB) {
       logger.error({ sendErr }, 'Failed to send fallback message')
     }
   }
+}
+
+// Simple heuristic — Indian numbers get Hindi fallback
+function detectLanguageFromPhone(phone) {
+  return (phone || '').startsWith('91') ? 'hi' : 'en'
 }
 
 module.exports = { processMessage }

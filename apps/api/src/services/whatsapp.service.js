@@ -17,7 +17,8 @@
 
 // Add try/catch on all three. On error log error.response?.data and throw.
 // Export all three functions.
-const axios = require('axios')
+const axios  = require('axios')
+const logger = require('../utils/logger')
 
 async function sendTextMessage(to, text, phoneNumberId, accessToken) {
   try {
@@ -35,7 +36,7 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
     )
     return response.data
   } catch (err) {
-    console.error('Error sending text message:', err.response?.data)
+    logger.error({ err: err.response?.data || err.message, to }, 'Failed to send text message')
     throw err
   }
 }
@@ -56,7 +57,7 @@ async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, acce
     )
     return response.data
   } catch (err) {
-    console.error('Error sending interactive buttons:', err.response?.data)
+    logger.error({ err: err.response?.data || err.message, to }, 'Failed to send interactive buttons')
     throw err
   }
 }
@@ -76,7 +77,7 @@ async function markAsRead(waMessageId, phoneNumberId, accessToken) {
     )
     return response.data
   } catch (err) {
-    console.error('Error marking message as read:', err.response?.data)
+    logger.error({ err: err.response?.data || err.message, waMessageId }, 'Failed to mark message as read')
     throw err
   }
 }

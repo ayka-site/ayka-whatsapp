@@ -36,7 +36,6 @@ const HINDI_CLASS_MAP = {
 
 function extractDataFromMessages(userMessage, aiResponse, flowState) {
   const updated = JSON.parse(JSON.stringify(flowState)) // deep clone
-  const text    = `${userMessage} ${aiResponse}`
   const userLc  = userMessage.toLowerCase().trim()
 
   // Ensure collectedData exists
@@ -67,6 +66,9 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     'speaking', 'coming', 'going', 'doing', 'having', 'getting',
     // Common English filler words
     'here', 'this', 'the', 'a', 'an', 'okay', 'ok', 'hi', 'hello',
+    // Honorific titles (must be in list so they get filtered from captures)
+    'dr', 'mr', 'mrs', 'ms', 'miss', 'prof', 'er', 'eng', 'ca', 'cs',
+    'adv', 'rev', 'capt', 'col', 'gen', 'lt', 'sgt', 'cdr', 'brig',
     // Roles and titles (not names)
     'parent', 'guardian', 'sir', 'madam', 'ma', 'ji', 'bhai',
     'system', 'administrator', 'admin', 'manager', 'director',
@@ -79,18 +81,22 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     'kahan', 'kaisa', 'kaun', 'yaar',
   ])
 
+  // Normalize honorifics: "Dr." → "Dr " so regex can capture the surname after the period
+  const cleanedForNames = userMessage.replace(
+    /\b(Dr|Mr|Mrs|Ms|Miss|Prof|Er|Eng|CA|CS|Adv|Rev|Capt|Col|Gen)\./gi, '$1'
+  )
+
   // ── Extract parent name from user message ──
   if (!updated.collectedData.parentName) {
     const namePatterns = [
-      /(?:i am|i'm|this is|my name is|mera naam|main)\s+([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,})?)/i,
-      /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\s+(?:here|speaking|bol raha|bol rahi)/i,
+      // Capture up to 3 words — run on cleanedForNames (periods stripped from honorifics)
+      /(?:i am|i'm|this is|my name is|mera naam|main)\s+([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,}){0,2})/i,
+      /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\s+(?:here|speaking|bol raha|bol rahi)/i,
     ]
     for (const pattern of namePatterns) {
-      const match = userMessage.match(pattern)
+      const match = cleanedForNames.match(pattern)   // use cleaned version
       if (match?.[1] && match[1].length > 2) {
         // Keep only words that are title-cased (real names) AND not blacklisted
-        // e.g. "calling about" → both lowercase → rejected entirely
-        // e.g. "Sunita here"  → "Sunita" passes (uppercase), "here" is blacklisted → "Sunita"
         const rawWords = match[1].trim().split(/\s+/)
         const cleanWords = rawWords.filter(w =>
           /^[A-Z]/.test(w) && !NOT_A_PARENT_NAME.has(w.toLowerCase())
@@ -155,10 +161,19 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
         if (match) { rawClass = (match[1] || match[0]).trim(); break }
       }
       if (!rawClass && !isPossessiveOrCurrent) {
+        // Use LAST match across all tier-2 patterns—last class mentioned tends to be the target
+        // e.g. "currently in class 3, want class 7" → picks 7 (though 3 hits tier-2, 7 hits tier-1)
+        // e.g. "class 3 aur class 7 mein daakhila" → picks 7 (last)
+        let lastPos  = -1
+        let lastRaw  = null
         for (const pattern of classPatterns) {
-          const match = userMessage.match(pattern)
-          if (match) { rawClass = (match[1] || match[0]).trim(); break }
+          const globalPat = new RegExp(pattern.source, (pattern.flags || '').replace('g', '') + 'g')
+          let m
+          while ((m = globalPat.exec(userMessage)) !== null) {
+            if (m.index > lastPos) { lastPos = m.index; lastRaw = (m[1] || m[0]).trim() }
+          }
         }
+        rawClass = lastRaw
       }
       if (rawClass) {
         const num = parseInt(rawClass, 10)
@@ -171,24 +186,8 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     }
   }
 
-  // ── Extract budget ──
-  // Handles: "50k", "50,000", "50000", "₹50k", "1.5 lakh", "1.5L", "50 thousand"
-  if (!updated.collectedData.budget) {
-    const budgetPatterns = [
-      /(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:k|K)\b/,                     // 50k, ₹50k
-      /(?:₹|rs\.?|inr)?\s*(\d{1,2}(?:\.\d+)?)\s*(?:lakh|lac|L)\b/i,         // 1.5 lakh, 2L
-      /(?:₹|rs\.?|inr)?\s*(\d{4,6})\b/,                                      // 50000, 15000
-      /(?:₹|rs\.?|inr)?\s*(\d+(?:,\d{3})+)\b/,                               // 50,000
-      /(?:₹|rs\.?|inr)?\s*(\d+)\s*(?:thousand|hazar|hazaar)\b/i,             // 50 thousand
-    ]
-    for (const pattern of budgetPatterns) {
-      const match = userMessage.match(pattern)
-      if (match) {
-        updated.collectedData.budget = match[0].trim()
-        break
-      }
-    }
-  }
+  // Budget extraction REMOVED in v4.0 — fees are fixed per school, never ask budget.
+  // The budget field was a false-positive magnet (school codes, years, PINs all matched).
 
   // ── Extract priorities / preferences ──
   // Handles: "infra", "results", "discipline", "teacher attention", etc.
@@ -232,19 +231,24 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
     'class', 'grade', 'standard', 'school', 'admission', 'enquiry',
     'your', 'their', 'child', 'student', 'enroll', 'wants', 'want',
     'need', 'needs', 'has', 'have', 'gets', 'says', 'told', 'goes',
+    'also', 'only', 'just', 'even', 'very',
     'help', 'info', 'detail', 'please', 'thanks', 'okay', 'yes', 'no',
   ])
   if (!updated.collectedData.studentName) {
     const studentPatterns = [
-      /\bmy\s+(?:son|daughter|child|beta|beti|bachcha)(?:'s name)?\s+(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\b/i,
-      /\b(?:admission for|enquiry for)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)\b/i,
+      // English: "my son/daughter NAME" — up to 3 words captured
+      /\bmy\s+(?:son|daughter|child|beta|beti|bachcha)(?:'s name)?\s+(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
+      // Hindi possessive with mera/meri prefix: "meri beti Sneha"
+      /\b(?:mera|meri|hamara|hamari|mere|hamare)\s+(?:beta|beti|bacha|bachcha|bachchi)\s+(?:ka\s+naam\s+|ki\s+naam\s+)?(?:hai\s+)?(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
+      // Bare Hindi: "beti Sneha ke liye" (no mera/meri prefix needed)
+      /\b(?:beta|beti|bacha|bachcha|bachchi)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
+      // "admission for NAME"
+      /\b(?:admission for|enquiry for)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
     ]
     for (const pattern of studentPatterns) {
       const match = userMessage.match(pattern)
       if (match?.[1]) {
         // Apply title-case + blacklist filter (same approach as parentName)
-        // The /i flag on the regex makes [A-Z] match any case in capture groups,
-        // so we must re-verify uppercase from the original matched text
         const rawWords = match[1].trim().split(/\s+/)
         const cleanWords = rawWords.filter(w => /^[A-Z]/.test(w) && !NOT_A_NAME.has(w.toLowerCase()))
         const candidate = cleanWords.join(' ')
@@ -258,8 +262,9 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
   }
 
   // ── Extract alternate phone number ──
+  // Handles: plain 10-digit, +91 prefix, 91 prefix (Indian country code)
   if (!updated.collectedData.altPhone) {
-    const phoneMatch = userMessage.match(/\b([6-9]\d{9})\b/)
+    const phoneMatch = userMessage.match(/(?:(?:\+91|91)\s*)?([6-9]\d{9})\b/)
     if (phoneMatch) {
       updated.collectedData.altPhone        = phoneMatch[1]
       updated.goals.contactDetailsCollected = true
