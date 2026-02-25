@@ -23,20 +23,39 @@ const logger = require('../utils/logger')
 const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please send your message again in a moment.'
 const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
 
+// In-memory dedup layer — catches race conditions where two webhook calls arrive
+// simultaneously before either's Redis SET NX completes (especially with Upstash HTTP latency)
+const _recentIds = new Map()
+const INMEM_TTL  = 60000 // 60 seconds
+
 // ═════════════════════════════════════════════════════════════════════════════
-// Deduplication — prevent processing the same WhatsApp message twice
-// WhatsApp sometimes retries webhook delivery, causing duplicate processing
+// Deduplication — two-layer: in-memory (instant) + Redis (durable)
 // ═════════════════════════════════════════════════════════════════════════════
 async function isDuplicate(waMessageId, businessId) {
   if (!waMessageId) return false
+
+  // Layer 1: In-memory check (instant, same-process race guard)
+  const memKey = `${businessId}:${waMessageId}`
+  if (_recentIds.has(memKey)) return true
+  _recentIds.set(memKey, Date.now())
+
+  // Periodic cleanup — prevent memory leak (every 500 entries, purge expired)
+  if (_recentIds.size > 500) {
+    const now = Date.now()
+    for (const [k, ts] of _recentIds) {
+      if (now - ts > INMEM_TTL) _recentIds.delete(k)
+    }
+  }
+
+  // Layer 2: Redis check (durable across process restarts)
   const key = `dedup:${businessId}:${waMessageId}`
   try {
-    // SET NX returns null if key already exists (message already processed)
     const result = await redis.set(key, '1', { ex: DEDUP_TTL, nx: true })
-    return result === null // null = key existed = duplicate
+    if (result === null) return true // already in Redis
+    return false
   } catch (err) {
-    // Redis failure → allow processing (better to process twice than drop a message)
-    logger.warn({ err, waMessageId }, 'Dedup check failed — allowing message through')
+    // Redis failure → in-memory guard already set, so we're protected
+    logger.warn({ err, waMessageId }, 'Dedup Redis check failed — in-memory guard active')
     return false
   }
 }
@@ -216,12 +235,22 @@ async function processMessage(req) {
 
     session.contactId = contact._id.toString()
 
-    // ── 3. Get or create active Conversation ──
-    let conversation = await Conversation.findOne({
-      businessId: tenant.businessId,
-      contactId:  contact._id,
-      status:     'active',
-    }).lean()
+    // ── 3. Get or reuse existing Conversation ──
+    // If session already has a conversationId (from Redis/MongoDB), load that directly
+    // — even if status is 'handed_off'. Only search/create if no conversationId in session.
+    let conversation = null
+
+    if (session.conversationId) {
+      conversation = await Conversation.findById(session.conversationId).lean()
+    }
+
+    if (!conversation) {
+      conversation = await Conversation.findOne({
+        businessId: tenant.businessId,
+        contactId:  contact._id,
+        status:     { $in: ['active', 'handed_off'] },
+      }).sort({ _id: -1 }).lean()
+    }
 
     if (!conversation) {
       conversation = await Conversation.create({

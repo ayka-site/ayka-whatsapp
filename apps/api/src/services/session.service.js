@@ -38,11 +38,13 @@ async function getSession(businessId, phone) {
       // Validate: if the cached conversationId no longer exists in MongoDB
       // (e.g. deleted during testing), wipe the stale Redis entry and rebuild
       if (session.conversationId) {
-        const stillActive = await Conversation.exists({
+        // Check for both 'active' and 'handed_off' — after handoff the conversation
+        // still exists and session data is valid. Only wipe truly deleted conversations.
+        const stillValid = await Conversation.exists({
           _id: session.conversationId,
-          status: 'active',
+          status: { $in: ['active', 'handed_off'] },
         })
-        if (!stillActive) {
+        if (!stillValid) {
           await redis.del(key).catch(() => {}) // best-effort cleanup
           // Fall through to MongoDB rebuild ↓
         } else {
@@ -59,7 +61,9 @@ async function getSession(businessId, phone) {
 
   // ── Fallback: rebuild session from MongoDB ──
   try {
-    const convo = await Conversation.findOne({ businessId, phone, status: 'active' }).lean()
+    const convo = await Conversation.findOne(
+      { businessId, phone, status: { $in: ['active', 'handed_off'] } }
+    ).sort({ _id: -1 }).lean()
     if (!convo) return null
 
     const messages = await Message.find(
