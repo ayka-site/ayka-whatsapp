@@ -3,6 +3,8 @@ const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
 const { buildSystemPrompt } = require('./prompt.builder')
 const { callGroq }          = require('../services/groq.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
+const { computeLeadScore } = require('./scoring.engine')
+const { scheduleVisit }    = require('./scheduling.engine')
 const { triggerHandoff }    = require('./handoff.engine')
 const { sendTextMessage, markAsRead } = require('../services/whatsapp.service')
 const redis  = require('../config/redis')
@@ -140,8 +142,9 @@ async function processMessage(req) {
   // ── Resolve message text based on type ──
   let messageText = await resolveMessageText(msgObj, tenant)
 
-  // Sanitize: strip any HANDOFF injection attempts from user input
+  // Sanitize: strip any HANDOFF or VISIT_CONFIRMED injection attempts from user input
   messageText = messageText.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
+  messageText = messageText.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '[?]').trim()
 
   // Handle special media markers — tell parent we received it but can't process
   if (messageText === '__IMAGE_RECEIVED__' || messageText === '__DOCUMENT_RECEIVED__') {
@@ -208,6 +211,8 @@ async function processMessage(req) {
         },
         handoffTriggered: false,
         handoffAt:        null,
+        visitConfirmed:   false,
+        visitConfirmedAt: null,
         sentiment:        'neutral',
       },
       recentMessages: [],
@@ -313,11 +318,14 @@ async function processMessage(req) {
 
     // ── 8. Parse AI response (detect handoff, clean response text) ──
     const alreadyHandedOff = session.flowState.handoffTriggered === true
-    const { cleanResponse, updatedFlowState, shouldHandoff } = parseAIResponse(rawAIResponse, session.flowState)
+    const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 9. Extract structured data from this exchange ──
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState)
     session.flowState = finalFlowState
+
+    // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──
+    const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
 
     // ── 10. Append AI response to session window ──
     session.recentMessages.push({
@@ -331,6 +339,14 @@ async function processMessage(req) {
     if (shouldHandoff && !alreadyHandedOff) {
       await triggerHandoff(session, tenant).catch(err =>
         logger.error({ err }, 'Handoff notification failed — parent still gets response')
+      )
+    }
+
+    // ── 11.5. Trigger visit scheduling if LLM confirmed a visit ──
+    const alreadyVisitConfirmed = session.flowState.visitConfirmed === true && !visitConfirmed
+    if (visitConfirmed && !alreadyVisitConfirmed) {
+      await scheduleVisit(session, tenant).catch(err =>
+        logger.error({ err }, 'Visit scheduling failed — parent still gets response')
       )
     }
 
@@ -377,6 +393,9 @@ async function processMessage(req) {
           $set: {
             flowState: finalFlowState,
             status: shouldHandoff ? 'handed_off' : 'active',
+            leadScore,
+            leadScoreReason,
+            leadScoreUpdatedAt: new Date(),
           },
         }
       ),

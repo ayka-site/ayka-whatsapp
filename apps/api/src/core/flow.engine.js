@@ -15,7 +15,16 @@ function parseAIResponse(rawResponse, flowState) {
     cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '').trim()
   }
 
-  return { cleanResponse, updatedFlowState, shouldHandoff }
+  // Detect VISIT_CONFIRMED: YES signal — bot confirmed a visit appointment
+  let visitConfirmed = false
+  if (/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*($|\n)/i.test(cleanResponse)) {
+    visitConfirmed = true
+    updatedFlowState.visitConfirmed   = true
+    updatedFlowState.visitConfirmedAt = new Date()
+    cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '').trim()
+  }
+
+  return { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed }
 }
 
 // Hindi ordinal words → class number mapping

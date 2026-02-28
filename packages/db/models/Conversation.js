@@ -46,6 +46,8 @@ const conversationSchema = new Schema({
     },
     handoffTriggered: { type: Boolean, default: false },
     handoffAt: { type: Date, default: null },
+    visitConfirmed: { type: Boolean, default: false },
+    visitConfirmedAt: { type: Date, default: null },
     sentiment: { type: String, default: 'neutral' }
   },
   source: {
@@ -55,11 +57,26 @@ const conversationSchema = new Schema({
   adHeadline: { type: String }
 },
   openedAt: { type: Date, default: Date.now },
-  resolvedAt: { type: Date, default: null }
+  resolvedAt: { type: Date, default: null },
+
+  // ── Lead scoring ──
+  // Stored on Conversation (not Contact) because:
+  //   1. Conversation already has vertical + flowState — the scoring inputs
+  //   2. A Contact can have multiple conversations over time; each is a distinct lead interaction
+  //   3. Dashboard filters need score per conversation (e.g. "show hot leads this week")
+  //   4. Backfill is trivial — iterate conversations, recompute from existing flowState
+  // We store latest score only (not history). Rationale: score always moves forward
+  // (cold→warm→hot) within a single conversation, so the latest is the most useful
+  // for dashboard filters and reseller reports. If funnel analytics are needed later,
+  // score transitions can be derived from flowState snapshots in messages.
+  leadScore:          { type: String, enum: ['hot', 'warm', 'cold'], default: 'cold' },
+  leadScoreReason:    { type: String, default: 'No information collected yet' },
+  leadScoreUpdatedAt: { type: Date, default: null },
 }, { timestamps: true })
 
 conversationSchema.index({ businessId: 1, status: 1 })
 conversationSchema.index({ businessId: 1, contactId: 1 })
 conversationSchema.index({ contactId: 1, openedAt: -1 })
+conversationSchema.index({ businessId: 1, leadScore: 1, openedAt: -1 })
 
 module.exports = mongoose.model('Conversation', conversationSchema)

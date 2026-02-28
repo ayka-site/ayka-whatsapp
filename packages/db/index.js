@@ -1,4 +1,5 @@
 module.exports = {
+  Appointment:   require('./models/Appointment'),
   Business:      require('./models/Business'),
   Contact:       require('./models/Contact'),
   Conversation:  require('./models/Conversation'),
