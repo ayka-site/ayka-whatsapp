@@ -30,7 +30,9 @@ function buildKBSummary(kb) {
   const latestResult = (arr) => {
     if (!Array.isArray(arr) || arr.length === 0) return null
     const sorted = [...arr].sort((a, b) => (b.year || 0) - (a.year || 0))
-    return `${sorted[0].percentage}% (${sorted[0].year})`
+    // Strip any existing % from the value to prevent "99.48%%" doubling
+    const pct = String(sorted[0].percentage).replace(/%/g, '')
+    return `${pct}% (${sorted[0].year})`
   }
 
   // Helper: build fees string from structured data
@@ -244,12 +246,18 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
     ? memoryLines.join('\n')
     : '(Nothing collected yet.)'
 
-  // ── Build MISSING INFO checklist ──
+  // ── Build MISSING INFO checklist (priority order: relationship → qualification → conversion) ──
   const missingInfo = []
-  if (!collected.interestedClass)                              missingInfo.push('Which class/grade')
-  if (!collected.priorities)                                   missingInfo.push('What matters most (emerge naturally, never list as menu)')
-  if (!goals.visitSuggested)                                   missingInfo.push('Whether they would like to visit')
-  if (!collected.preferredVisitTime && goals.visitSuggested)   missingInfo.push('When they want to visit')
+  // Phase 1 — Relationship (first 2-3 messages)
+  if (!collected.parentName)                                   missingInfo.push('Parent\'s name (ask warmly, e.g. "May I know your good name?" / "Aapka shubh naam?")')
+  // Phase 2 — Qualification (after name, weave into answers)
+  if (!collected.studentName)                                  missingInfo.push('Child\'s name')
+  if (!collected.interestedClass)                              missingInfo.push('Which class/grade they want admission in')
+  // Phase 3 — Conversion (after enough info shared)
+  if (!goals.visitSuggested)                                   missingInfo.push('Suggest a school visit')
+  if (!collected.preferredVisitTime && goals.visitSuggested)   missingInfo.push('When they would like to visit')
+  // Phase 4 — Contact (near handoff)
+  if (!collected.altPhone && goals.visitSuggested)             missingInfo.push('Alternate contact number (for visit coordination)')
 
   const missingBlock = missingInfo.length > 0
     ? missingInfo.map(i => `  - ${i}`).join('\n')
@@ -257,10 +265,12 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
 
   // ── Build DO NOT RE-ASK ──
   const doNotAsk = []
-  if (collected.interestedClass) doNotAsk.push('class/grade')
-  if (collected.parentName)      doNotAsk.push('parent name')
-  if (collected.studentName)     doNotAsk.push("child's name")
-  if (collected.priorities)      doNotAsk.push('priorities/preferences')
+  if (collected.parentName)         doNotAsk.push('parent name')
+  if (collected.studentName)        doNotAsk.push("child's name")
+  if (collected.interestedClass)    doNotAsk.push('class/grade')
+  if (collected.preferredVisitTime) doNotAsk.push('visit time')
+  if (collected.altPhone)           doNotAsk.push('phone number')
+  if (collected.priorities)         doNotAsk.push('priorities/preferences')
   const doNotAskBlock = doNotAsk.length > 0
     ? `NEVER re-ask: ${doNotAsk.join(', ')}. Already in MEMORY.`
     : ''
@@ -358,9 +368,15 @@ ${isPostHandoff
       ? (isGreeting
           ? `FIRST MESSAGE: Greet warmly in 1 sentence as ${agentName} from ${schoolName}. Then ask: "${lang === 'english' ? 'How can I help you today?' : 'Kaise madad kar sakti hoon aapki?'}". Do NOT assume anything. Do NOT ask about class yet.`
           : `FIRST MESSAGE: They opened with a specific question or statement. Answer it directly using KNOWN FACTS. Then naturally introduce yourself as ${agentName} from ${schoolName}.`)
-      : `Respond directly to what they said. Answer any question FIRST from KNOWN FACTS. Then naturally gather ONE missing piece from the list below — woven into conversation, never as an interrogation.`
+      : `CORE BEHAVIOR — Answer + Collect:
+1. Answer their question FIRST and COMPLETELY from KNOWN FACTS.
+2. After answering, ask exactly ONE question to collect the FIRST missing item from the list below.
+3. Weave the question naturally into your answer — like a real counselor, not an interrogation.
+   Example: After answering a fees question, say "By the way, I didn't catch your name — may I know?" or "Achha, aapka shubh naam bata dijiye toh main apni records mein note kar loon."
+4. If the parent's message ALREADY provides info from the missing list (e.g. they mention a class or their name), acknowledge it and move to the NEXT missing item instead.
+5. NEVER skip answering to ask a collection question. Answer is always first.`
 }
-${!isPostHandoff && missingInfo.length > 0 ? `\nStill need to learn (gather organically, 1 at a time):\n${missingBlock}` : ''}
+${!isPostHandoff && missingInfo.length > 0 ? `\nSTILL NEED TO COLLECT (ask the FIRST item you haven't collected yet — one per message):\n${missingBlock}` : ''}
 
 Emotional state: ${emotion}${emotion === 'frustrated' ? ' — Acknowledge frustration first. Apologize briefly. Then address their concern using MEMORY.' : emotion === 'hesitant' ? ' — Be reassuring, not pushy. Share facts that build confidence.' : emotion === 'urgent' ? " — Move quickly toward handoff. Don't add unnecessary questions." : ''}
 
