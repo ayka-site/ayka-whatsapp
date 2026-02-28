@@ -25,9 +25,10 @@ const businessSchema = new Schema({
     verifyToken:   { type: String, required: true }
   },
   settings: {
-    displayName: { type: String },
-    timezone:    { type: String, default: 'Asia/Kolkata' },
-    language:    { type: String, default: 'en' },
+    displayName:  { type: String },
+    agentName:    { type: String },
+    timezone:     { type: String, default: 'Asia/Kolkata' },
+    language:     { type: String, default: 'en' },
     handoffPhone: { type: String }
   },
   subscription: {

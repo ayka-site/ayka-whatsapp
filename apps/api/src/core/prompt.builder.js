@@ -195,8 +195,8 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   const collected      = flowState.collectedData || {}
   const goals          = flowState.goals || {}
 
-  // ── Resolve persona name (NOT business displayName — that's 'AyKa Test School' etc.) ──
-  const agentName  = 'Priya'
+  // ── Resolve persona name (DB: settings.agentName → fallback 'Priya') ──
+  const agentName  = tenantSettings?.agentName || 'Priya'
   const schoolName = kb?.content?.about?.name   || tenantSettings?.displayName  || tenantSettings?.businessName || 'our school'
 
   // ── Build facts from KB (correct MongoDB field paths) ──

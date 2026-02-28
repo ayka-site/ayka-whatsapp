@@ -1,12 +1,5 @@
-// Write Express middleware using @upstash/redis to rate limit WhatsApp messages.
-// Key format: ratelimit:{businessId}:{phone}
-// Get businessId from req.tenant.businessId, phone from req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from
-// Allow max 10 requests per 60 seconds using Redis INCR and EXPIRE.
-// If phone or businessId not available, call next() and skip.
-// If over limit: call next() anyway (do not block — let handler send WhatsApp message back).
-// Attach req.isRateLimited = true if over limit so the handler can check it.
-// Import redis from '../config/redis'.
 const redis = require('../config/redis')
+const logger = require('../utils/logger')
 
 async function rateLimiter(req, res, next) {
   try {
@@ -16,16 +9,21 @@ async function rateLimiter(req, res, next) {
     if (!businessId || !phone) return next()
 
     const key = `ratelimit:${businessId}:${phone}`
-    const count = await redis.incr(key)
 
-    if (count === 1) {
-      await redis.expire(key, 60)
-    }
+    // Atomic pipeline: INCR + EXPIRE in a single HTTP round-trip.
+    // Prevents the race where INCR creates the key but EXPIRE never runs
+    // (e.g. process crash or Redis error between the two calls).
+    // Using EXPIRE on every call makes this a sliding window — acceptable
+    // for WhatsApp rate limiting and harder to game than a fixed window.
+    const [count] = await redis.pipeline().incr(key).expire(key, 60).exec()
 
     req.isRateLimited = count > 10
     next()
   } catch (err) {
-    next(err)
+    // Do NOT call next(err) — that propagates a 500 to Express's error handler
+    // which returns a non-2xx to Meta and causes it to retry the webhook.
+    logger.warn({ err }, 'rateLimiter Redis error — allowing request through')
+    next()
   }
 }
 

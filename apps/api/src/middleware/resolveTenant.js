@@ -1,7 +1,7 @@
 const redis = require('../config/redis')
 const { Business } = require('@ayka/db')
 const { decrypt } = require('../utils/encryption')
-const logger = require('../config/logger')
+const logger = require('../utils/logger')
 
 async function resolveTenant(req, res, next) {
   try {

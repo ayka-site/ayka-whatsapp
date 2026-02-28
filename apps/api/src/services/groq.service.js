@@ -62,8 +62,10 @@ async function callGroq(systemPrompt, recentMessages) {
       lastError = error
       const status = error.status || error.statusCode || 0
 
-      // Non-retryable errors → fail immediately
-      if (!RETRYABLE_CODES.has(status) && attempt > 0) {
+      // Non-retryable HTTP errors (401 bad key, 403 forbidden, 404 not found, 422 invalid) →
+      // fail immediately on any attempt. The `status &&` guard ensures network errors
+      // (status 0, no HTTP response) still go through the retry loop.
+      if (status && !RETRYABLE_CODES.has(status)) {
         logger.error({ status, message: error.message, attempt }, 'Groq non-retryable error')
         throw error
       }
