@@ -1,15 +1,7 @@
 {
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/conversations/page": "app/admin/conversations/page.js",
-  "/admin/clients/page": "app/admin/clients/page.js",
   "/page": "app/page.js",
-  "/admin/appointments/page": "app/admin/appointments/page.js",
   "/login/page": "app/login/page.js",
-  "/admin/leads/page": "app/admin/leads/page.js",
-  "/admin/analytics/page": "app/admin/analytics/page.js",
-  "/admin/settings/page": "app/admin/settings/page.js",
-  "/client/leads/page": "app/client/leads/page.js",
   "/client/dashboard/page": "app/client/dashboard/page.js",
-  "/admin/widget/page": "app/admin/widget/page.js",
-  "/client/conversations/page": "app/client/conversations/page.js"
+  "/client/conversations/page": "app/client/conversations/page.js",
+  "/client/leads/page": "app/client/leads/page.js"
 }
