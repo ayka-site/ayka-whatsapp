@@ -1,7 +1,12 @@
 **/node_modules
 .env
+.env.*
 .git
 *.log
 apps/dashboard
 apps/widget
 services/
+SPV/
+docs/
+*.md
+**/.next
