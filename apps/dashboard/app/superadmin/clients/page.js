@@ -20,6 +20,7 @@ const EMPTY_CLIENT = {
   subscription: { status: 'active' },
   pricing: { totalPrice: 0, note: '' },
   isDirect: false,
+  widget: { enabled: false },
 }
 
 export default function SuperAdminClients() {
@@ -66,6 +67,7 @@ export default function SuperAdminClients() {
       subscription: { status: c.subscription?.status || 'active' },
       pricing: { totalPrice: c.pricing?.totalPrice || 0, note: c.pricing?.note || '' },
       isDirect,
+      widget: { enabled: c.widget?.enabled || false },
     })
     setIsNew(false); setMsg(''); setEditOpen(true)
   }
@@ -141,6 +143,7 @@ export default function SuperAdminClients() {
               <th className="p-3 text-left">Hot</th>
               <th className="p-3 text-left">Last Active</th>
               <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Widget</th>
               <th className="p-3 text-center">Actions</th>
             </tr></thead>
             <tbody>
@@ -153,6 +156,11 @@ export default function SuperAdminClients() {
                   <td className="p-3"><span className="text-red-400 font-medium">{formatNumber(c.leads?.hot || 0)}</span></td>
                   <td className="p-3 text-xs opacity-50">{c.lastActivity ? relativeTime(c.lastActivity) : '—'}</td>
                   <td className="p-3"><Badge score={c.isActive ? 'active' : 'cancelled'} /></td>
+                  <td className="p-3">
+                    {c.widget?.enabled
+                      ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400">🔌 On</span>
+                      : <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 opacity-40">Off</span>}
+                  </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={() => openEdit(c)} className="text-xs px-2 py-1 rounded border border-white/10 hover:bg-white/10" style={{ color: 'var(--color-primary)' }}>Edit</button>
@@ -163,7 +171,7 @@ export default function SuperAdminClients() {
                   </td>
                 </tr>
               ))}
-              {clients.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-xs opacity-40">No clients found</td></tr>}
+              {clients.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-xs opacity-40">No clients found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -230,6 +238,13 @@ export default function SuperAdminClients() {
             </>
           )}
           <FormField label="Status"><FormSelect value={form.subscription?.status} onChange={v => set('subscription.status', v)} options={[{value:'active',label:'Active'},{value:'expired',label:'Expired'},{value:'cancelled',label:'Cancelled'}]} /></FormField>
+
+          <hr className="border-white/10" />
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Web Widget</h3>
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+            <input type="checkbox" checked={!!form.widget?.enabled} onChange={e => set('widget.enabled', e.target.checked)} className="rounded" />
+            Enable embeddable web chat widget for this client
+          </label>
 
           {msg && <p className="text-xs text-red-500">{msg}</p>}
           <div className="flex justify-end gap-3 pt-2">

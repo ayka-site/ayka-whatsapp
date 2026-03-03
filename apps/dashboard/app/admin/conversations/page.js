@@ -65,7 +65,7 @@ export default function AdminConversations() {
               <select value={client} onChange={e => { setClient(e.target.value); setPage(1) }}
                 className="px-2 py-1 text-[10px] rounded-lg border border-white/10 bg-transparent" style={{ color: 'var(--color-text)' }}>
                 <option value="">All Clients</option>
-                {(clientList?.clients || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(Array.isArray(clientList) ? clientList : []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
               {['', ...scores].map(s => (
                 <button key={s} onClick={() => { setScore(s); setPage(1) }}

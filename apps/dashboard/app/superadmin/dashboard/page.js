@@ -19,6 +19,7 @@ export default function SuperAdminDashboard() {
   const { data: resellers } = useFetch('/api/superadmin/resellers', [])
 
   const s = stats || {}
+  const v = (o) => (o && typeof o === 'object') ? (o.value ?? 0) : (o ?? 0)
   const resellerArr = Array.isArray(resellers) ? resellers : (resellers?.resellers || [])
   const platformVolConvos = platformVol?.conversations || []
   const platformVolMsgs = platformVol?.messages || []
@@ -47,12 +48,12 @@ export default function SuperAdminDashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Resellers" value={formatNumber(s.totalResellers)} loading={sL} />
-        <StatCard label="Clients" value={formatNumber(s.totalClients)} loading={sL} />
-        <StatCard label="Conversations Today" value={formatNumber(s.conversationsToday)} loading={sL} />
-        <StatCard label="Messages Today" value={formatNumber(s.messagesToday)} loading={sL} />
-        <StatCard label="Hot Leads (Month)" value={formatNumber(s.hotLeadsMonth)} loading={sL} />
-        <StatCard label="Visits (Month)" value={formatNumber(s.visitsMonth)} loading={sL} />
+        <StatCard label="Resellers" value={formatNumber(v(s.totalResellers))} loading={sL} />
+        <StatCard label="Clients" value={formatNumber(v(s.totalClients))} loading={sL} />
+        <StatCard label="Conversations Today" value={formatNumber(v(s.conversationsToday))} loading={sL} />
+        <StatCard label="Messages Today" value={formatNumber(v(s.messagesToday))} loading={sL} />
+        <StatCard label="Hot Leads (Month)" value={formatNumber(v(s.hotLeadsMonth))} loading={sL} />
+        <StatCard label="Visits (Month)" value={formatNumber(v(s.visitsMonth))} loading={sL} />
         <StatCard label="Error Rate" value={`${s.errorRate?.value ?? 0}%`} loading={sL} />
         <StatCard label="Avg Latency" value={`${s.avgLatency?.value ?? 0}ms`} loading={sL} />
       </div>

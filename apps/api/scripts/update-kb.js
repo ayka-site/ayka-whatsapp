@@ -11,8 +11,10 @@ async function main() {
   await mongoose.connect(process.env.MONGODB_URI)
   console.log('Connected to MongoDB\n')
 
-  const kb = await KnowledgeBase.findOne({})
-  if (!kb) { console.error('No KB found!'); process.exit(1) }
+  const businessId = process.argv[2] || process.env.BUSINESS_ID
+  const filter = businessId ? { businessId } : {}
+  const kb = await KnowledgeBase.findOne(filter)
+  if (!kb) { console.error('No KB found!' + (businessId ? ` (businessId: ${businessId})` : ' Pass businessId as argument or set BUSINESS_ID env var')); process.exit(1) }
 
   console.log(`Found KB: ${kb._id} (business: ${kb.businessId})\n`)
 

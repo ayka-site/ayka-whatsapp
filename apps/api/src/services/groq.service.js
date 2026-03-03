@@ -2,33 +2,163 @@ const Groq   = require('groq-sdk')
 const logger = require('../utils/logger')
 
 /**
- * groq.service.js v4.0 — Groq LLM API with production-grade retry
+ * groq.service.js v5.0 — Production-grade LLM with concurrency, multi-key, model tiering, Azure fallback
  *
- * Fixes over v3.0:
- *   1. Max 3 retry attempts (was unbounded recursive calls → could loop forever)
- *   2. Exponential backoff with jitter (not fixed delays)
- *   3. Uses pino logger (was console.error)
- *   4. Timeout per request (30s)
- *   5. Respects Retry-After header from Groq on 429s
+ * Features over v4.0:
+ *   1. Concurrency limiter (semaphore) — prevents overwhelming the API
+ *   2. Multi-key rotation (GROQ_API_KEYS comma-separated)
+ *   3. Model tiering: fast model for short convos, default model for longer
+ *   4. Azure OpenAI fallback when all Groq keys exhausted
+ *   5. Enhanced stats (model usage, fallback metrics, concurrency tracking)
  */
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+// ─── MULTI-KEY ROTATION WITH HEALTH TRACKING ────────────────────
+const apiKeys = (process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '').split(',').map(k => k.trim()).filter(Boolean)
+if (apiKeys.length === 0) {
+  logger.error('No Groq API keys found. Set GROQ_API_KEYS or GROQ_API_KEY')
+}
 
-const MAX_RETRIES      = 3
-const BASE_DELAY_MS    = 2000
-const MAX_DELAY_MS     = 30000
-const REQUEST_TIMEOUT  = 30000 // 30 seconds
+const groqClients = apiKeys.map(key => new Groq({ apiKey: key }))
+const KEY_COOLDOWN_MS = 60000 // 1 minute cooldown after rate limit
+const keyHealth = apiKeys.map(() => ({ healthy: true, cooldownUntil: 0, rateLimitHits: 0 }))
+let currentKeyIndex = 0
 
-// Retryable HTTP status codes
+function getNextClient() {
+  if (groqClients.length === 0) throw new Error('No Groq API keys configured')
+  const now = Date.now()
+  // Try to find a healthy key using round-robin
+  for (let i = 0; i < groqClients.length; i++) {
+    const idx = (currentKeyIndex + i) % groqClients.length
+    const health = keyHealth[idx]
+    // Re-enable keys whose cooldown has expired
+    if (!health.healthy && now >= health.cooldownUntil) {
+      health.healthy = true
+    }
+    if (health.healthy) {
+      currentKeyIndex = idx + 1
+      return { client: groqClients[idx], keyIndex: idx }
+    }
+  }
+  // All keys in cooldown — force-use the one with earliest cooldown
+  let earliest = 0
+  for (let i = 1; i < keyHealth.length; i++) {
+    if (keyHealth[i].cooldownUntil < keyHealth[earliest].cooldownUntil) earliest = i
+  }
+  currentKeyIndex = earliest + 1
+  keyHealth[earliest].healthy = true
+  return { client: groqClients[earliest], keyIndex: earliest }
+}
+
+function markKeyRateLimited(keyIndex) {
+  if (keyIndex >= 0 && keyIndex < keyHealth.length) {
+    keyHealth[keyIndex].healthy = false
+    keyHealth[keyIndex].cooldownUntil = Date.now() + KEY_COOLDOWN_MS
+    keyHealth[keyIndex].rateLimitHits++
+  }
+}
+
+// ─── MODEL TIERING ──────────────────────────────────────────────
+const MODEL_FAST    = process.env.GROQ_MODEL_FAST || 'llama-3.1-8b-instant'
+const MODEL_DEFAULT = process.env.GROQ_MODEL_DEFAULT || 'llama-3.3-70b-versatile'
+
+function selectModel(recentMessages) {
+  // Use fast model for short conversations (≤ 3 messages)
+  return recentMessages.length <= 3 ? MODEL_FAST : MODEL_DEFAULT
+}
+
+// ─── CONCURRENCY LIMITER (Semaphore) ────────────────────────────
+const MAX_CONCURRENT = parseInt(process.env.LLM_MAX_CONCURRENCY) || 5
+let activeCalls = 0
+const waitQueue = []
+
+function acquireSemaphore() {
+  return new Promise(resolve => {
+    if (activeCalls < MAX_CONCURRENT) {
+      activeCalls++
+      return resolve()
+    }
+    waitQueue.push(resolve)
+  })
+}
+
+function releaseSemaphore() {
+  activeCalls--
+  if (waitQueue.length > 0) {
+    activeCalls++
+    const next = waitQueue.shift()
+    next()
+  }
+}
+
+// ─── AZURE OPENAI FALLBACK ──────────────────────────────────────
+let azureClient = null
+function getAzureClient() {
+  if (azureClient) return azureClient
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT
+  const apiKey   = process.env.AZURE_OPENAI_API_KEY
+  if (!endpoint || !apiKey) return null
+  try {
+    const { AzureOpenAI } = require('openai')
+    azureClient = new AzureOpenAI({
+      endpoint,
+      apiKey,
+      apiVersion: '2024-08-01-preview',
+    })
+    return azureClient
+  } catch (err) {
+    logger.warn({ err }, 'Azure OpenAI client init failed — fallback disabled')
+    return null
+  }
+}
+
+const MAX_RETRIES   = 3
+const BASE_DELAY_MS = 2000
+const MAX_DELAY_MS  = 30000
+
 const RETRYABLE_CODES = new Set([429, 500, 502, 503, 504])
 
+// ─── STATS ──────────────────────────────────────────────────────
+const groqStats = {
+  totalCalls: 0,
+  successfulCalls: 0,
+  failedCalls: 0,
+  rateLimitHits: 0,
+  retries: 0,
+  lastRateLimitAt: null,
+  _latencySum: 0,
+  resetAt: new Date(),
+  // v5.0 additions
+  modelUsage: {},           // { 'llama-3.3-70b-versatile': 42, ... }
+  fallbackCalls: 0,
+  fallbackSuccesses: 0,
+  peakConcurrency: 0,
+  queuedCalls: 0,
+}
+
+function getGroqStats() {
+  return {
+    totalCalls:       groqStats.totalCalls,
+    successfulCalls:  groqStats.successfulCalls,
+    failedCalls:      groqStats.failedCalls,
+    rateLimitHits:    groqStats.rateLimitHits,
+    retries:          groqStats.retries,
+    lastRateLimitAt:  groqStats.lastRateLimitAt,
+    avgLatencyMs:     groqStats.successfulCalls > 0 ? Math.round(groqStats._latencySum / groqStats.successfulCalls) : 0,
+    trackingSince:    groqStats.resetAt,
+    // v5.0
+    modelUsage:       groqStats.modelUsage,
+    fallbackCalls:    groqStats.fallbackCalls,
+    fallbackSuccesses: groqStats.fallbackSuccesses,
+    concurrency:      { current: activeCalls, max: MAX_CONCURRENT, peak: groqStats.peakConcurrency, queued: waitQueue.length },
+    keyCount:         groqClients.length,
+    keyHealth:        keyHealth.map((k, i) => ({ key: i + 1, healthy: k.healthy, rateLimitHits: k.rateLimitHits })),
+  }
+}
+
 /**
- * callGroq — send chat completion request with retry + exponential backoff
+ * callGroq — send chat completion request
  *
- * @param {string} systemPrompt — the full system prompt
- * @param {Array}  recentMessages — array of {role, content} message objects
- * @returns {string} — the AI response text
- * @throws {Error} — after all retries exhausted
+ * v5.0: concurrency-limited, multi-key, model-tiered, with Azure fallback
  */
 async function callGroq(systemPrompt, recentMessages) {
   const messages = [
@@ -39,60 +169,105 @@ async function callGroq(systemPrompt, recentMessages) {
     })),
   ]
 
+  const model = selectModel(recentMessages)
+  groqStats.totalCalls++
+  groqStats.modelUsage[model] = (groqStats.modelUsage[model] || 0) + 1
+
+  // Acquire concurrency slot
+  await acquireSemaphore()
+  if (activeCalls > groqStats.peakConcurrency) groqStats.peakConcurrency = activeCalls
+
+  const callStart = Date.now()
   let lastError = null
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const response = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages,
-        max_tokens: 400,
-        temperature: 0.7,
-      })
+  try {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { client: groq, keyIndex } = getNextClient()
+        const response = await groq.chat.completions.create({
+          model,
+          messages,
+          max_tokens: 400,
+          temperature: 0.7,
+        })
 
-      const content = response.choices?.[0]?.message?.content
-      if (!content) {
-        logger.warn({ attempt }, 'Groq returned empty response')
-        throw new Error('Groq returned empty response')
+        const content = response.choices?.[0]?.message?.content
+        if (!content) {
+          logger.warn({ attempt, model }, 'Groq returned empty response')
+          throw new Error('Groq returned empty response')
+        }
+
+        groqStats.successfulCalls++
+        groqStats._latencySum += (Date.now() - callStart)
+        return content
+
+      } catch (error) {
+        lastError = error
+        const status = error.status || error.statusCode || 0
+
+        if (status && !RETRYABLE_CODES.has(status)) {
+          logger.error({ status, message: error.message, attempt, model }, 'Groq non-retryable error')
+          groqStats.failedCalls++
+          throw error
+        }
+
+        if (status === 429) {
+          groqStats.rateLimitHits++
+          groqStats.lastRateLimitAt = new Date()
+          // Mark the specific key as rate-limited so rotation skips it
+          const lastKeyIdx = ((currentKeyIndex - 1) % groqClients.length + groqClients.length) % groqClients.length
+          markKeyRateLimited(lastKeyIdx)
+        }
+
+        if (attempt === MAX_RETRIES) break
+
+        groqStats.retries++
+
+        let delayMs
+        if (status === 429 && error.headers?.['retry-after']) {
+          delayMs = parseInt(error.headers['retry-after'], 10) * 1000
+        } else {
+          delayMs = Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS)
+          delayMs += Math.random() * 1000
+        }
+
+        logger.warn({ status, attempt, delayMs: Math.round(delayMs), model }, 'Groq retrying')
+        await new Promise(resolve => setTimeout(resolve, delayMs))
       }
-
-      return content
-
-    } catch (error) {
-      lastError = error
-      const status = error.status || error.statusCode || 0
-
-      // Non-retryable HTTP errors (401 bad key, 403 forbidden, 404 not found, 422 invalid) →
-      // fail immediately on any attempt. The `status &&` guard ensures network errors
-      // (status 0, no HTTP response) still go through the retry loop.
-      if (status && !RETRYABLE_CODES.has(status)) {
-        logger.error({ status, message: error.message, attempt }, 'Groq non-retryable error')
-        throw error
-      }
-
-      // Last attempt → no more retries
-      if (attempt === MAX_RETRIES) {
-        logger.error({ status, message: error.message, attempt }, 'Groq all retries exhausted')
-        throw error
-      }
-
-      // Calculate delay: respect Retry-After header for 429, else exponential backoff
-      let delayMs
-      if (status === 429 && error.headers?.['retry-after']) {
-        delayMs = parseInt(error.headers['retry-after'], 10) * 1000
-      } else {
-        // Exponential backoff with jitter: 2s, 4s, 8s + random 0-1s
-        delayMs = Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS)
-        delayMs += Math.random() * 1000
-      }
-
-      logger.warn({ status, attempt, delayMs: Math.round(delayMs) }, 'Groq retrying after error')
-      await new Promise(resolve => setTimeout(resolve, delayMs))
     }
-  }
 
-  // Should never reach here, but just in case
-  throw lastError || new Error('Groq call failed with unknown error')
+    // ── Azure Fallback ──
+    const azure = getAzureClient()
+    if (azure) {
+      groqStats.fallbackCalls++
+      logger.info('Falling back to Azure OpenAI')
+      try {
+        const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
+        const response = await azure.chat.completions.create({
+          model: deployment,
+          messages,
+          max_tokens: 400,
+          temperature: 0.7,
+        })
+
+        const content = response.choices?.[0]?.message?.content
+        if (content) {
+          groqStats.fallbackSuccesses++
+          groqStats.successfulCalls++
+          groqStats._latencySum += (Date.now() - callStart)
+          return content
+        }
+      } catch (azureErr) {
+        logger.error({ err: azureErr }, 'Azure OpenAI fallback also failed')
+      }
+    }
+
+    groqStats.failedCalls++
+    throw lastError || new Error('All LLM providers failed')
+
+  } finally {
+    releaseSemaphore()
+  }
 }
 
-module.exports = { callGroq }
+module.exports = { callGroq, getGroqStats }

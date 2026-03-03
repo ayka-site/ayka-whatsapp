@@ -1,7 +1,7 @@
 // Mongoose schema for 'conversations' collection.
 // Fields exactly:
 // businessId: ObjectId ref 'Business' required
-// resellerId: ObjectId ref 'Reseller' required
+// resellerId: ObjectId ref 'Reseller' default null (optional for direct clients)
 // contactId: ObjectId ref 'Contact' required
 // phone: String required
 // status: String enum ['active','handed_off','resolved','expired'] default 'active'
@@ -23,7 +23,7 @@ const { Schema } = mongoose
 
 const conversationSchema = new Schema({
   businessId: { type: Schema.Types.ObjectId, ref: 'Business', required: true },
-  resellerId: { type: Schema.Types.ObjectId, ref: 'Reseller', required: true },
+  resellerId: { type: Schema.Types.ObjectId, ref: 'Reseller', default: null },
   contactId: { type: Schema.Types.ObjectId, ref: 'Contact', required: true },
   phone: { type: String, required: true },
   status: { type: String, enum: ['active','handed_off','resolved','expired'], default: 'active' },

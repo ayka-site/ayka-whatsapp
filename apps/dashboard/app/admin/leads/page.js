@@ -55,7 +55,7 @@ export default function AdminLeads() {
           style={{ color: 'var(--color-text)' }}
         >
           <option value="">All Clients</option>
-          {(clientList?.clients || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(Array.isArray(clientList) ? clientList : []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
         <div className="flex gap-1">
           {['', ...scores].map(s => (

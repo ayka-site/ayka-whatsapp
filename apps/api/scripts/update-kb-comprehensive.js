@@ -19,8 +19,10 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════
   // STEP 1: Read current KB
   // ═══════════════════════════════════════════════════════════════
-  const kb = await KnowledgeBase.findOne({})
-  if (!kb) { console.error('No KB found!'); process.exit(1) }
+  const businessId = process.argv[2] || process.env.BUSINESS_ID
+  const filter = businessId ? { businessId } : {}
+  const kb = await KnowledgeBase.findOne(filter)
+  if (!kb) { console.error('No KB found!' + (businessId ? ` (businessId: ${businessId})` : ' Pass businessId as argument or set BUSINESS_ID env var')); process.exit(1) }
   console.log(`KB _id: ${kb._id}\n`)
 
   // ═══════════════════════════════════════════════════════════════

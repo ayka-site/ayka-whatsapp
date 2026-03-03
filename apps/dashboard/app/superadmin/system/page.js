@@ -112,13 +112,7 @@ export default function SuperAdminSystem() {
           {/* Groq LLM Stats */}
           {apiUsage?.groq && (
             <div className="rounded-xl border border-white/10 p-6" style={{ background: 'var(--color-surface)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>🧠 LLM Engine Stats <span className="text-[10px] font-normal opacity-40 ml-2">(since last restart)</span></h3>
-                <div className="flex gap-2">
-                  {apiUsage.groq.azureFallback && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Azure Fallback ✓</span>}
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10" style={{ color: 'var(--color-text)' }}>{apiUsage.groq.keyCount || 1} API key{(apiUsage.groq.keyCount || 1) > 1 ? 's' : ''}</span>
-                </div>
-              </div>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text)' }}>🧠 Groq LLM Stats <span className="text-[10px] font-normal opacity-40 ml-2">(since last restart)</span></h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-xs opacity-40">Total Calls</p>
@@ -140,9 +134,9 @@ export default function SuperAdminSystem() {
                 </div>
               </div>
 
-              {/* Rate Limit + Concurrency */}
+              {/* Rate Limit Section */}
               <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-xs opacity-40">🚨 Rate Limit Hits</p>
                     <p className="text-lg font-bold" style={{ color: apiUsage.groq.rateLimitHits > 0 ? '#ef4444' : '#22c55e' }}>
@@ -155,44 +149,58 @@ export default function SuperAdminSystem() {
                     <p className="text-lg font-bold" style={{ color: apiUsage.groq.retries > 0 ? '#f59e0b' : 'var(--color-text)' }}>{apiUsage.groq.retries || 0}</p>
                   </div>
                   <div>
-                    <p className="text-xs opacity-40">Last Rate-Limit</p>
+                    <p className="text-xs opacity-40">Last Rate-Limit At</p>
                     <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                       {apiUsage.groq.lastRateLimitAt ? relativeTime(apiUsage.groq.lastRateLimitAt) : 'Never'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs opacity-40">Concurrency</p>
-                    <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      {apiUsage.groq.concurrency?.active || 0}/{apiUsage.groq.concurrency?.max || 5} active
-                      {apiUsage.groq.concurrency?.queued > 0 && <span className="text-yellow-400 ml-1">(+{apiUsage.groq.concurrency.queued} queued)</span>}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Model Usage + Fallback */}
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs opacity-40">⚡ Fast Model</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(apiUsage.groq.modelUsage?.fast || 0)} <span className="text-xs font-normal opacity-40">calls</span></p>
-                  </div>
-                  <div>
-                    <p className="text-xs opacity-40">🧠 Full Model</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(apiUsage.groq.modelUsage?.default || 0)} <span className="text-xs font-normal opacity-40">calls</span></p>
-                  </div>
-                  <div>
-                    <p className="text-xs opacity-40">🔄 Fallback Calls</p>
-                    <p className="text-lg font-bold" style={{ color: apiUsage.groq.fallbackCalls > 0 ? '#3b82f6' : 'var(--color-text)' }}>{apiUsage.groq.fallbackCalls || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs opacity-40">Fallback Success</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-                      {apiUsage.groq.fallbackCalls > 0 ? `${((apiUsage.groq.fallbackSuccesses / apiUsage.groq.fallbackCalls) * 100).toFixed(0)}%` : '—'}
-                    </p>
+              {/* Concurrency Section (v5.0) */}
+              {apiUsage.groq.concurrency && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-xs font-semibold mb-2 opacity-60">⚡ Concurrency</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div><p className="text-xs opacity-40">Active</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{apiUsage.groq.concurrency.current}</p></div>
+                    <div><p className="text-xs opacity-40">Max Slots</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{apiUsage.groq.concurrency.max}</p></div>
+                    <div><p className="text-xs opacity-40">Peak</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{apiUsage.groq.concurrency.peak}</p></div>
+                    <div><p className="text-xs opacity-40">Queued</p><p className="text-lg font-bold" style={{ color: apiUsage.groq.concurrency.queued > 0 ? '#f59e0b' : 'var(--color-text)' }}>{apiUsage.groq.concurrency.queued}</p></div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Model Usage (v5.0) */}
+              {apiUsage.groq.modelUsage && Object.keys(apiUsage.groq.modelUsage).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-xs font-semibold mb-2 opacity-60">🧩 Model Usage</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    {Object.entries(apiUsage.groq.modelUsage).map(([model, count]) => (
+                      <div key={model}>
+                        <p className="text-xs opacity-40 truncate" title={model}>{model}</p>
+                        <p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(count)}</p>
+                      </div>
+                    ))}
+                    {apiUsage.groq.keyCount && (
+                      <div><p className="text-xs opacity-40">API Keys</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{apiUsage.groq.keyCount}</p></div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback Metrics (v5.0) */}
+              {(apiUsage.groq.fallbackCalls > 0 || apiUsage.groq.fallbackSuccesses > 0) && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-xs font-semibold mb-2 opacity-60">🔄 Azure Fallback</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div><p className="text-xs opacity-40">Fallback Calls</p><p className="text-lg font-bold" style={{ color: '#f59e0b' }}>{apiUsage.groq.fallbackCalls}</p></div>
+                    <div><p className="text-xs opacity-40">Fallback Successes</p><p className="text-lg font-bold" style={{ color: '#22c55e' }}>{apiUsage.groq.fallbackSuccesses}</p></div>
+                    <div><p className="text-xs opacity-40">Fallback Rate</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+                      {apiUsage.groq.totalCalls > 0 ? `${((apiUsage.groq.fallbackCalls / apiUsage.groq.totalCalls) * 100).toFixed(1)}%` : '0%'}
+                    </p></div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

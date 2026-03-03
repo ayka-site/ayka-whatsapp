@@ -18,9 +18,12 @@ const { Schema } = mongoose
 
 const contactSchema = new Schema({
   businessId: { type: Schema.Types.ObjectId, ref: 'Business', required: true },
-  resellerId: { type: Schema.Types.ObjectId, ref: 'Reseller', required: true },
-  phone:      { type: String, required: true },
+  resellerId: { type: Schema.Types.ObjectId, ref: 'Reseller', default: null },
+  phone:      { type: String, default: null },
   name:       { type: String, default: null },
+  email:      { type: String, default: null },
+  webVisitorId: { type: String, default: null },
+  source:     { type: String, enum: ['whatsapp', 'web_widget', 'manual'], default: 'whatsapp' },
   profile: {
     studentName: { type: String },
     interestedClass: { type: String },
@@ -34,7 +37,8 @@ const contactSchema = new Schema({
   totalConversations: { type: Number, default: 0 }
 }, { timestamps: true })
 
-contactSchema.index({ businessId: 1, phone: 1 }, { unique: true })
+contactSchema.index({ businessId: 1, phone: 1 }, { unique: true, partialFilterExpression: { phone: { $type: 'string' } } })
+contactSchema.index({ businessId: 1, webVisitorId: 1 }, { sparse: true })
 contactSchema.index({ resellerId: 1, lastMessageAt: -1 })
 
 module.exports = mongoose.model('Contact', contactSchema)

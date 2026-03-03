@@ -21,6 +21,33 @@ export default function AdminDashboard() {
   const { data: clients } = useFetch('/api/admin/clients', [])
 
   const s = stats || {}
+  const v = (o) => (o && typeof o === 'object') ? (o.value ?? 0) : (o ?? 0)
+  // ── Transform API responses to chart-compatible shapes ──
+  const leadsData = (Array.isArray(leadsByClient) ? leadsByClient : []).map(d => ({ ...d, leads: (d.hot || 0) + (d.warm || 0) + (d.cold || 0) }))
+  const scoreData = portfolioScore && !Array.isArray(portfolioScore) && typeof portfolioScore === 'object'
+    ? [{ name: 'Hot', value: portfolioScore.hot || 0 }, { name: 'Warm', value: portfolioScore.warm || 0 }, { name: 'Cold', value: portfolioScore.cold || 0 }].filter(d => d.value > 0)
+    : (Array.isArray(portfolioScore) ? portfolioScore : [])
+  const volData = (Array.isArray(platformVol?.current) ? platformVol.current : []).map(d => ({ date: d._id, leads: d.count }))
+  const funnelData = (() => {
+    const arr = Array.isArray(funnel) ? funnel : []
+    const t = arr.reduce((a, d) => ({ total: a.total + (d.total || 0), dc: a.dc + (d.dataCollected || 0), vc: a.vc + (d.visitConfirmed || 0), ho: a.ho + (d.handoff || 0) }), { total: 0, dc: 0, vc: 0, ho: 0 })
+    const m = t.total || 1
+    return [{ stage: 'Total Leads', value: t.total, pct: 100 }, { stage: 'Data Collected', value: t.dc, pct: Math.round(t.dc / m * 100) }, { stage: 'Visit Confirmed', value: t.vc, pct: Math.round(t.vc / m * 100) }, { stage: 'Handoff', value: t.ho, pct: Math.round(t.ho / m * 100) }]
+  })()
+  const growthData = (() => {
+    const raw = Array.isArray(monthlyGrowth?.data) ? monthlyGrowth.data : Array.isArray(monthlyGrowth) ? monthlyGrowth : []
+    const byM = {}
+    raw.forEach(d => { const m = d._id?.month || d.month; if (m) byM[m] = (byM[m] || 0) + (d.count || d.leads || 0) })
+    return Object.entries(byM).sort().map(([month, leads]) => ({ month, leads }))
+  })()
+  const topData = (() => {
+    const arr = Array.isArray(topClients) ? topClients : []
+    const max = arr.reduce((m, c) => Math.max(m, c.hotCount || c.leads || 0), 1)
+    return arr.map(c => ({ name: c.name, leads: c.hotCount || c.leads || 0, pct: Math.round((c.hotCount || c.leads || 0) / max * 100) }))
+  })()
+  const msgData = (Array.isArray(msgByDay) ? msgByDay : []).map(d => ({ day: d.day, inbound: d.count || d.inbound || 0, outbound: d.outbound || 0 }))
+  const activityEvents = (Array.isArray(activity) ? activity : []).map(a => ({ type: a.type === 'score_upgraded' ? 'hot_lead' : a.type, description: a.description, client: '', time: a.timestamp }))
+  const clientHealth = (Array.isArray(clients) ? clients : []).map(c => ({ ...c, totalLeads: c.leads?.total || 0, hotLeads: c.leads?.hot || 0, visitsConfirmed: 0, avgScore: null }))
 
   return (
     <DashboardLayout requiredRole="reseller">
@@ -28,19 +55,19 @@ export default function AdminDashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <StatCard label="Total Clients" value={formatNumber(s.totalClients)} loading={sL} />
-        <StatCard label="Active Bots" value={formatNumber(s.activeBots)} loading={sL} />
-        <StatCard label="Total Leads" value={formatNumber(s.totalLeads)} loading={sL} />
-        <StatCard label="Hot Leads" value={formatNumber(s.hotLeads)} loading={sL} />
-        <StatCard label="Visits Confirmed" value={formatNumber(s.visitsConfirmed)} loading={sL} />
-        <StatCard label="Avg Score" value={s.avgScore != null ? s.avgScore.toFixed(1) : '—'} loading={sL} />
+        <StatCard label="Active Clients" value={formatNumber(v(s.activeClients))} loading={sL} />
+        <StatCard label="Total Leads" value={formatNumber(v(s.totalLeads))} loading={sL} />
+        <StatCard label="Hot Leads" value={formatNumber(v(s.hotLeads))} loading={sL} />
+        <StatCard label="Visits Confirmed" value={formatNumber(v(s.visitsConfirmed))} loading={sL} />
+        <StatCard label="Handoffs" value={formatNumber(v(s.handoffs))} loading={sL} />
+        <StatCard label="Bot Uptime" value={`${v(s.botUptime) || 99.9}%`} loading={sL} />
       </div>
 
       {/* Row 1 — Leads per Client + Portfolio Score */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Leads Per Client" subtitle="Current portfolio">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={leadsByClient?.data || []} layout="vertical">
+            <BarChart data={leadsData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis dataKey="name" type="category" width={100} tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }} />
@@ -52,8 +79,8 @@ export default function AdminDashboard() {
         <ChartWrapper title="Portfolio Score Distribution" subtitle="All clients combined">
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={portfolioScore?.data || []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                {(portfolioScore?.data || []).map((_, i) => <Cell key={i} fill={['var(--score-hot)', 'var(--score-warm)', 'var(--score-cold)'][i] || COLORS[i]} />)}
+              <Pie data={scoreData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                {scoreData.map((_, i) => <Cell key={i} fill={['var(--score-hot)', 'var(--score-warm)', 'var(--score-cold)'][i] || COLORS[i]} />)}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -65,7 +92,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Platform Volume" subtitle="Daily leads across all bots">
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={platformVol?.data || []}>
+            <LineChart data={volData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -76,7 +103,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
         <ChartWrapper title="Conversion Funnel" subtitle="Aggregated across all clients">
           <div className="space-y-3 px-4 py-2">
-            {(funnel?.data || []).map((step, i) => (
+            {funnelData.map((step, i) => (
               <div key={i}>
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: 'var(--color-text)' }}>{step.stage}</span>
@@ -95,7 +122,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Monthly Growth" subtitle="Lead acquisition MoM">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={monthlyGrowth?.data || []}>
+            <BarChart data={growthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -106,7 +133,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
         <ChartWrapper title="Top Clients" subtitle="By lead volume">
           <div className="space-y-2 px-4">
-            {(topClients?.data || []).map((c, i) => (
+            {topData.map((c, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-xs font-mono opacity-30 w-4">{i + 1}</span>
                 <div className="flex-1">
@@ -124,7 +151,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Messages by Day" subtitle="Across all bots">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={msgByDay?.data || []}>
+            <BarChart data={msgData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -137,7 +164,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
         <ChartWrapper title="Recent Activity" subtitle="Across all clients">
           <div className="max-h-[260px] overflow-y-auto px-4 space-y-2">
-            {(activity?.events || []).slice(0, 20).map((ev, i) => (
+            {activityEvents.slice(0, 20).map((ev, i) => (
               <div key={i} className="flex items-start gap-2 text-xs">
                 <span className="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: ev.type === 'hot_lead' ? 'var(--score-hot)' : ev.type === 'handoff' ? '#f59e0b' : 'var(--color-primary)' }} />
                 <div className="flex-1 min-w-0">
@@ -166,7 +193,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {(clients?.clients || []).map(c => (
+            {clientHealth.map(c => (
               <tr key={c._id} className="border-b border-white/5 hover:bg-white/5">
                 <td className="p-2 font-medium" style={{ color: 'var(--color-text)' }}>{c.name}</td>
                 <td className="p-2">{formatNumber(c.totalLeads)}</td>

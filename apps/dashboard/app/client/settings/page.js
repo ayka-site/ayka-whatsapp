@@ -29,8 +29,8 @@ export default function ClientSettings() {
     setSaving(false)
   }
 
-  const kb = data?.knowledgeBase || {}
-  const bot = data?.business || {}
+  const kb = data?.school || {}
+  const bot = data?.bot || {}
 
   return (
     <DashboardLayout requiredRole="client">
@@ -46,9 +46,9 @@ export default function ClientSettings() {
             </div>
           ) : (
             <div className="space-y-3 text-sm">
-              <Field label="Name" value={kb.schoolName || bot.name || '—'} />
-              <Field label="Phone" value={kb.contactNumber || '—'} />
-              <Field label="Address" value={kb.fullAddress || '—'} />
+              <Field label="Name" value={kb.name || bot.name || '—'} />
+              <Field label="Phone" value={kb.contact || '—'} />
+              <Field label="Address" value={kb.address || '—'} />
               <Field label="Timings" value={kb.timings || '—'} />
               <Field label="Board" value={kb.board || '—'} />
               <Field label="Classes" value={Array.isArray(kb.classes) ? kb.classes.join(', ') : (kb.classes || '—')} />

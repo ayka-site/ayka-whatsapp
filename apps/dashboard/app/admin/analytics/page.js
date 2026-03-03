@@ -15,6 +15,33 @@ export default function AdminAnalytics() {
   const { data: growth } = useFetch('/api/admin/charts/monthly-growth', [])
   const { data: topClients } = useFetch('/api/admin/charts/top-clients', [])
 
+  // ── Transform API responses to chart shapes ──
+  const monthlyData = (() => {
+    const raw = Array.isArray(monthly) ? monthly : []
+    const byMonth = {}
+    raw.forEach(d => { const m = d._id?.month; if (!m) return; if (!byMonth[m]) byMonth[m] = { month: m, hot: 0, warm: 0, cold: 0, total: 0 }; byMonth[m][d._id?.score] = d.count; byMonth[m].total += d.count })
+    return Object.values(byMonth).sort((a, b) => a.month.localeCompare(b.month)).map(m => ({ month: m.month, avgScore: m.total ? Math.round((m.hot * 3 + m.warm * 2 + m.cold) / m.total * 10) / 10 : 0, hotPct: m.total ? Math.round(m.hot / m.total * 100) : 0 }))
+  })()
+  const avgTimeData = (Array.isArray(avgTime) ? avgTime : []).map(d => ({ client: d.name, avgDays: d.avgMessages }))
+  const funnelData = (() => {
+    const arr = Array.isArray(funnel) ? funnel : []
+    const t = arr.reduce((a, d) => ({ total: a.total + (d.total || 0), dc: a.dc + (d.dataCollected || 0), vc: a.vc + (d.visitConfirmed || 0), ho: a.ho + (d.handoff || 0) }), { total: 0, dc: 0, vc: 0, ho: 0 })
+    const m = t.total || 1
+    return [{ stage: 'Total Leads', value: t.total, pct: 100 }, { stage: 'Data Collected', value: t.dc, pct: Math.round(t.dc / m * 100) }, { stage: 'Visit Confirmed', value: t.vc, pct: Math.round(t.vc / m * 100) }, { stage: 'Handoff', value: t.ho, pct: Math.round(t.ho / m * 100) }]
+  })()
+  const msgDayData = (Array.isArray(msgDay) ? msgDay : []).map(d => ({ day: d.day, inbound: d.count || d.inbound || 0, outbound: d.outbound || 0 }))
+  const growthData = (() => {
+    const raw = Array.isArray(growth?.data) ? growth.data : Array.isArray(growth) ? growth : []
+    const byM = {}
+    raw.forEach(d => { const m = d._id?.month || d.month; if (m) byM[m] = (byM[m] || 0) + (d.count || d.leads || 0) })
+    return Object.entries(byM).sort().map(([month, leads]) => ({ month, leads }))
+  })()
+  const topData = (() => {
+    const arr = Array.isArray(topClients) ? topClients : []
+    const max = arr.reduce((m, c) => Math.max(m, c.hotCount || c.leads || 0), 1)
+    return arr.map(c => ({ name: c.name, leads: c.hotCount || c.leads || 0, pct: Math.round((c.hotCount || c.leads || 0) / max * 100) }))
+  })()
+
   return (
     <DashboardLayout requiredRole="reseller">
       <TopBar title="Analytics" breadcrumbs={['Home', 'Analytics']} />
@@ -23,7 +50,7 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Score Quality Trend" subtitle="Monthly avg lead score across portfolio">
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={monthly?.data || []}>
+            <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -37,7 +64,7 @@ export default function AdminAnalytics() {
 
         <ChartWrapper title="Avg Time to Score" subtitle="Days from first contact to hot score">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={avgTime?.data || []}>
+            <BarChart data={avgTimeData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="client" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -52,7 +79,7 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Conversion Funnel Per Client" subtitle="Aggregated pipeline stages">
           <div className="space-y-3 px-4 py-2">
-            {(funnel?.data || []).map((step, i) => (
+            {funnelData.map((step, i) => (
               <div key={i}>
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: 'var(--color-text)' }}>{step.stage}</span>
@@ -68,7 +95,7 @@ export default function AdminAnalytics() {
 
         <ChartWrapper title="Messages by Day of Week" subtitle="Inbound vs outbound">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={msgDay?.data || []}>
+            <BarChart data={msgDayData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -85,7 +112,7 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Monthly Growth" subtitle="MoM lead acquisition">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={growth?.data || []}>
+            <BarChart data={growthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
@@ -97,7 +124,7 @@ export default function AdminAnalytics() {
 
         <ChartWrapper title="Top Performing Clients" subtitle="By lead volume and quality">
           <div className="space-y-3 px-4">
-            {(topClients?.data || []).map((c, i) => (
+            {topData.map((c, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-xs font-mono opacity-30 w-5">{i + 1}</span>
                 <div className="flex-1">

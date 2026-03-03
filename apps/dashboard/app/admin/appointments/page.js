@@ -32,7 +32,7 @@ export default function AdminAppointments() {
         <select value={client} onChange={e => setClient(e.target.value)}
           className="px-3 py-1.5 text-xs rounded-lg border border-white/10 bg-transparent" style={{ color: 'var(--color-text)' }}>
           <option value="">All Clients</option>
-          {(clientList?.clients || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(Array.isArray(clientList) ? clientList : []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
         {['', ...statuses].map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}

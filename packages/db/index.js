@@ -5,5 +5,6 @@ module.exports = {
   Conversation:  require('./models/Conversation'),
   Message:       require('./models/Message'),
   KnowledgeBase: require('./models/KnowledgeBase'),
-  Reseller:      require('./models/Reseller.js'),
+  Reseller:      require('./models/Reseller'),
+  User:          require('./models/User'),
 }

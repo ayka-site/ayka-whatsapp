@@ -41,7 +41,7 @@ export default function SuperAdminLeads() {
         <select value={reseller} onChange={e => { setReseller(e.target.value); setPage(1) }}
           className="px-3 py-1.5 text-xs rounded-lg border border-white/10 bg-transparent" style={{ color: 'var(--color-text)' }}>
           <option value="">All Resellers</option>
-          {(resellerList?.resellers || []).map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
+          {(Array.isArray(resellerList) ? resellerList : []).map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
         </select>
         <div className="flex gap-1">
           {['', ...scores].map(s => (

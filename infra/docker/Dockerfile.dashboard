@@ -1,0 +1,27 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy workspace root package files
+COPY package.json package-lock.json ./
+
+# Copy workspace packages
+COPY packages/ ./packages/
+
+# Copy dashboard app
+COPY apps/dashboard/ ./apps/dashboard/
+
+# Install dependencies
+RUN npm install --workspace=apps/dashboard --include-workspace-root
+
+# Build the dashboard
+ARG NEXT_PUBLIC_API_URL=https://api.ayka.site
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+WORKDIR /app/apps/dashboard
+RUN npx next build
+
+EXPOSE 3001
+
+ENV PORT=3001
+CMD ["npx", "next", "start", "-p", "3001"]

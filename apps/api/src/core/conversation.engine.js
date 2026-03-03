@@ -272,6 +272,8 @@ async function processMessage(req) {
         },
         flowState: session.flowState,
       })
+      // Increment contact's conversation counter
+      Contact.updateOne({ _id: contact._id }, { $inc: { totalConversations: 1 } }).catch(() => {})
     }
 
     session.conversationId = conversation._id.toString()

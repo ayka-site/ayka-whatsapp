@@ -35,12 +35,12 @@ async function resolveTenant(req, res, next) {
       resellerId:    business.resellerId?.toString(),
       vertical:      business.vertical,
       settings:      business.settings,
-      accessToken:   decrypt(business.whatsapp.accessToken),
+      accessToken:   business.whatsapp.accessToken,
       phoneNumberId: business.whatsapp.phoneNumberId
     }
 
     // Upstash syntax: { ex: seconds } NOT 'EX', seconds
-    await redis.set(cacheKey, JSON.stringify(tenant), { ex: 3600 })
+    await redis.set(cacheKey, JSON.stringify(tenant), { ex: 600 })
     req.tenant = tenant
     next()
   } catch (err) {

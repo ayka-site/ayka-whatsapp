@@ -19,6 +19,7 @@ const NAV_ITEMS = {
     { href: '/admin/conversations', label: 'Conversations', icon: '💬' },
     { href: '/admin/appointments', label: 'Appointments', icon: '📅' },
     { href: '/admin/analytics', label: 'Analytics', icon: '📈' },
+    { href: '/admin/widget', label: 'Web Widget', icon: '🔌' },
     { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
   ],
   superadmin: [

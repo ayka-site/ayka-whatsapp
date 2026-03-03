@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AyKa Widget Demo — Sant Pathik Vidyalaya</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      color: white;
+    }
+    .hero h1 { font-size: 2.5rem; margin-bottom: 12px; }
+    .hero p { font-size: 1.1rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+    .content {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    .card h3 { color: #667eea; margin-bottom: 12px; font-size: 1.1rem; }
+    .card p { font-size: 0.95rem; line-height: 1.6; color: #555; }
+    .card ul { list-style: none; padding: 0; }
+    .card ul li { padding: 6px 0; font-size: 0.9rem; color: #555; }
+    .card ul li::before { content: '✓ '; color: #667eea; font-weight: bold; }
+    .badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      margin-top: 8px;
+    }
+    .instructions {
+      background: white;
+      grid-column: 1 / -1;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    .instructions h3 { color: #667eea; margin-bottom: 16px; }
+    .code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 16px 20px;
+      border-radius: 10px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    .code-block .tag { color: #89b4fa; }
+    .code-block .attr { color: #f9e2af; }
+    .code-block .str { color: #a6e3a1; }
+    .arrow {
+      text-align: center;
+      color: white;
+      font-size: 1.2rem;
+      padding: 20px;
+      opacity: 0.8;
+    }
+    @media (max-width: 640px) {
+      .content { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>🤖 AyKa AI Chat Widget</h1>
+    <p>Plug-and-play AI chatbot for your website. One script tag — fully branded, multi-lingual, lead-qualified conversations.</p>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <h3>🎓 Demo: Sant Pathik Vidyalaya</h3>
+      <p>This page has the AyKa widget embedded for <strong>Sant Pathik Vidyalaya, Bahraich</strong>.</p>
+      <p style="margin-top:12px">Try asking:</p>
+      <ul>
+        <li>Class 5 mein admission kaise hoga?</li>
+        <li>Fees kitni hai?</li>
+        <li>School mein kya kya activities hain?</li>
+        <li>Hostel facility hai?</li>
+      </ul>
+      <span class="badge">Hinglish AI</span>
+      <span class="badge">Lead Scoring</span>
+    </div>
+
+    <div class="card">
+      <h3>⚡ Features</h3>
+      <ul>
+        <li>One-line embed — no coding needed</li>
+        <li>Per-client branding (colors, logo, name)</li>
+        <li>Multi-lingual (Hindi/English/Hinglish)</li>
+        <li>Smart lead qualification & scoring</li>
+        <li>Visit scheduling with confirmation</li>
+        <li>Auto handoff to humans when needed</li>
+        <li>Works on mobile & desktop</li>
+        <li>WhatsApp + Web unified CRM</li>
+      </ul>
+    </div>
+
+    <div class="instructions">
+      <h3>📋 Embed on Your Website</h3>
+      <p style="margin-bottom:12px; color:#555;">Add this single script tag before <code>&lt;/body&gt;</code> to embed AyKa on any website:</p>
+      <div class="code-block">
+        <span class="tag">&lt;script</span>
+        <span class="attr"> src</span>=<span class="str">"https://your-api.ayka.in/widget/embed/ayka-widget.js"</span><br>
+        &nbsp;&nbsp;<span class="attr">data-business-id</span>=<span class="str">"YOUR_BUSINESS_ID"</span><br>
+        &nbsp;&nbsp;<span class="attr">data-api-url</span>=<span class="str">"https://your-api.ayka.in"</span><br>
+        <span class="tag">&gt;&lt;/script&gt;</span>
+      </div>
+      <p style="margin-top:12px; font-size:0.85rem; color:#888;">Replace YOUR_BUSINESS_ID with the client's ID from the dashboard. That's it — the widget auto-loads branding, theme, and AI config.</p>
+    </div>
+  </div>
+
+  <div class="arrow">👇 Click the chat bubble in the bottom-right corner to try it!</div>
+
+  <!-- AyKa Widget Embed — one line, plug and play -->
+  <script
+    src="http://localhost:3000/widget/embed/ayka-widget.js"
+    data-business-id="69a305f398f94563b73c6ef3"
+    data-api-url="http://localhost:3000"
+  ></script>
+
+</body>
+</html>
