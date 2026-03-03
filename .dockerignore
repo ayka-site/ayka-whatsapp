@@ -1,12 +1,16 @@
 **/node_modules
+**/.next
 .env
 .env.*
 .git
 *.log
-apps/dashboard
-apps/widget
 services/
 SPV/
 docs/
 *.md
-**/.next
+
+# Ignore dashboard/widget content but allow package.json (needed for npm ci workspace resolution)
+apps/dashboard
+!apps/dashboard/package.json
+apps/widget
+!apps/widget/package.json

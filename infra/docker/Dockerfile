@@ -8,14 +8,14 @@ COPY package.json package-lock.json ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
+COPY apps/dashboard/package.json ./apps/dashboard/
+COPY apps/widget/package.json ./apps/widget/
 
-# Create stubs for workspaces not deployed in this image
-# (npm ci with workspaces needs a package.json in every workspace dir)
-RUN mkdir -p apps/dashboard apps/widget \
- && echo '{"name":"@ayka/dashboard","version":"1.0.0","private":true}' > apps/dashboard/package.json \
- && echo '{"name":"@ayka/widget","version":"1.0.0","private":true}' > apps/widget/package.json
-
-RUN npm ci --ignore-scripts
+# Use npm install (not ci) because workspace package.json files may have
+# minor differences from lockfile due to local development environment.
+# --ignore-scripts skips postinstall hooks for faster builds.
+# --omit=dev skips devDependencies (not needed in production image).
+RUN npm install --ignore-scripts --omit=dev
 
 # Copy only the packages/apps needed for the API
 COPY packages/ ./packages/
