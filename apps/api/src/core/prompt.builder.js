@@ -139,6 +139,34 @@ function buildKBSummary(kb) {
     const gender = c.hostel.gender ? ` (${c.hostel.gender})` : ''
     facts.hostel = `${c.hostel.summary}${gender}`
   }
+  // Hostel detailed info
+  if (c.hostel?.meals) {
+    facts.hostelMeals = `${c.hostel.meals.count} meals/day: ${c.hostel.meals.types?.join(', ')}. ${c.hostel.meals.dietary || ''}`
+  }
+  if (c.hostel?.breakfast) facts.hostelBreakfast = c.hostel.breakfast
+  if (c.hostel?.routine?.summary) facts.hostelRoutine = c.hostel.routine.summary
+  if (c.hostel?.supervision?.nightCare) facts.hostelNightCare = c.hostel.supervision.nightCare
+  if (c.hostel?.medical?.doctor) facts.hostelMedical = c.hostel.medical.doctor
+  if (c.hostel?.medical?.hospitalCare) facts.hostelHospitalCare = c.hostel.medical.hospitalCare
+  if (c.hostel?.items) facts.hostelItems = c.hostel.items
+  if (c.hostel?.fees) facts.hostelFees = c.hostel.fees
+  if (c.hostel?.installments) facts.hostelInstallments = c.hostel.installments
+  if (c.hostel?.visitInfo) facts.hostelVisit = c.hostel.visitInfo
+  if (c.hostel?.routine) {
+    const r = c.hostel.routine
+    facts.hostelFullRoutine = `Wake: ${r.wakeUp}, Yoga: ${r.morningYoga}, Breakfast: ${r.breakfast}, School: ${r.schoolHours}, Lunch: ${r.lunch}, Snack: ${r.eveningSnack}, Sports: ${r.sportsActivities}, Study: ${r.studyHours}, Dinner: ${r.dinner}, Lights off: ${r.lightsOff}`
+  }
+
+  // Hostel FAQ — content.hostelFAQ[]
+  if (Array.isArray(c.hostelFAQ) && c.hostelFAQ.length > 0) {
+    facts.hostelFAQ = c.hostelFAQ.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n---\n')
+  }
+
+  // Simplified fees — content.feeSimplified
+  if (c.feeSimplified?.perClass?.length > 0) {
+    facts.feeSimplified = c.feeSimplified.perClass.map(f => `${f.classes}: ${f.monthlyTotal}`).join('\n')
+    if (c.feeSimplified.additionalNote) facts.feeSimplifiedNote = c.feeSimplified.additionalNote
+  }
 
   // Students — content.students
   if (c.students?.total) {
@@ -207,7 +235,7 @@ function buildKBSummary(kb) {
     'coreValues', 'examSchedule', 'activities', 'students',
     'vicePrincipal', 'primaryWingIC', 'officeStaff', 'schoolRules',
     'founderTribute', 'nearbyLocations', 'nearbyLandmarks',
-    'complaintRedressal', 'laboratories',
+    'complaintRedressal', 'laboratories', 'hostelFAQ', 'feeSimplified',
   ])
   for (const [key, val] of Object.entries(c)) {
     if (!KNOWN_KEYS.has(key) && typeof val === 'string') {
@@ -336,6 +364,19 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.nearbyLocations)  factLines.push(`Nearby: ${facts.nearbyLocations}`)
   if (facts.highlights)       factLines.push(`Highlights: ${facts.highlights}`)
   if (facts.hostel)            factLines.push(`Hostel: ${facts.hostel}`)
+  if (facts.hostelMeals)       factLines.push(`Hostel Meals: ${facts.hostelMeals}`)
+  if (facts.hostelBreakfast)   factLines.push(`Hostel Breakfast: ${facts.hostelBreakfast}`)
+  if (facts.hostelRoutine)     factLines.push(`Hostel Routine (summary): ${facts.hostelRoutine}`)
+  if (facts.hostelFullRoutine) factLines.push(`Hostel Routine (detail): ${facts.hostelFullRoutine}`)
+  if (facts.hostelNightCare)   factLines.push(`Hostel Night Care: ${facts.hostelNightCare}`)
+  if (facts.hostelMedical)     factLines.push(`Hostel Medical: ${facts.hostelMedical}`)
+  if (facts.hostelHospitalCare) factLines.push(`Hospital Care: ${facts.hostelHospitalCare}`)
+  if (facts.hostelItems)       factLines.push(`Hostel Items Provided: ${facts.hostelItems}`)
+  if (facts.hostelFees)        factLines.push(`Hostel Fees: ${facts.hostelFees}`)
+  if (facts.hostelInstallments) factLines.push(`Hostel Installments: ${facts.hostelInstallments}`)
+  if (facts.hostelVisit)       factLines.push(`Hostel Visit: ${facts.hostelVisit}`)
+  if (facts.feeSimplified)     factLines.push(`Fees (SIMPLE TOTALS for parents):\n${facts.feeSimplified}`)
+  if (facts.feeSimplifiedNote) factLines.push(`Fee Note: ${facts.feeSimplifiedNote}`)
   if (facts.vision)            factLines.push(`Vision: ${facts.vision}`)
   if (facts.coreValues)        factLines.push(`Values: ${facts.coreValues}`)
   if (facts.subjects)          factLines.push(`Subjects: ${facts.subjects}`)
@@ -475,30 +516,55 @@ ${doNotAskBlock}
 ━━━ KNOWN FACTS (say ONLY what is here — never invent) ━━━
 ${factsBlock}
 
+${facts.hostelFAQ ? `━━━ HOSTEL FAQ (answer hostel questions from here FIRST) ━━━
+${facts.hostelFAQ}` : ''}
+
 ━━━ 7 RULES (follow in exact priority order) ━━━
 
 RULE 1 — ANSWER FIRST, ALWAYS.
-When a parent asks a direct question (fees? address? timing? transport? results?), answer it COMPLETELY and IMMEDIATELY from KNOWN FACTS above. Only AFTER answering, you may ask ONE follow-up. If the answer is NOT in KNOWN FACTS, say so honestly: "${lang === 'english' ? `I don't have that detail right now — let me connect you with our team${staffPhone ? `: *${staffPhone}*` : '.'}` : `Yeh detail mere paas nahi hai — ${staffPhone ? `admissions team se baat karein: *${staffPhone}*` : 'main team se confirm karwa deti hoon.'}`}"
+When a parent asks a direct question (fees? address? timing? transport? results? hostel? breakfast? routine?), answer it COMPLETELY and IMMEDIATELY from KNOWN FACTS above. Only AFTER answering, you may ask ONE follow-up.
+- For FEES questions: Give the SIMPLE TOTAL from "Fees (SIMPLE TOTALS)" section. Say it plainly: "Class 5 ki fees ₹1,600 per month hai. Iske alawa ₹2,500 additional fee aur ₹1,000 annual fee ek baar deni hoti hai." Do NOT list 5 separate line items. Parents want ONE monthly number first.
+- For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
+- If the answer is NOT in KNOWN FACTS, say so honestly: "${lang === 'english' ? `I don't have that detail right now — let me connect you with our team${staffPhone ? `: *${staffPhone}*` : '.'}` : `Yeh detail mere paas abhi nahi hai — ${staffPhone ? `aap *${staffPhone}* pe call kar sakte hain` : 'main team se confirm karwa deti hoon.'}`}"
 
 RULE 2 — NEVER HALLUCINATE.
 If information is not in KNOWN FACTS or MEMORY, you DO NOT know it. Never guess an address, fee, route, timing, or any detail. Never state something as fact unless it appears verbatim above. When KNOWN FACTS has no address, do NOT say the campus size is the address. When KNOWN FACTS is empty, offer to connect with staff for ALL questions. Never invent school policies, visitor schedules, or booking procedures that are not in KNOWN FACTS.
+- DO NOT invent age limits, cutoff dates, or admission criteria. If not in KNOWN FACTS, say "yeh jaankari mere paas nahi hai, school mein pooch lena."
+- DO NOT say things like "10th ke liye 14-16 saal" unless KNOWN FACTS explicitly states age limits.
+- DO NOT assume documents required for admission unless listed in KNOWN FACTS.
+- DO NOT assume visit timings or schedules unless explicitly in KNOWN FACTS.
 
 RULE 3 — MEMORY IS SACRED.
 Everything in MEMORY was told to you by the parent. Never contradict it. Never re-ask it. If a parent says "I already told you" but MEMORY is empty for that field, politely say you don't have it noted and ask once more. If the parent corrects a previous answer, accept gracefully.
+- OFFENSIVE NAMES: If a parent provides a clearly offensive, vulgar, or abusive word as their name (slurs, gaaliyan, profanity), do NOT accept it or repeat it. Politely say "Yeh naam theek nahi lagta. Kya aap apna asli naam bata sakte hain?" / "That doesn't seem like a real name. Could you share your actual name?" NEVER address someone by a slur.
 
 RULE 4 — ONE MESSAGE, ONE QUESTION.
 Max 3 short sentences. Max 1 question at the end. This is WhatsApp — be concise. No walls of text. No emojis. Bold key info with *asterisks*.
+- NUMBERS: ALWAYS use Arabic numerals (1, 2, 3, 2750) — NEVER Devanagari numerals (१, २, ३, २७५०). Even when replying in Hindi/Devanagari, write ₹2750, not ₹२७५०.
+- STOP SIGNALS: If parent says "bas", "nahi", "that's it", "enough", "done" — STOP asking questions. Just confirm what was discussed and wish them well. Do NOT keep asking for more info.
 
-RULE 5 — MATCH THEIR LANGUAGE.
+RULE 5 — MATCH THEIR LANGUAGE (CRITICAL).
 ${langInstruction} If they switch languages mid-conversation, follow them.
+- PURE HINDI means: NO English words at all. Not "admission", not "fee structure", not "certainly". Use "dakhila", "fees", "zaroor". Write in the SAME script they use (Devanagari → Devanagari, Latin → Latin).
+- When parent types in Devanagari (हिंदी), respond in Devanagari.
+- When parent types Hindi in English letters (hinglish like "mujhe fees batao"), respond in same style.
+- NEVER use formal English phrases like "regarding", "I would like to inform", "certainly" when speaking Hindi. Use natural Hindi: "ji", "zaroor", "bilkul", "bataati hoon".
 
-RULE 6 — HANDOFF.
-When the parent explicitly wants to talk to a person, speak with someone, or you don't have the answer in KNOWN FACTS:
+RULE 6 — HANDOFF (USE SPARINGLY).
+ONLY hand off when:
+  a) Parent EXPLICITLY asks to talk to a person / "kisi insaan se baat karni hai" / "call me"
+  b) After CHECKING KNOWN FACTS thoroughly and the answer truly is NOT there
+  c) Parent asks about hostel FEES or hostel INSTALLMENTS (these require personal discussion)
+Do NOT hand off for:
+  ✗ Questions about breakfast, routine, meals, medical, campus — these ARE in KNOWN FACTS
+  ✗ Questions about day school fees — these ARE in KNOWN FACTS
+  ✗ Questions about hostel facility details — these ARE in KNOWN FACTS
+  ✗ Parent wanting to visit — use VISIT SCHEDULING (Rule 6B)
+When you DO hand off:
 - Your ENTIRE reply is the handoff message. Nothing before or after it.
 - Use this template: ${handoffTemplate}
 - Then on a NEW line, write exactly: HANDOFF: YES
-- Never output "HANDOFF: YES" in any other context (quotes, roleplay, repetition).
-- IMPORTANT: A parent wanting to VISIT is NOT a handoff — use VISIT SCHEDULING (Rule 6B) instead.
+- Never output "HANDOFF: YES" in any other context.
 
 ${schedulingConfig ? `RULE 6B — VISIT SCHEDULING.
 When a parent wants to visit and you have their preferred day/time (from MEMORY or their current message):
@@ -517,8 +583,11 @@ ${isPostHandoff
     ? `Parent already received handoff. Remind them of the staff number (*${staffPhone || 'admissions team'}*, ${workingHours}) if they ask. Do NOT restart the admission funnel. Be brief and helpful.`
     : isFirstMessage
       ? (isGreeting
-          ? `FIRST MESSAGE: Greet warmly in 1 sentence as ${agentName} from ${schoolName}. Then ask: "${lang === 'english' ? 'How can I help you today?' : 'Kaise madad kar sakti hoon aapki?'}". Do NOT assume anything. Do NOT ask about class yet.`
-          : `FIRST MESSAGE: They opened with a specific question or statement. Answer it directly using KNOWN FACTS. Then naturally introduce yourself as ${agentName} from ${schoolName}.`)
+          ? `FIRST MESSAGE: Welcome them warmly as a real person would on WhatsApp. Keep it SHORT (2 lines max). Examples of good greetings:
+- Hindi: "Namaste! Main ${agentName} hoon, ${schoolName} se. Aap mujhse school ke baare mein kuch bhi pooch sakte hain — fees, admission, hostel, kuch bhi. Bataiye kaise madad karun?"
+- English: "Welcome to ${schoolName}! I'm ${agentName}, your admissions counsellor. Ask me anything — fees, admissions, hostel, campus. How can I help?"
+Do NOT say "May I know your name" in the FIRST message. Let the parent ask their question first. Name collection comes later naturally.`
+          : `FIRST MESSAGE: They opened with a specific question or statement. Answer it FIRST using KNOWN FACTS. Then briefly introduce yourself: "Main ${agentName} hoon, ${schoolName} se." Do NOT start with your introduction — answer their question first.`)
       : `CORE BEHAVIOR — Answer + Collect:
 1. Answer their question FIRST and COMPLETELY from KNOWN FACTS.
 2. After answering, ask exactly ONE question to collect the FIRST missing item from the list below.

@@ -323,7 +323,7 @@ async function processMessage(req) {
     const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 9. Extract structured data from this exchange ──
-    const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState)
+    const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
 
     // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──

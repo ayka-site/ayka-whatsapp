@@ -35,7 +35,7 @@ async function resolveTenant(req, res, next) {
       resellerId:    business.resellerId?.toString(),
       vertical:      business.vertical,
       settings:      business.settings,
-      accessToken:   business.whatsapp.accessToken,
+      accessToken:   decrypt(business.whatsapp.accessToken),
       phoneNumberId: business.whatsapp.phoneNumberId
     }
 

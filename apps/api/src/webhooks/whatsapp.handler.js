@@ -65,8 +65,8 @@ async function handleWhatsAppWebhook(req, res) {
       // Language-aware rate limit message
       const isIndian = phone.startsWith('91')
       const reply = isIndian
-        ? 'Aap bahut tezi se messages bhej rahe hain. Kripya ek minute ruk kar phir try karein.'
-        : 'You are sending messages too quickly. Please wait a moment and try again.'
+        ? 'Ek minute rukiye, main aapka pichla message padh rahi hoon. Thoda sa patience rakhiye, abhi jawab deti hoon! 🙏'
+        : 'Just a moment please, I\'m reading your previous message. I\'ll respond shortly!'
 
       await sendTextMessage(
         phone, reply,

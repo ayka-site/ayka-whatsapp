@@ -43,8 +43,9 @@ const HINDI_CLASS_MAP = {
   'barahvi': 12, 'barahwa': 12,
 }
 
-function extractDataFromMessages(userMessage, aiResponse, flowState) {
+function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessages) {
   const updated = JSON.parse(JSON.stringify(flowState)) // deep clone
+  updated.recentMessages = recentMessages || [] // attach for bare-name detection
   const userLc  = userMessage.toLowerCase().trim()
 
   // Ensure collectedData exists
@@ -65,6 +66,15 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
   if (/\b(visit|come in|schedule|tour|aa jaiye|aa sakte|campus dekh|dekhne aaiye)\b/i.test(aiResponse)) {
     updated.goals.visitSuggested = true
   }
+
+  // Profanity/slur blocklist — reject these as names entirely
+  const PROFANITY_BLOCKLIST = new Set([
+    'nigga', 'nigger', 'fuck', 'shit', 'bitch', 'ass', 'dick', 'pussy',
+    'bastard', 'whore', 'slut', 'cunt', 'faggot', 'retard', 'chutiya',
+    'madarchod', 'behenchod', 'bhenchod', 'gaand', 'lund', 'randi',
+    'harami', 'kutta', 'kutti', 'saala', 'saali', 'gadha', 'ullu',
+    'bhosdike', 'bsdk', 'mc', 'bc', 'lodu', 'tatti',
+  ])
 
   // Words that look like proper names but aren't parent names
   const NOT_A_PARENT_NAME = new Set([
@@ -102,6 +112,14 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
       /(?:i am|i'm|this is|my name is|mera naam|main)\s+([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,}){0,2})/i,
       /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\s+(?:here|speaking|bol raha|bol rahi)/i,
     ]
+
+    // Helper: validate a name candidate — not profanity, not too short
+    const isValidName = (name) => {
+      if (!name || name.length < 2) return false
+      const words = name.toLowerCase().split(/\s+/)
+      return !words.some(w => PROFANITY_BLOCKLIST.has(w))
+    }
+
     for (const pattern of namePatterns) {
       const match = cleanedForNames.match(pattern)   // use cleaned version
       if (match?.[1] && match[1].length > 2) {
@@ -111,11 +129,47 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
           /^[A-Z]/.test(w) && !NOT_A_PARENT_NAME.has(w.toLowerCase())
         )
         const candidate = cleanWords.join(' ')
-        if (candidate.length > 2) {
+        if (isValidName(candidate)) {
           updated.collectedData.parentName  = candidate
           updated.goals.parentNameCollected = true
         }
         break
+      }
+    }
+
+    // Bare name fallback: if the last AI message asked for their name,
+    // and this message is 1-3 title-cased words (likely a name reply)
+    if (!updated.collectedData.parentName) {
+      const lastAI = (updated.recentMessages || flowState.recentMessages || []).filter(m => m.role === 'assistant').slice(-1)[0]
+      const lastAIText = (lastAI?.content?.text || '').toLowerCase()
+      const aiAskedName = /(?:naam|name|aapka\s+shubh|your\s+(?:good\s+)?name|aapka\s+naam)/i.test(lastAIText)
+
+      if (aiAskedName) {
+        // Check if user message is a bare name (1-3 words, mostly alpha, title-cased first word)
+        const trimmed = userMessage.trim()
+        const words = trimmed.split(/\s+/)
+        if (words.length >= 1 && words.length <= 3) {
+          const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
+          const firstCapped = /^[A-Z]/.test(words[0])
+          if (allAlpha && firstCapped) {
+            const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+            if (isValidName(candidate) && !NOT_A_PARENT_NAME.has(candidate.toLowerCase())) {
+              updated.collectedData.parentName  = candidate
+              updated.goals.parentNameCollected = true
+            }
+          }
+          // Also try if all lowercase (common on WhatsApp): "nandan" → "Nandan"
+          if (!updated.collectedData.parentName && words.length <= 2) {
+            const allLowerAlpha = words.every(w => /^[a-z]+$/.test(w) && w.length >= 2)
+            if (allLowerAlpha) {
+              const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+              if (isValidName(candidate) && !NOT_A_PARENT_NAME.has(candidate.toLowerCase())) {
+                updated.collectedData.parentName  = candidate
+                updated.goals.parentNameCollected = true
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -248,7 +302,11 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
       // English: "my son/daughter NAME" — up to 3 words captured
       /\bmy\s+(?:son|daughter|child|beta|beti|bachcha)(?:'s name)?\s+(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
       // Hindi possessive with mera/meri prefix: "meri beti Sneha"
-      /\b(?:mera|meri|hamara|hamari|mere|hamare)\s+(?:beta|beti|bacha|bachcha|bachchi)\s+(?:ka\s+naam\s+|ki\s+naam\s+)?(?:hai\s+)?(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
+      /\b(?:mera|meri|hamara|hamari|mere|hamare)\s+(?:beta|beti|bacha|bachcha|bachchi|bache|bacche)\s+(?:ka\s+naam\s+|ki\s+naam\s+)?(?:hai\s+)?(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
+      // Hindi: "mere bache ka naam X hai" / "bache ka naam X"
+      /\b(?:mera|meri|mere|hamare)\s+(?:bache|bacche|bachche|bachchon)\s+ka\s+naam\s+([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})/i,
+      // Hindi: "naam X hai" when in student-name context (AI asked for child's name)
+      /\b(?:bachche?|bache?|beta|beti)\s+ka\s+naam\s+([A-Za-z]{2,})\b/i,
       // Bare Hindi: "beti Sneha ke liye" (no mera/meri prefix needed)
       /\b(?:beta|beti|bacha|bachcha|bachchi)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
       // "admission for NAME"
@@ -259,13 +317,35 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
       if (match?.[1]) {
         // Apply title-case + blacklist filter (same approach as parentName)
         const rawWords = match[1].trim().split(/\s+/)
-        const cleanWords = rawWords.filter(w => /^[A-Z]/.test(w) && !NOT_A_NAME.has(w.toLowerCase()))
-        const candidate = cleanWords.join(' ')
+        const cleanWords = rawWords.filter(w => /^[A-Za-z]/.test(w) && !NOT_A_NAME.has(w.toLowerCase()) && !PROFANITY_BLOCKLIST.has(w.toLowerCase()))
+        const candidate = cleanWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
         if (candidate.length > 2) {
           updated.collectedData.studentName  = candidate
           updated.goals.studentInfoCollected = true
         }
         break
+      }
+    }
+
+    // Bare student name fallback: if AI asked for child's name and user replied with just a name
+    if (!updated.collectedData.studentName) {
+      const lastAI = (updated.recentMessages || []).filter(m => m.role === 'assistant').slice(-1)[0]
+      const lastAIText = (lastAI?.content?.text || '').toLowerCase()
+      const aiAskedStudent = /(?:bachch[ea]|bache|beta|beti|child|student|son|daughter).*(?:naam|name)/i.test(lastAIText)
+
+      if (aiAskedStudent) {
+        const trimmed = userMessage.trim()
+        const words = trimmed.split(/\s+/)
+        if (words.length >= 1 && words.length <= 3) {
+          const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
+          if (allAlpha) {
+            const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+            if (candidate.length > 2 && !NOT_A_NAME.has(candidate.toLowerCase()) && !PROFANITY_BLOCKLIST.has(candidate.toLowerCase())) {
+              updated.collectedData.studentName  = candidate
+              updated.goals.studentInfoCollected = true
+            }
+          }
+        }
       }
     }
   }
@@ -298,6 +378,10 @@ function extractDataFromMessages(userMessage, aiResponse, flowState) {
       }
     }
   }
+
+  // Clean up: remove recentMessages from flowState before returning
+  // (it was only attached temporarily for bare-name detection)
+  delete updated.recentMessages
 
   return updated
 }
