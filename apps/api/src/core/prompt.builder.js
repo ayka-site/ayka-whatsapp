@@ -351,7 +351,8 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.board)            factLines.push(`Board: ${facts.board}${facts.affiliationNo ? ` (${facts.affiliationNo})` : ''}`)
   if (facts.classes)          factLines.push(`Classes offered: ${facts.classes}`)
   if (facts.streams)          factLines.push(`Streams (11-12): ${facts.streams}`)
-  if (facts.fees)             factLines.push(`Fees (2026-27, class-wise — FIXED, no negotiation):\n${facts.fees}`)
+  // If feeSimplified exists (parent-friendly totals), skip the verbose class-wise breakdown to save tokens
+  if (facts.fees && !facts.feeSimplified)  factLines.push(`Fees (2026-27, class-wise — FIXED, no negotiation):\n${facts.fees}`)
   if (facts.results)          factLines.push(`Results: ${facts.results}`)
   if (facts.infrastructure)   factLines.push(`Campus: ${facts.infrastructure}`)
   if (facts.timing)           factLines.push(`School hours: ${facts.timing}`)
@@ -465,8 +466,14 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
         ? '"I\'ll have our team reach out to you shortly."'
         : '"Main team ko bol deti hoon, woh aapko jaldi contact karenge."')
 
+  // ── hostelFAQ: only inject when the conversation is actually about hostel (saves ~900 tokens otherwise) ──
+  const hostelKeywords = /hostel|boarding|\bरहना\b|\bरहने\b|छात्रावास|\bmatron\b/i
+  const isHostelConversation = hostelKeywords.test(currentMessage) ||
+    recentMessages.slice(-4).some(m => hostelKeywords.test(m.content?.text || m.content || ''))
+
   // ── Build recent conversation context (include current message) ──
-  const chatLines = recentMessages.slice(-10).map(m => {
+  // Keep last 6 messages (not 10) — saves ~200-400 tokens on long conversations
+  const chatLines = recentMessages.slice(-6).map(m => {
     const role = m.role === 'user' ? 'Parent' : agentName
     return `${role}: ${m.content?.text || ''}`
   })
@@ -516,7 +523,7 @@ ${doNotAskBlock}
 ━━━ KNOWN FACTS (say ONLY what is here — never invent) ━━━
 ${factsBlock}
 
-${facts.hostelFAQ ? `━━━ HOSTEL FAQ (answer hostel questions from here FIRST) ━━━
+${facts.hostelFAQ && isHostelConversation ? `━━━ HOSTEL FAQ (answer hostel questions from here FIRST) ━━━
 ${facts.hostelFAQ}` : ''}
 
 ━━━ 7 RULES (follow in exact priority order) ━━━
