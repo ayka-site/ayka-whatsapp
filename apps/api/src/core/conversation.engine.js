@@ -1,5 +1,5 @@
 const sessionService = require('../services/session.service')
-const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
+const { KnowledgeBase, Contact, Conversation, Message, Appointment } = require('@ayka/db')
 const { buildSystemPrompt } = require('./prompt.builder')
 const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
@@ -320,6 +320,9 @@ async function processMessage(req) {
 
     // ── 8. Parse AI response (detect handoff, clean response text) ──
     const alreadyHandedOff = session.flowState.handoffTriggered === true
+    // Capture previous visit/data state BEFORE overwriting session.flowState
+    const wasVisitPreviouslyConfirmed = session.flowState.visitConfirmed === true
+    const prevCollectedData = { ...(session.flowState.collectedData || {}) }
     const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 9. Extract structured data from this exchange ──
@@ -345,11 +348,28 @@ async function processMessage(req) {
     }
 
     // ── 11.5. Trigger visit scheduling if LLM confirmed a visit ──
-    const alreadyVisitConfirmed = session.flowState.visitConfirmed === true && !visitConfirmed
-    if (visitConfirmed && !alreadyVisitConfirmed) {
+    // Only schedule when VISIT_CONFIRMED: YES appears for the first time in this
+    // conversation — OR after a reschedule reset (wasVisitPreviouslyConfirmed became
+    // false via flow.engine reschedule detection). Prevents duplicate scheduling
+    // if the bot re-emits the signal on subsequent messages.
+    if (visitConfirmed && !wasVisitPreviouslyConfirmed) {
       await scheduleVisit(session, tenant).catch(err =>
         logger.error({ err }, 'Visit scheduling failed — parent still gets response')
       )
+    }
+
+    // ── 11.6. Update confirmed appointment with newly-collected profile data ──
+    // Student name / parent name are often collected AFTER the appointment is first
+    // created (bot asks "what's your child's name?" after confirming the visit time).
+    if (finalFlowState.visitConfirmed) {
+      const { studentName: newStudent, parentName: newParent } = finalFlowState.collectedData
+      const { studentName: oldStudent, parentName: oldParent } = prevCollectedData
+      if (newStudent !== oldStudent || newParent !== oldParent) {
+        Appointment.updateOne(
+          { conversationId: session.conversationId, status: 'confirmed' },
+          { $set: { studentName: newStudent || undefined, parentName: newParent || undefined } }
+        ).catch(err => logger.warn({ err }, 'Appointment profile update failed'))
+      }
     }
 
     // ── 12. Save session to Redis ──

@@ -52,6 +52,20 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.collectedData) updated.collectedData = {}
   if (!updated.goals)         updated.goals = {}
 
+  // ── Rescheduling: reset visit state when user explicitly wants a new time ──
+  // This allows the bot to re-collect the time preference and emit VISIT_CONFIRMED: YES again,
+  // triggering scheduleVisit which will cancel the old appointment and create a new one.
+  if (updated.visitConfirmed) {
+    const rescheduleKeywords = /\b(reschedule|change.*(?:appointment|visit|time|date)|different\s+(?:time|day|date)|new\s+(?:time|day|date)|dobara\s+schedule|time\s+badal|date\s+badal|appointment\s+badal|visit\s+badal|phir\s+se\s+schedule|koi\s+aur\s+(?:time|din)|alag\s+(?:time|din|date))\b/i
+    if (rescheduleKeywords.test(userLc)) {
+      updated.visitConfirmed = false
+      updated.visitConfirmedAt = null
+      updated.collectedData.preferredVisitTime = null
+      updated.goals.visitSuggested = true // keep this true so bot asks for new time
+      logger.info?.({ phone: updated.phone }, 'Rescheduling requested — visit state reset')
+    }
+  }
+
   // ── Mark inquiry understood after any real message ──
   if (userMessage.length > 1) {
     updated.goals.inquiryUnderstood = true
@@ -85,6 +99,10 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     'speaking', 'coming', 'going', 'doing', 'having', 'getting',
     // Common English filler words
     'here', 'this', 'the', 'a', 'an', 'okay', 'ok', 'hi', 'hello',
+    // Greetings in various languages (users often open with these, not their name)
+    'namaste', 'namaskar', 'namashkra', 'namaskaar', 'namasthe', 'pranam',
+    'salaam', 'adaab', 'assalam', 'vanakkam', 'hola', 'hey', 'heya', 'hye',
+    'welcome', 'greetings', 'good', 'morning', 'evening', 'afternoon', 'night',
     // Honorific titles (must be in list so they get filtered from captures)
     'dr', 'mr', 'mrs', 'ms', 'miss', 'prof', 'er', 'eng', 'ca', 'cs',
     'adv', 'rev', 'capt', 'col', 'gen', 'lt', 'sgt', 'cdr', 'brig',
@@ -106,10 +124,13 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   )
 
   // ── Extract parent name from user message ──
-  if (!updated.collectedData.parentName) {
+  // Allow override if user EXPLICITLY states their name (covers name corrections too)
+  const hasExplicitNameStatement = /\b(mera\s+naam|mera\s+name|my\s+name\s+is|i\s+am|i'm|this\s+is|main\s+hoon)\b/i.test(userMessage)
+  if (!updated.collectedData.parentName || hasExplicitNameStatement) {
     const namePatterns = [
       // Capture up to 3 words — run on cleanedForNames (periods stripped from honorifics)
-      /(?:i am|i'm|this is|my name is|mera naam|main)\s+([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,}){0,2})/i,
+      // Handles both "mera naam" (Hindi) and "mera name" (Hinglish English spelling)
+      /(?:i am|i'm|this is|my name is|mera naam|mera name|main hoon)\s+([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})/i,
       /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\s+(?:here|speaking|bol raha|bol rahi)/i,
     ]
 
