@@ -328,18 +328,18 @@ router.get('/system/api-usage', asyncHandler(async (req, res) => {
 
   const messagesToday = await Message.countDocuments({ createdAt: { $gte: todayStart } })
 
-  // Import Groq stats from the service
-  let groqStats = {}
+  // Import LLM stats (includes Gemini + Groq breakdown)
+  let llmStats = {}
   try {
-    const { getGroqStats } = require('../services/groq.service')
-    groqStats = getGroqStats()
-  } catch (e) { /* groq service may not be loaded */ }
+    const { getLLMStats } = require('../services/llm.service')
+    llmStats = getLLMStats()
+  } catch (e) { /* llm service may not be loaded */ }
 
   res.json({
     groqTokensToday: messagesToday * 500,
     groqTokensMonth: messagesToday * 500 * 30,
     costEstimate: `$${(messagesToday * 500 * 0.00000027).toFixed(2)}`,
-    groq: groqStats,
+    llm: llmStats,
   })
 }))
 

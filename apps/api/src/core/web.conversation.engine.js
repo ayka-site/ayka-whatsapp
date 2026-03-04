@@ -1,7 +1,7 @@
 const sessionService = require('../services/session.service')
 const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
 const { buildSystemPrompt } = require('./prompt.builder')
-const { callGroq }          = require('../services/groq.service')
+const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
 const { computeLeadScore } = require('./scoring.engine')
 const { triggerHandoff }   = require('./handoff.engine')
@@ -171,7 +171,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
     // ── 8. Call LLM ──
-    const rawAIResponse = await callGroq(systemPrompt, session.recentMessages)
+    const rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
 
     // ── 9. Parse response ──
     const alreadyHandedOff = session.flowState.handoffTriggered === true

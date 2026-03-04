@@ -173,14 +173,10 @@ async function callGroq(systemPrompt, recentMessages) {
   groqStats.totalCalls++
   groqStats.modelUsage[model] = (groqStats.modelUsage[model] || 0) + 1
 
-  // Acquire concurrency slot
-  await acquireSemaphore()
-  if (activeCalls > groqStats.peakConcurrency) groqStats.peakConcurrency = activeCalls
-
   const callStart = Date.now()
   let lastError = null
 
-  try {
+  {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         const { client: groq, keyIndex } = getNextClient()
@@ -264,9 +260,6 @@ async function callGroq(systemPrompt, recentMessages) {
 
     groqStats.failedCalls++
     throw lastError || new Error('All LLM providers failed')
-
-  } finally {
-    releaseSemaphore()
   }
 }
 

@@ -1,10 +1,7 @@
 const required = [
   'MONGODB_URI',
-  'UPSTASH_REDIS_REST_URL',
-  'UPSTASH_REDIS_REST_TOKEN',
   'META_APP_SECRET',
   'META_WEBHOOK_VERIFY_TOKEN',
-  // GROQ_API_KEYS (comma-separated) preferred; GROQ_API_KEY also accepted
   'ENCRYPTION_KEY',
   'NODE_ENV'
 ]
@@ -15,9 +12,11 @@ function validateEnv() {
     throw new Error(`Missing required env vars: ${missing.join(', ')}`)
   }
 
-  // At least one Groq key must be present
-  if (!process.env.GROQ_API_KEYS && !process.env.GROQ_API_KEY) {
-    throw new Error('Either GROQ_API_KEYS or GROQ_API_KEY must be set')
+  // At least one LLM provider must be configured
+  const hasGemini = !!process.env.GEMINI_API_KEY
+  const hasGroq   = !!(process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY)
+  if (!hasGemini && !hasGroq) {
+    throw new Error('At least one LLM provider required: set GEMINI_API_KEY or GROQ_API_KEYS/GROQ_API_KEY')
   }
 
   // ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes for AES-256-CBC)

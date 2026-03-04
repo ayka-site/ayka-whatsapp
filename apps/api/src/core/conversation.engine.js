@@ -1,7 +1,7 @@
 const sessionService = require('../services/session.service')
 const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
 const { buildSystemPrompt } = require('./prompt.builder')
-const { callGroq }          = require('../services/groq.service')
+const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
 const { computeLeadScore } = require('./scoring.engine')
 const { scheduleVisit }    = require('./scheduling.engine')
@@ -315,8 +315,8 @@ async function processMessage(req) {
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // ── 7. Call Groq (with proper retry + backoff in groq.service.js) ──
-    const rawAIResponse = await callGroq(systemPrompt, session.recentMessages)
+    // ── 7. Call LLM (Gemini primary → Groq fallback → Azure last resort) ──
+    const rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
 
     // ── 8. Parse AI response (detect handoff, clean response text) ──
     const alreadyHandedOff = session.flowState.handoffTriggered === true
