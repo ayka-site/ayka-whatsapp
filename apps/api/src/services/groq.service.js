@@ -163,7 +163,7 @@ function getGroqStats() {
 async function callGroq(systemPrompt, recentMessages) {
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...recentMessages.slice(-6).map(msg => ({
+    ...recentMessages.slice(-5).map(msg => ({
       role: msg.role,
       content: msg.content?.text || msg.content || '',
     })),

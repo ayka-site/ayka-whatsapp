@@ -1,42 +1,36 @@
 const logger = require('../utils/logger')
 
 /**
- * llm.service.js v1.0 — Unified LLM gateway
+ * llm.service.js v2.0 — Unified LLM gateway
  *
  * Priority chain:
- *   1. Gemini 2.0 Flash (primary — free 1500 RPD, great Hindi/Hinglish)
- *   2. Groq  (fallback  — multi-key rotation, model tiering)
- *   3. Azure OpenAI (last resort)
+ *   1. Gemini 3 Flash (primary) — gemini-3-flash-preview, thinking: minimal
+ *   2. Groq Llama-70B (fallback) — multi-key rotation
  *
- * Single export: callLLM(systemPrompt, recentMessages) → string
- * Drop-in replacement for callGroq everywhere.
+ * Uses new @google/genai SDK (required for Gemini 3 models)
+ * History window: last 5 messages
  */
 
-// ─── GEMINI (Google Generative AI) ──────────────────────────────
-const { GoogleGenerativeAI } = require('@google/generative-ai')
+// ─── GEMINI (@google/genai — new SDK for Gemini 3) ──────────────
+const { GoogleGenAI } = require('@google/genai')
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-let geminiModel = null
+const GEMINI_MODEL   = process.env.GEMINI_MODEL || 'gemini-3-flash-preview'
+
+let geminiClient = null
 
 if (GEMINI_API_KEY) {
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-    geminiModel = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
-      generationConfig: {
-        maxOutputTokens: 400,
-        temperature: 0.7,
-      },
-    })
-    logger.info('Gemini Flash initialized as primary LLM')
+    geminiClient = new GoogleGenAI({ apiKey: GEMINI_API_KEY })
+    logger.info({ model: GEMINI_MODEL }, 'Gemini 3 Flash initialized as primary LLM')
   } catch (err) {
     logger.warn({ err }, 'Gemini init failed — will use Groq as primary')
   }
 } else {
-  logger.info('No GEMINI_API_KEY — using Groq as primary LLM')
+  logger.warn('No GEMINI_API_KEY set — falling back to Groq as primary LLM')
 }
 
-// ─── GROQ (multi-key, model tiering, retries) ──────────────────
+// ─── GROQ (fallback — multi-key, model tiering, retries) ────────
 const { callGroq, getGroqStats } = require('./groq.service')
 
 // ─── CONCURRENCY LIMITER ────────────────────────────────────────
@@ -70,70 +64,83 @@ const llmStats = {
 function getLLMStats() {
   return {
     ...llmStats,
+    model: GEMINI_MODEL,
     groqStats: getGroqStats(),
     concurrency: { current: activeCalls, max: MAX_CONCURRENT, peak: llmStats.peakConcurrency, queued: waitQueue.length },
   }
 }
 
-// ─── GEMINI CALL ────────────────────────────────────────────────
-async function callGemini(systemPrompt, recentMessages) {
-  if (!geminiModel) return null
-
-  // Gemini uses a different message format:
-  // - systemInstruction is set at model level, we pass it in generateContent
-  // - contents: [{ role: 'user'|'model', parts: [{ text }] }]
-  const contents = recentMessages.slice(-6).map(msg => ({
+// ─── BUILD GEMINI CONTENTS ──────────────────────────────────────
+// Gemini 3 requires:
+//   - contents: [{ role: 'user'|'model', parts: [{ text }] }]
+//   - Strict alternation: must start with 'user', no two same roles in a row
+//   - systemInstruction passed in config, NOT as a message
+function buildGeminiContents(recentMessages) {
+  // Take last 5 messages
+  const raw = recentMessages.slice(-5).map(msg => ({
     role: msg.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: msg.content?.text || msg.content || '' }],
+    parts: [{ text: (msg.content?.text || msg.content || '').trim() }],
   }))
 
-  // If no user messages, create one from the last message
-  if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: '(start)' }] })
-  }
-
-  // Ensure conversation starts with a user message (Gemini requirement)
-  if (contents[0].role !== 'user') {
-    contents.unshift({ role: 'user', parts: [{ text: '(context)' }] })
-  }
-
-  // Ensure alternating roles — Gemini requires strict user/model alternation
-  const cleaned = []
-  for (const msg of contents) {
-    if (cleaned.length > 0 && cleaned[cleaned.length - 1].role === msg.role) {
-      // Merge consecutive same-role messages
-      cleaned[cleaned.length - 1].parts[0].text += '\n' + msg.parts[0].text
+  // Merge consecutive same-role messages to satisfy alternation requirement
+  const merged = []
+  for (const msg of raw) {
+    if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
+      merged[merged.length - 1].parts[0].text += '\n' + msg.parts[0].text
     } else {
-      cleaned.push(msg)
+      merged.push({ role: msg.role, parts: [{ text: msg.parts[0].text }] })
     }
   }
+
+  // Must start with 'user'
+  if (merged.length === 0 || merged[0].role !== 'user') {
+    merged.unshift({ role: 'user', parts: [{ text: '...' }] })
+  }
+
+  return merged
+}
+
+// ─── GEMINI CALL ────────────────────────────────────────────────
+async function callGemini(systemPrompt, recentMessages) {
+  if (!geminiClient) return null
+
+  const contents = buildGeminiContents(recentMessages)
 
   try {
-    const result = await geminiModel.generateContent({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: cleaned,
+    const response = await geminiClient.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+        maxOutputTokens: 400,
+        temperature: 1.0,       // Gemini 3 official recommendation: keep at 1.0
+        thinkingConfig: {
+          thinkingLevel: 'minimal', // Fastest + cheapest for WhatsApp chat
+        },
+      },
     })
 
-    const text = result.response?.text()
-    if (!text) {
-      logger.warn('Gemini returned empty response')
+    const text = response.text
+    if (!text || !text.trim()) {
+      logger.warn({ model: GEMINI_MODEL }, 'Gemini returned empty response')
       return null
     }
-    return text
+
+    return text.trim()
+
   } catch (err) {
-    const status = err.status || err.httpStatusCode || 0
-    // 429 = rate limited, 500/503 = server issues — all worth falling back
-    logger.warn({ status, message: err.message }, 'Gemini call failed — falling back to Groq')
+    const status = err.status || err.httpStatusCode || err.code || 0
+    logger.warn({ status, message: err.message, model: GEMINI_MODEL }, 'Gemini call failed — falling back to Groq')
     return null
   }
 }
 
 // ─── UNIFIED CALL ───────────────────────────────────────────────
 /**
- * callLLM — drop-in replacement for callGroq
- * @param {string} systemPrompt - full system prompt
- * @param {Array}  recentMessages - [{role, content}]
- * @returns {string} AI response text
+ * callLLM(systemPrompt, recentMessages) → string
+ *
+ * Primary:  Gemini 3 Flash (gemini-3-flash-preview, thinking: minimal)
+ * Fallback: Groq Llama-70B (multi-key rotation, own retry logic)
  */
 async function callLLM(systemPrompt, recentMessages) {
   llmStats.totalCalls++
@@ -142,7 +149,7 @@ async function callLLM(systemPrompt, recentMessages) {
   if (activeCalls > llmStats.peakConcurrency) llmStats.peakConcurrency = activeCalls
 
   try {
-    // ── 1. Try Gemini Flash (primary) ──
+    // ── 1. Gemini 3 Flash (primary) ──
     llmStats.geminiCalls++
     const geminiResult = await callGemini(systemPrompt, recentMessages)
     if (geminiResult) {
@@ -150,10 +157,10 @@ async function callLLM(systemPrompt, recentMessages) {
       return geminiResult
     }
     llmStats.geminiFails++
+    logger.warn('Gemini failed — switching to Groq fallback')
 
-    // ── 2. Fallback to Groq (has its own retries + Azure fallback) ──
+    // ── 2. Groq Llama-70B (fallback) ──
     llmStats.groqFallbacks++
-    logger.info('Falling back to Groq')
     const groqResult = await callGroq(systemPrompt, recentMessages)
     llmStats.groqFallbackSuccesses++
     return groqResult
