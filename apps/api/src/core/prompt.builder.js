@@ -472,8 +472,9 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
     recentMessages.slice(-4).some(m => hostelKeywords.test(m.content?.text || m.content || ''))
 
   // ── Build recent conversation context (include current message) ──
-  // Keep last 6 messages (not 10) — saves ~200-400 tokens on long conversations
-  const chatLines = recentMessages.slice(-6).map(m => {
+  // Keep last 10 messages in prompt context — critical for 30-40 msg parent convos.
+  // Key facts (name, class, phone) are always safe in MEMORY block regardless.
+  const chatLines = recentMessages.slice(-10).map(m => {
     const role = m.role === 'user' ? 'Parent' : agentName
     return `${role}: ${m.content?.text || ''}`
   })

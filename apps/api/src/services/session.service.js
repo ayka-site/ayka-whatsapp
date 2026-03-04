@@ -17,7 +17,7 @@ const logger = require('../utils/logger')
  */
 
 const SESSION_TTL   = 86400 // 24 hours
-const MAX_MESSAGES  = 10
+const MAX_MESSAGES  = 20    // store last 20 messages in session (enough for 35-40 msg convos)
 
 function sessionKey(businessId, phone) {
   return `session:${businessId}:${phone}`
