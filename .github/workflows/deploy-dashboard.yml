@@ -1,0 +1,83 @@
+name: Deploy AyKa Dashboard
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/shared/**'
+      - 'infra/docker/Dockerfile.dashboard'
+  workflow_dispatch:
+
+env:
+  REGISTRY: aykaregistry.azurecr.io
+  IMAGE_NAME: ayka-dashboard
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: aykaregistry.azurecr.io
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.dashboard
+          push: true
+          tags: aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.ayka.site
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Container Apps
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            # Check if container app exists, create if not
+            if ! az containerapp show --name ayka-dashboard --resource-group ayka-rg &>/dev/null; then
+              echo "Creating container app ayka-dashboard..."
+              az containerapp create \
+                --name ayka-dashboard \
+                --resource-group ayka-rg \
+                --environment "$(az containerapp env list -g ayka-rg --query '[0].name' -o tsv)" \
+                --image aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }} \
+                --registry-server aykaregistry.azurecr.io \
+                --registry-username ${{ secrets.REGISTRY_USERNAME }} \
+                --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
+                --target-port 3001 \
+                --ingress external \
+                --min-replicas 0 \
+                --max-replicas 2 \
+                --cpu 0.5 \
+                --memory 1Gi \
+                --env-vars \
+                  NODE_ENV=production \
+                  PORT=3001
+            else
+              echo "Updating existing container app..."
+              az containerapp registry set \
+                --name ayka-dashboard \
+                --resource-group ayka-rg \
+                --server aykaregistry.azurecr.io \
+                --username ${{ secrets.REGISTRY_USERNAME }} \
+                --password ${{ secrets.REGISTRY_PASSWORD }}
+              
+              az containerapp update \
+                --name ayka-dashboard \
+                --resource-group ayka-rg \
+                --image aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }}
+            fi

@@ -1,27 +1,52 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy workspace root package files
+# Copy root workspace config + lockfile
 COPY package.json package-lock.json ./
 
-# Copy workspace packages
+# Copy ALL workspace package.json files (npm workspace resolution)
+COPY packages/db/package.json ./packages/db/
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/dashboard/package.json ./apps/dashboard/
+COPY apps/api/package.json ./apps/api/
+
+# Stub for widget (not needed for dashboard)
+RUN mkdir -p apps/widget \
+ && echo '{"name":"@ayka/widget","version":"1.0.0","private":true}' > apps/widget/package.json
+
+RUN npm install --ignore-scripts
+
+# Copy dashboard source + shared packages
+COPY apps/dashboard/ ./apps/dashboard/
 COPY packages/ ./packages/
 
-# Copy dashboard app
-COPY apps/dashboard/ ./apps/dashboard/
-
-# Install dependencies
-RUN npm install --workspace=apps/dashboard --include-workspace-root
-
-# Build the dashboard
+# Build-time env — the API URL the browser will call
 ARG NEXT_PUBLIC_API_URL=https://api.ayka.site
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Build Next.js with standalone output
 WORKDIR /app/apps/dashboard
+
+# Ensure public dir exists (may not in some projects)
+RUN mkdir -p public
+
 RUN npx next build
+
+# ── Production image (minimal) ──
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Copy standalone output (includes server.js + all needed node_modules)
+COPY --from=builder /app/apps/dashboard/.next/standalone ./
+# Copy static assets and public folder
+COPY --from=builder /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
+# public folder may not exist
+COPY --from=builder /app/apps/dashboard/public ./apps/dashboard/public
 
 EXPOSE 3001
 
-ENV PORT=3001
-CMD ["npx", "next", "start", "-p", "3001"]
+WORKDIR /app/apps/dashboard
+CMD ["node", "server.js"]

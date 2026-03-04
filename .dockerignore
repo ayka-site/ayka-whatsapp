@@ -1,3 +1,4 @@
+# Ignore build artifacts and env files
 **/node_modules
 **/.next
 .env
@@ -9,8 +10,6 @@ SPV/
 docs/
 *.md
 
-# Ignore dashboard/widget content but allow package.json (needed for npm ci workspace resolution)
-apps/dashboard
-!apps/dashboard/package.json
+# Widget not used in any Docker build yet
 apps/widget
 !apps/widget/package.json
