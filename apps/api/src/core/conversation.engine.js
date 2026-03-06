@@ -22,7 +22,6 @@ const logger = require('../utils/logger')
  *   6. DB writes are fire-and-forget but logged on failure
  */
 
-const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please send your message again in a moment.'
 const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
 
 // In-memory dedup layer — catches race conditions where two webhook calls arrive
@@ -315,7 +314,7 @@ async function processMessage(req) {
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // ── 7. Call LLM (Gemini primary → Groq fallback → Azure last resort) ──
+    // ── 7. Call LLM (Azure OpenAI gpt-4o-mini) ──
     const rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
 
     // ── 8. Parse AI response (detect handoff, clean response text) ──
@@ -432,7 +431,21 @@ async function processMessage(req) {
   } catch (err) {
     logger.error({ err, phone, businessId: tenant.businessId }, 'processMessage failed')
     try {
-      await sendTextMessage(phone, FALLBACK_MSG, tenant.phoneNumberId, tenant.accessToken)
+      // Language-aware natural error message — never sound robotic
+      const hasDevanagari = /[\u0900-\u097F]/.test(messageText || '')
+      const hasHindiWords = /\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap)\b/i.test(messageText || '')
+      const isIndian = (phone || '').startsWith('91')
+
+      let fallback
+      if (hasDevanagari) {
+        fallback = 'अभी थोड़ी तकनीकी दिक्कत आ रही है, क्या आप थोड़ी देर बाद मैसेज कर सकते हैं?'
+      } else if (hasHindiWords || isIndian) {
+        fallback = 'Abhi thodi technical dikkat aa rahi hai, kya aap thodi der baad message kar sakte hain?'
+      } else {
+        fallback = 'We are experiencing a brief technical issue. Could you please try again in a few minutes?'
+      }
+
+      await sendTextMessage(phone, fallback, tenant.phoneNumberId, tenant.accessToken)
     } catch (sendErr) {
       logger.error({ sendErr }, 'Failed to send fallback message')
     }

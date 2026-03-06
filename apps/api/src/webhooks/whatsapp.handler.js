@@ -60,18 +60,21 @@ async function handleWhatsAppWebhook(req, res) {
 
     // ── Rate limit check (set by rateLimiter middleware) ──
     if (req.isRateLimited) {
-      const tenant = req.tenant
-      const phone = msgObj.from
-      // Language-aware rate limit message
-      const isIndian = phone.startsWith('91')
-      const reply = isIndian
-        ? 'Ek minute rukiye, main aapka pichla message padh rahi hoon. Thoda sa patience rakhiye, abhi jawab deti hoon! 🙏'
-        : 'Just a moment please, I\'m reading your previous message. I\'ll respond shortly!'
+      // Only send waiting message ONCE — first time rate limit triggers (count === 11)
+      // Subsequent rate-limited messages are silently dropped to avoid spamming
+      if (req.rateLimitCount === 11) {
+        const tenant = req.tenant
+        const phone = msgObj.from
+        const isIndian = phone.startsWith('91')
+        const reply = isIndian
+          ? 'Ek minute rukiye, main aapka pichla message padh rahi hoon.'
+          : 'Just a moment please, I\'m reading your previous message.'
 
-      await sendTextMessage(
-        phone, reply,
-        tenant.phoneNumberId, tenant.accessToken
-      ).catch(() => {})
+        await sendTextMessage(
+          phone, reply,
+          tenant.phoneNumberId, tenant.accessToken
+        ).catch(() => {})
+      }
       return
     }
 

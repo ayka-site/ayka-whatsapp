@@ -18,6 +18,7 @@ async function rateLimiter(req, res, next) {
     const [count] = await redis.pipeline().incr(key).expire(key, 60).exec()
 
     req.isRateLimited = count > 10
+    req.rateLimitCount = count
     next()
   } catch (err) {
     // Do NOT call next(err) — that propagates a 500 to Express's error handler

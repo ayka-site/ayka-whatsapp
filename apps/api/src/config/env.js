@@ -12,11 +12,9 @@ function validateEnv() {
     throw new Error(`Missing required env vars: ${missing.join(', ')}`)
   }
 
-  // At least one LLM provider must be configured
-  const hasGemini = !!process.env.GEMINI_API_KEY
-  const hasGroq   = !!(process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY)
-  if (!hasGemini && !hasGroq) {
-    throw new Error('At least one LLM provider required: set GEMINI_API_KEY or GROQ_API_KEYS/GROQ_API_KEY')
+  // Azure OpenAI is required for the LLM service
+  if (!process.env.AZURE_OPENAI_KEY) {
+    throw new Error('AZURE_OPENAI_KEY is required for the LLM service')
   }
 
   // ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes for AES-256-CBC)

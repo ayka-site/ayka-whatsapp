@@ -250,35 +250,60 @@ function buildKBSummary(kb) {
 // detectLanguage — determine conversation language from recent messages
 // ═════════════════════════════════════════════════════════════════════════════
 function detectLanguage(recentMessages, currentMessage) {
-  const texts = []
-  if (currentMessage) texts.push(currentMessage)
-  const userMsgs = (recentMessages || []).filter(m => m.role === 'user').slice(-3)
-  userMsgs.forEach(m => texts.push(m.content?.text || ''))
-
-  const corpus = texts.join(' ')
-
-  // Devanagari script → Hindi (pure Hindi)
-  if (/[\u0900-\u097F]/.test(corpus)) return 'hindi'
-
-  // Common Hindi/Awadhi words in Latin script → Hinglish
-  const hindiWords = new Set([
+  // ── IMMEDIATE SCRIPT MATCHING: detect primarily from current message ──
+  // The bot must mirror the user's language/script from the very first message.
+  // Only fall back to conversation history for very short ambiguous inputs.
+  const HINDI_WORDS = new Set([
     'hai', 'hain', 'kya', 'mein', 'nahi', 'aur', 'toh', 'mujhe',
     'chahiye', 'batao', 'bhai', 'yaar', 'kaise', 'hoon', 'aapka', 'aapki',
     'ka', 'ki', 'ke', 'se', 'ko', 'pe', 'par', 'ho', 'raha', 'rahi',
     'karke', 'karna', 'karo', 'btao', 'hn', 'haa', 'ji', 'achha', 'theek',
     'daakhila', 'naam', 'mera', 'meri', 'beta', 'beti', 'bachcha',
+    // Greetings — critical for first-message detection
+    'namaste', 'namaskar', 'namashkra', 'namaskaar', 'namasthe', 'pranam',
+    'salaam', 'salam', 'adaab', 'assalamu', 'alaikum', 'walaikum', 'janab',
     // Awadhi belt / Bahraich local words
     'humka', 'hamra', 'hamaar', 'kaisan', 'aahin', 'babuji', 'maai',
     'padhai', 'padhna', 'kitna', 'kitni', 'kab', 'kahan', 'kaun',
     'bacche', 'school', 'paisa', 'fees', 'dakhila', 'jaankari',
-    // Islamic greetings detected as Hindi register
-    'assalamu', 'alaikum', 'walaikum', 'salam', 'janab',
+    // Common conversation words
+    'acha', 'accha', 'bilkul', 'zaroor', 'shukriya', 'dhanyavad',
+    'bataiye', 'bataye', 'dijiye', 'kijiye', 'chahte', 'chahti',
+    'hum', 'aap', 'tum', 'yeh', 'woh', 'bas', 'nai', 'abhi', 'kal',
+    'subah', 'dopahar', 'shaam', 'baje', 'hnji', 'hmm', 'hn',
   ])
-  const words = corpus.toLowerCase().split(/\s+/)
-  const hindiCount = words.filter(w => hindiWords.has(w)).length
-  const hindiRatio = words.length > 0 ? hindiCount / words.length : 0
 
-  if (hindiRatio > 0.15) return 'hinglish'
+  const text = (currentMessage || '').trim()
+
+  if (text.length > 0) {
+    // Devanagari script → hindi (respond in Devanagari)
+    const devanagariCount = (text.match(/[\u0900-\u097F]/g) || []).length
+    if (devanagariCount >= 2) return 'hindi'
+
+    // Check for Hindi/Hinglish words in Latin script
+    const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+    const hindiCount = words.filter(w => HINDI_WORDS.has(w)).length
+
+    // Short messages (1-2 words): even 1 Hindi word → hinglish
+    if (words.length <= 2 && hindiCount > 0) return 'hinglish'
+
+    // Longer messages: ratio-based detection
+    if (words.length > 2) {
+      const ratio = hindiCount / words.length
+      if (ratio > 0.15) return 'hinglish'
+      return 'english'
+    }
+  }
+
+  // ── FALLBACK: recent history for ambiguous/empty current message ──
+  const userMsgs = (recentMessages || []).filter(m => m.role === 'user').slice(-3)
+  const historyText = userMsgs.map(m => m.content?.text || '').join(' ')
+
+  if (/[\u0900-\u097F]/.test(historyText)) return 'hindi'
+
+  const histWords = historyText.toLowerCase().split(/\s+/)
+  const histHindiCount = histWords.filter(w => HINDI_WORDS.has(w)).length
+  if (histWords.length > 0 && histHindiCount / histWords.length > 0.15) return 'hinglish'
 
   return 'english'
 }
@@ -452,10 +477,10 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
 
   // ── Language instruction ──
   const langInstruction = lang === 'hindi'
-    ? 'Respond in Hindi (Devanagari or Latin script matching the parent).'
+    ? 'RESPOND IN PURE HINDI USING DEVANAGARI SCRIPT (हिन्दी). The parent is typing in Devanagari — you MUST reply in Devanagari. No English words, no Latin script at all.'
     : lang === 'hinglish'
-      ? "Respond in Hinglish (mix of Hindi and English, matching the parent's style)."
-      : 'Respond in English.'
+      ? 'RESPOND IN HINGLISH — Hindi words written in Latin/English script (Roman lipi). Match the parent\'s exact style. Example: "Aapka bachcha kaun si class mein hai?" NOT "आपका बच्चा कौन सी क्लास में है?" and NOT formal English.'
+      : 'RESPOND IN ENGLISH using Latin script. Keep it warm, natural and conversational.'
 
   // ── Language-aware handoff template ──
   const handoffTemplate = staffPhone
@@ -533,6 +558,7 @@ RULE 1 — ANSWER FIRST, ALWAYS.
 When a parent asks a direct question (fees? address? timing? transport? results? hostel? breakfast? routine?), answer it COMPLETELY and IMMEDIATELY from KNOWN FACTS above. Only AFTER answering, you may ask ONE follow-up.
 - For FEES questions: Give the SIMPLE TOTAL from "Fees (SIMPLE TOTALS)" section. Say it plainly: "Class 5 ki fees ₹1,600 per month hai. Iske alawa ₹2,500 additional fee aur ₹1,000 annual fee ek baar deni hoti hai." Do NOT list 5 separate line items. Parents want ONE monthly number first.
 - For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
+- For SPECIALITY/FEATURE questions (e.g. "school mein kya khaas hai", "what makes your school special"): Lead with the school's most academically distinctive features FIRST — AI & robotics lab, STEM education, Tinkering lab, smart board digital classrooms, science & computer labs. Mention sports, music, art, dance and other extracurricular activities only AFTER academic highlights, or if the parent specifically asks. Never lead with generic facilities.
 - If the answer is NOT in KNOWN FACTS, say so honestly: "${lang === 'english' ? `I don't have that detail right now — let me connect you with our team${staffPhone ? `: *${staffPhone}*` : '.'}` : `Yeh detail mere paas abhi nahi hai — ${staffPhone ? `aap *${staffPhone}* pe call kar sakte hain` : 'main team se confirm karwa deti hoon.'}`}"
 
 RULE 2 — NEVER HALLUCINATE.
@@ -541,6 +567,7 @@ If information is not in KNOWN FACTS or MEMORY, you DO NOT know it. Never guess 
 - DO NOT say things like "10th ke liye 14-16 saal" unless KNOWN FACTS explicitly states age limits.
 - DO NOT assume documents required for admission unless listed in KNOWN FACTS.
 - DO NOT assume visit timings or schedules unless explicitly in KNOWN FACTS.
+- ANSWER ONLY WHAT THE PARENT ASKED. Do not volunteer unrelated topics. If they ask about fees, talk about fees — do not randomly mention transport or sports. If they ask about hostel, talk about hostel — do not bring up academics unless asked. Stay precisely on the topic of the parent's question.
 
 RULE 3 — MEMORY IS SACRED.
 Everything in MEMORY was told to you by the parent. Never contradict it. Never re-ask it. If a parent says "I already told you" but MEMORY is empty for that field, politely say you don't have it noted and ask once more. If the parent corrects a previous answer, accept gracefully.
@@ -557,6 +584,8 @@ ${langInstruction} If they switch languages mid-conversation, follow them.
 - When parent types in Devanagari (हिंदी), respond in Devanagari.
 - When parent types Hindi in English letters (hinglish like "mujhe fees batao"), respond in same style.
 - NEVER use formal English phrases like "regarding", "I would like to inform", "certainly" when speaking Hindi. Use natural Hindi: "ji", "zaroor", "bilkul", "bataati hoon".
+- ZERO spelling mistakes. ZERO grammar errors. ZERO awkward phrasing. Every message must read like a fluent native speaker wrote it on WhatsApp.
+- NEVER use emojis. Not a single one. No 🙏, no 👋, no ✅, nothing.
 
 RULE 6 — HANDOFF (USE SPARINGLY).
 ONLY hand off when:
