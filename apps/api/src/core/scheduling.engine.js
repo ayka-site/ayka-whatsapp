@@ -67,6 +67,15 @@ async function scheduleVisit(session, tenant) {
   const rawPreference  = collected.preferredVisitTime || 'Not specified'
   const { date, time } = _parseVisitComponents(rawPreference)
 
+  // ── Server-side operating hours validation ──
+  // School hours: 9 AM – 2 PM, Mon–Sat. Reject clearly invalid times.
+  const invalidTimeMarkers = /raat|night|sunday|itwar|itwaar|evening|shaam|sham|midnight/i
+  const invalidHour = /\b([3-9]|1[0-2])\s*pm\b|\b([3-8])\s*baje\s*(raat|shaam)?/i
+  if (invalidTimeMarkers.test(rawPreference) || invalidHour.test(rawPreference)) {
+    logger.warn({ rawPreference, phone }, 'Visit time outside operating hours — skipping appointment creation')
+    return null
+  }
+
   // Cancel any existing appointment for this conversation (rescheduling scenario)
   try {
     await Appointment.updateMany(

@@ -27,8 +27,9 @@ function parseAIResponse(rawResponse, flowState) {
   return { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed }
 }
 
-// Hindi ordinal words → class number mapping
+// Hindi ordinal words → class number mapping (Latin + Devanagari)
 const HINDI_CLASS_MAP = {
+  // Latin script Hinglish ordinals
   'pehli': 1,  'pehla': 1,  'pratham': 1,
   'doosri': 2, 'doosra': 2,
   'teesri': 3, 'teesra': 3,
@@ -41,6 +42,26 @@ const HINDI_CLASS_MAP = {
   'dasvi': 10,  'daswa': 10,
   'gyarhvi': 11, 'gyarhwa': 11,
   'barahvi': 12, 'barahwa': 12,
+  // Devanagari script ordinals
+  'पहली': 1,   'प्रथम': 1,
+  'दूसरी': 2,
+  'तीसरी': 3,
+  'चौथी': 4,
+  'पाँचवीं': 5,  'पांचवीं': 5,  'पाँचवी': 5,
+  'छठी': 6,    'छठवीं': 6,
+  'सातवीं': 7,  'सातवी': 7,
+  'आठवीं': 8,  'आठवी': 8,
+  'नौवीं': 9,   'नौवी': 9,
+  'दसवीं': 10,  'दसवी': 10,
+  'ग्यारहवीं': 11, 'ग्यारहवी': 11,
+  'बारहवीं': 12, 'बारहवी': 12,
+}
+
+// Devanagari number words → digit mapping
+const DEVANAGARI_NUMBER_MAP = {
+  'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पाँच': 5, 'पांच': 5,
+  'छह': 6, 'छः': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
+  'ग्यारह': 11, 'बारह': 12,
 }
 
 function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessages) {
@@ -51,6 +72,9 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   // Ensure collectedData exists
   if (!updated.collectedData) updated.collectedData = {}
   if (!updated.goals)         updated.goals = {}
+
+  // Wrap all extraction in try/finally to guarantee recentMessages cleanup (Problem 13)
+  try {
 
   // ── Rescheduling: reset visit state when user explicitly wants a new time ──
   // This allows the bot to re-collect the time preference and emit VISIT_CONFIRMED: YES again,
@@ -71,9 +95,13 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     updated.goals.inquiryUnderstood = true
   }
 
-  // ── Mark info shared if AI response is substantive ──
-  if (aiResponse.length > 80) {
-    updated.goals.infoShared = true
+  // ── Mark info shared if AI response contains actual school facts ──
+  // Not just any long response — must contain real KB content indicators
+  if (!updated.goals.infoShared && aiResponse.length > 30) {
+    const FACT_INDICATORS = /\b(₹|rupee|fee|fees|फीस|class\s*\d|nursery|hostel|होस्टल|admission|दाखिला|dakhila|daakhila|timing|\d\s*(?:am|pm|baje)|result|\d+\.\d+%|campus|infrastructure|lab|library|transport|bus|cbse|board|\bscience\b|\bcommerce\b|\barts\b|sports|hostel|smart\s*board|stem|robotics|tinkering)\b/i
+    if (FACT_INDICATORS.test(aiResponse)) {
+      updated.goals.infoShared = true
+    }
   }
 
   // ── Detect visit suggestion in AI response ──
@@ -163,13 +191,24 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     if (!updated.collectedData.parentName) {
       const lastAI = (updated.recentMessages || flowState.recentMessages || []).filter(m => m.role === 'assistant').slice(-1)[0]
       const lastAIText = (lastAI?.content?.text || '').toLowerCase()
-      const aiAskedName = /(?:naam|name|aapka\s+shubh|your\s+(?:good\s+)?name|aapka\s+naam)/i.test(lastAIText)
+      const aiAskedName = /(?:नाम|शुभ|आपका|naam|name|aapka\s+shubh|your\s+(?:good\s+)?name|aapka\s+naam)/i.test(lastAIText)
 
       if (aiAskedName) {
-        // Check if user message is a bare name (1-3 words, mostly alpha, title-cased first word)
         const trimmed = userMessage.trim()
         const words = trimmed.split(/\s+/)
-        if (words.length >= 1 && words.length <= 3) {
+
+        // Devanagari name: 1-3 Devanagari words
+        const isDevanagari = words.every(w => /^[\u0900-\u097F]+$/.test(w))
+        if (isDevanagari && words.length >= 1 && words.length <= 3) {
+          const candidate = words.join(' ')
+          if (candidate.length >= 2) {
+            updated.collectedData.parentName  = candidate
+            updated.goals.parentNameCollected = true
+          }
+        }
+
+        // Latin name: existing logic
+        if (!updated.collectedData.parentName && words.length >= 1 && words.length <= 3) {
           const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
           const firstCapped = /^[A-Z]/.test(words[0])
           if (allAlpha && firstCapped) {
@@ -193,6 +232,22 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         }
       }
     }
+
+    // Devanagari explicit name patterns: "मेरा नाम रमेश है" / "मैं रमेश हूँ"
+    if (!updated.collectedData.parentName) {
+      // Common Hindi stop words that appear after a name — must be excluded from capture
+      const HINDI_STOP = new Set(['है', 'हैं', 'हूँ', 'हूं', 'हु', 'से', 'का', 'की', 'के', 'और', 'भी', 'तो', 'ने', 'पर', 'में', 'को'])
+      const devNameMatch = userMessage.match(/(?:मेरा\s+नाम|मैं)\s+(?:है\s+)?([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)
+      if (devNameMatch?.[1]) {
+        // Filter out stop words from captured name
+        const nameWords = devNameMatch[1].trim().split(/\s+/).filter(w => !HINDI_STOP.has(w))
+        const candidate = nameWords.join(' ')
+        if (candidate.length >= 2) {
+          updated.collectedData.parentName  = candidate
+          updated.goals.parentNameCollected = true
+        }
+      }
+    }
   }
 
   // ── Class correction: user says "actually class 7" or "wrong class, it's class 9" ──
@@ -209,11 +264,32 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   // Priority 0: Hindi ordinals → Tier 1: enrollment context → Tier 2: bare mention (guarded)
   if (!updated.collectedData.interestedClass) {
 
-    // Priority 0: Hindi ordinal class names (paanchvi, aathvi, barahvi, etc.)
+    // Priority 0: Hindi ordinal class names (paanchvi, aathvi, barahvi, पाँचवीं, आठवीं, etc.)
     for (const [hindi, num] of Object.entries(HINDI_CLASS_MAP)) {
-      if (new RegExp(`\\b${hindi}\\b`, 'i').test(userMessage)) {
+      if (new RegExp(`\\b${hindi}\\b`, 'i').test(userMessage) || userMessage.includes(hindi)) {
         updated.collectedData.interestedClass = `Class ${num}`
         break
+      }
+    }
+
+    // Priority 0B: Devanagari digit patterns — "कक्षा 10", "क्लास 5", "कक्षा २०" (with Devanagari digits)
+    if (!updated.collectedData.interestedClass) {
+      const devClassMatch = userMessage.match(/(?:कक्षा|क्लास|श्रेणी)\s*([\u0966-\u096F0-9]{1,2})/)
+      if (devClassMatch) {
+        // Convert Devanagari digits to Arabic
+        const numStr = devClassMatch[1].replace(/[\u0966-\u096F]/g, d => String(d.charCodeAt(0) - 0x0966))
+        const num = parseInt(numStr, 10)
+        if (num >= 1 && num <= 12) updated.collectedData.interestedClass = `Class ${num}`
+      }
+    }
+
+    // Priority 0C: Devanagari number words — "दसवीं कक्षा", "पाँचवीं में"
+    if (!updated.collectedData.interestedClass) {
+      for (const [numWord, num] of Object.entries(DEVANAGARI_NUMBER_MAP)) {
+        if (userMessage.includes(numWord)) {
+          updated.collectedData.interestedClass = `Class ${num}`
+          break
+        }
       }
     }
 
@@ -357,12 +433,23 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     if (!updated.collectedData.studentName) {
       const lastAI = (updated.recentMessages || []).filter(m => m.role === 'assistant').slice(-1)[0]
       const lastAIText = (lastAI?.content?.text || '').toLowerCase()
-      const aiAskedStudent = /(?:bachch[ea]|bache|beta|beti|child|student|son|daughter).*(?:naam|name)/i.test(lastAIText)
+      const aiAskedStudent = /(?:बच्च[\u0947\u093e]|बचे|बेटा|बेटी|नाम|bachch[ea]|bache|beta|beti|child|student|son|daughter).*(?:नाम|naam|name)/i.test(lastAIText)
 
       if (aiAskedStudent) {
         const trimmed = userMessage.trim()
         const words = trimmed.split(/\s+/)
+
+        // Devanagari student name
         if (words.length >= 1 && words.length <= 3) {
+          const isDevanagari = words.every(w => /^[\u0900-\u097F]+$/.test(w))
+          if (isDevanagari && trimmed.length >= 2) {
+            updated.collectedData.studentName  = trimmed
+            updated.goals.studentInfoCollected = true
+          }
+        }
+
+        // Latin student name
+        if (!updated.collectedData.studentName && words.length >= 1 && words.length <= 3) {
           const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
           if (allAlpha) {
             const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
@@ -372,6 +459,15 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
             }
           }
         }
+      }
+    }
+
+    // Devanagari explicit student name: "मेरे बेटे का नाम राहुल है" / "मेरी बेटी स्नेहा"
+    if (!updated.collectedData.studentName) {
+      const devStudentMatch = userMessage.match(/(?:मेर[\u0947\u0940\u093e]\s+(?:बेट[\u0947\u0940\u093e]|बच्च[\u0947\u093e]|बचे)(?:\s+का\s+नाम)?\s*(?:है\s+)?)\s*([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)
+      if (devStudentMatch?.[1] && devStudentMatch[1].length >= 2) {
+        updated.collectedData.studentName  = devStudentMatch[1].trim()
+        updated.goals.studentInfoCollected = true
       }
     }
   }
@@ -390,11 +486,15 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.collectedData.preferredVisitTime) {
     const timePatterns = [
       /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i,
-      /\b(morning|afternoon|evening|subah|dopahar|shaam|10\s*(?:am|baje)|11\s*(?:am|baje)|12\s*(?:pm|baje))\b/i,
+      /\b(morning|afternoon|subah|dopahar|10\s*(?:am|baje)|11\s*(?:am|baje)|12\s*(?:pm|baje)|1\s*(?:pm|baje)|2\s*(?:pm|baje))\b/i,
     ]
-    // Only extract if the message clearly has visit intent
-    // NOTE: bare 'aa' removed — it's too common in Hinglish ("aa raha tha", "aa gaya", etc.)
-    if (/\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)) {
+
+    // BLOCK invalid times — night, evening, Sunday are outside school hours (9AM–2PM Mon–Sat)
+    const INVALID_TIME_MARKERS = /\b(raat|night|sunday|itwar|itwaar|evening|shaam|sham|rat\s*ke?|midnight|3\s*(?:am|pm|baje)|4\s*(?:pm|baje)|5\s*(?:pm|baje)|6\s*(?:pm|baje)|7\s*(?:pm|baje)|8\s*(?:pm|baje)|9\s*(?:pm|baje)|10\s*pm|11\s*pm|12\s*am)\b/i
+    const hasInvalidTime = INVALID_TIME_MARKERS.test(userLc)
+
+    // Only extract if the message clearly has visit intent AND is not at an invalid time
+    if (!hasInvalidTime && /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)) {
       for (const pattern of timePatterns) {
         const match = userMessage.match(pattern)
         if (match) {
@@ -407,7 +507,9 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
   // Clean up: remove recentMessages from flowState before returning
   // (it was only attached temporarily for bare-name detection)
-  delete updated.recentMessages
+  } finally {
+    delete updated.recentMessages
+  }
 
   return updated
 }

@@ -145,10 +145,13 @@ async function processMessage(req) {
   messageText = messageText.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
   messageText = messageText.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '[?]').trim()
 
+  // ── Load session early — needed for language-aware media fallback messages ──
+  let session = await sessionService.getSession(tenant.businessId, phone)
+
   // Handle special media markers — tell parent we received it but can't process
   if (messageText === '__IMAGE_RECEIVED__' || messageText === '__DOCUMENT_RECEIVED__') {
     try {
-      const lang = detectLanguageFromPhone(phone) // simple heuristic
+      const lang = detectLanguageFromContext(session, phone)
       const reply = lang === 'en'
         ? "I received your file! For now, I can only read text messages. Could you type out what you'd like to know?"
         : 'Aapki file mili! Abhi main sirf text messages padh sakti hoon. Kya aap type karke bata sakte hain?'
@@ -181,8 +184,7 @@ async function processMessage(req) {
     return
   }
 
-  // ── 1. Get or create session ──
-  let session = await sessionService.getSession(tenant.businessId, phone)
+  // ── 1. Get or create session (loaded earlier for media fallback — reuse here) ──
 
   if (!session) {
     session = {
@@ -452,8 +454,16 @@ async function processMessage(req) {
   }
 }
 
-// Simple heuristic — Indian numbers get Hindi fallback
-function detectLanguageFromPhone(phone) {
+// Session-aware language detection for media fallback messages
+// Uses recent conversation messages instead of just phone prefix
+function detectLanguageFromContext(session, phone) {
+  const userMsgs = (session?.recentMessages || []).filter(m => m.role === 'user').slice(-3)
+  for (const m of userMsgs) {
+    const text = m.content?.text || ''
+    if (/[\u0900-\u097F]/.test(text)) return 'hi' // Devanagari
+    if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|boliye|bataiye)\b/i.test(text)) return 'hi'
+  }
+  // Fallback: Indian phone number → Hindi, else English
   return (phone || '').startsWith('91') ? 'hi' : 'en'
 }
 
