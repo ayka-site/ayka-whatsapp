@@ -10,14 +10,15 @@ async function rateLimiter(req, res, next) {
 
     const key = `ratelimit:${businessId}:${phone}`
 
-    // Atomic pipeline: INCR + EXPIRE in a single HTTP round-trip.
-    // Prevents the race where INCR creates the key but EXPIRE never runs
-    // (e.g. process crash or Redis error between the two calls).
-    // Using EXPIRE on every call makes this a sliding window — acceptable
-    // for WhatsApp rate limiting and harder to game than a fixed window.
-    const [count] = await redis.pipeline().incr(key).expire(key, 60).exec()
+    // Fixed-window rate limiter: INCR the key, set TTL only on first message.
+    // The old sliding-window reset EXPIRE on every message, so the counter
+    // grew indefinitely during active conversations (never expired).
+    // Now the 60-second window starts when the first message arrives and
+    // resets naturally — no matter how many messages come in that window.
+    const count = await redis._client.incr(key)
+    if (count === 1) await redis._client.expire(key, 60)
 
-    req.isRateLimited = count > 25
+    req.isRateLimited = count > 40
     req.rateLimitCount = count
     next()
   } catch (err) {

@@ -153,7 +153,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
   // ── Extract parent name from user message ──
   // Allow override if user EXPLICITLY states their name (covers name corrections too)
-  const hasExplicitNameStatement = /\b(mera\s+naam|mera\s+name|my\s+name\s+is|i\s+am|i'm|this\s+is|main\s+hoon)\b/i.test(userMessage)
+  const hasExplicitNameStatement = /\b(mera\s+naam|mera\s+name|my\s+name\s+is|i\s+am|i'm|this\s+is|main\s+hoon)\b/i.test(userMessage) || /मेरा\s+नाम/.test(userMessage)
   if (!updated.collectedData.parentName || hasExplicitNameStatement) {
     const namePatterns = [
       // Capture up to 3 words — run on cleanedForNames (periods stripped from honorifics)
@@ -234,7 +234,8 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     }
 
     // Devanagari explicit name patterns: "मेरा नाम रमेश है" / "मैं रमेश हूँ"
-    if (!updated.collectedData.parentName) {
+    // Allow override only for "मेरा नाम" (explicit correction), NOT "मैं X" alone
+    if (!updated.collectedData.parentName || /मेरा\s+नाम/.test(userMessage)) {
       // Common Hindi stop words that appear after a name — must be excluded from capture
       const HINDI_STOP = new Set(['है', 'हैं', 'हूँ', 'हूं', 'हु', 'से', 'का', 'की', 'के', 'और', 'भी', 'तो', 'ने', 'पर', 'में', 'को'])
       const devNameMatch = userMessage.match(/(?:मेरा\s+नाम|मैं)\s+(?:है\s+)?([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)

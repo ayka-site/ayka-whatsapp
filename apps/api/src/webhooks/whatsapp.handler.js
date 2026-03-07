@@ -62,7 +62,7 @@ async function handleWhatsAppWebhook(req, res) {
     if (req.isRateLimited) {
       // Only send waiting message ONCE — first time rate limit triggers (count === 11)
       // Subsequent rate-limited messages are silently dropped to avoid spamming
-      if (req.rateLimitCount === 26) {
+      if (req.rateLimitCount === 41) {
         const tenant = req.tenant
         const phone = msgObj.from
         const isIndian = phone.startsWith('91')
