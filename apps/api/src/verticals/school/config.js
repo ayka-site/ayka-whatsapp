@@ -77,6 +77,49 @@ const schoolConfig = {
       return `Partial info: ${known.join(', ')} — missing ${3 - known.length} key fields`
     },
   },
+
+  // ── Special Knowledge Packs (fallback facts if present in KB or needed in prompt context) ──
+  specialKnowledge: {
+    talentHunt2026: {
+      name: 'Sant Pathik Talent Hunt 2026',
+      scope: 'City-level talent platform to encourage confidence, creativity, and self-expression',
+      participation: {
+        ageGroup: '3 to 12 years',
+        openForAll: true,
+        fee: 'Free (no registration fee)',
+      },
+      categories: [
+        'Fancy Dress with Rhymes (Age 3-5): National Leaders / Save Earth',
+        'Ad Mad (Age 6-7)',
+        'Storytelling with Props (Age 8-9): Open',
+        'Singing (Age 10-12): Open',
+        'Dancing (Age 10-12): Open',
+      ],
+      process: [
+        'Record a clear performance video',
+        'Send the video to official school WhatsApp',
+        'Upload the same video on Instagram',
+        'Tag Sant Pathik Talent Hunt Instagram page',
+        'School accepts as collaboration',
+      ],
+      judging: [
+        'Final score = Judges evaluation + Instagram engagement points',
+        'Every 100 likes = 10 points',
+      ],
+      awards: {
+        cashPrizePool: '₹21,000',
+        perCategory: '1st, 2nd, 3rd positions',
+        allParticipants: 'Certificate of Participation & Appreciation',
+        firstPlaceTitles: {
+          adMad: 'Pathik Ad Star',
+          fancyDress: 'Pathik Costume Icon',
+          storytelling: 'Pathik Kahani Samrat',
+          singing: 'Pathik Sursamrat',
+          dancing: 'Pathik Nrityangna',
+        },
+      },
+    },
+  },
 }
 
 module.exports = schoolConfig

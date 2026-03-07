@@ -1,3 +1,42 @@
+const logger = require('../utils/logger')
+
+/**
+ * dedupeResponseParagraphs - Remove exact duplicate paragraphs from model output.
+ * @param {string} text - Raw assistant response text.
+ * @returns {string} Response with duplicate paragraphs removed, order preserved.
+ */
+function dedupeResponseParagraphs(text) {
+  const paragraphs = String(text || '')
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
+
+  const seen = new Set()
+  const unique = []
+  for (const p of paragraphs) {
+    const key = p.toLowerCase().replace(/\s+/g, ' ')
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(p)
+  }
+  return unique.join('\n\n')
+}
+
+/**
+ * normalizeModelResponse - Apply safe cleanup to improve readability and reduce repetition.
+ * @param {string} text - Raw assistant response text.
+ * @returns {string} Normalized assistant response.
+ */
+function normalizeModelResponse(text) {
+  const compact = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  return dedupeResponseParagraphs(compact)
+}
+
 function parseAIResponse(rawResponse, flowState) {
   if (!rawResponse) {
     return { cleanResponse: '', updatedFlowState: flowState, shouldHandoff: false }
@@ -23,6 +62,8 @@ function parseAIResponse(rawResponse, flowState) {
     updatedFlowState.visitConfirmedAt = new Date()
     cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '').trim()
   }
+
+  cleanResponse = normalizeModelResponse(cleanResponse)
 
   return { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed }
 }

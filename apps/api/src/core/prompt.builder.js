@@ -352,6 +352,24 @@ function detectLanguageMode(currentMessage, recentMessages) {
   return 'english'
 }
 
+/**
+ * resolveTalentHuntKnowledge - Read Talent Hunt data from known KB shapes with fallback.
+ * @param {object|null|undefined} kb - Knowledge base document.
+ * @param {object|null|undefined} specialKnowledge - Vertical config special knowledge map.
+ * @returns {object|null} Talent Hunt fact object when available.
+ */
+function resolveTalentHuntKnowledge(kb, specialKnowledge) {
+  return (
+    kb?.content?.events?.talentHunt2026 ||
+    kb?.content?.events?.talentHunt ||
+    kb?.content?.specialEvents?.talentHunt2026 ||
+    kb?.content?.specialEvents?.talentHunt ||
+    kb?.content?.talentHunt2026 ||
+    specialKnowledge?.talentHunt2026 ||
+    null
+  )
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // detectEmotion — score-based emotion from last user message + flow state
 // ═════════════════════════════════════════════════════════════════════════════
@@ -421,9 +439,11 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
 
   // ── Load vertical scheduling config (if available) ──
   let schedulingConfig = null
+  let specialKnowledge = null
   try {
     const verticalConfig = require(`../verticals/${session?.vertical || 'school'}/config`)
     if (verticalConfig?.scheduling?.enabled) schedulingConfig = verticalConfig.scheduling
+    if (verticalConfig?.specialKnowledge) specialKnowledge = verticalConfig.specialKnowledge
   } catch (err) {
     logger.warn({ err, vertical: session?.vertical || 'school' }, 'Vertical config load failed; scheduling disabled')
   }
@@ -476,6 +496,19 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
     ? factLines.map(l => `• ${l}`).join('\n')
     : '(No knowledge base loaded — for ALL questions, offer to connect with admissions staff.)'
 
+  const talentHunt = resolveTalentHuntKnowledge(kb, specialKnowledge)
+  const talentHuntBlock = talentHunt
+    ? `• Event: ${talentHunt.name}
+• Purpose: ${talentHunt.scope}
+• Eligibility: Age ${talentHunt.participation?.ageGroup}, Open for all
+• Fee: ${talentHunt.participation?.fee}
+• Categories: ${(talentHunt.categories || []).join(' | ')}
+• Participation process: ${(talentHunt.process || []).join(' -> ')}
+• Judging: ${(talentHunt.judging || []).join(' | ')}
+• Awards: Cash pool ${talentHunt.awards?.cashPrizePool}; ${(talentHunt.awards?.perCategory || '')}; ${talentHunt.awards?.allParticipants || ''}
+• First-place category titles: Ad Mad - ${talentHunt.awards?.firstPlaceTitles?.adMad || 'Pathik Ad Star'}, Fancy Dress - ${talentHunt.awards?.firstPlaceTitles?.fancyDress || 'Pathik Costume Icon'}, Storytelling - ${talentHunt.awards?.firstPlaceTitles?.storytelling || 'Pathik Kahani Samrat'}, Singing - ${talentHunt.awards?.firstPlaceTitles?.singing || 'Pathik Sursamrat'}, Dancing - ${talentHunt.awards?.firstPlaceTitles?.dancing || 'Pathik Nrityangna'}`
+    : ''
+
   // ── Build MEMORY block ──
   const safeParent = escapePromptValue(collected.parentName || '[not yet collected]')
   const safeStudentRaw = collected.studentName ? escapePromptValue(collected.studentName) : '[not yet collected]'
@@ -488,6 +521,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (collected.preferredVisitTime) memoryLines.push(`Visit time: ${escapePromptValue(collected.preferredVisitTime)}`)
   if (collected.altPhone)           memoryLines.push(`Alternate phone: ${escapePromptValue(collected.altPhone)}`)
   if (collected.priorities)         memoryLines.push(`Priorities: ${escapePromptValue(collected.priorities)}`)
+  memoryLines.push(`Handoff already done: ${flowState.handoffTriggered ? 'yes' : 'no'}`)
 
   const memoryBlock = memoryLines.join('\n') + '\n⚠ Parent name and Student name are ALWAYS different people. NEVER use the parent\'s name (or any part of it) as the student\'s name.'
 
@@ -610,6 +644,8 @@ CONVERSATION STYLE — Sound like a REAL PERSON on WhatsApp, not a chatbot:
 • NEVER paste visit hours in parentheses like "(somvaar se shanivaar, 9-2)". If you need to mention hours, weave them naturally: "School subah 9 se 2 baje tak khula rehta hai."
 • Use natural transitions: "Achha", "Waise", "Haan toh", "Sahi hai" — the way real people talk.
 • Keep replies TIGHT — 2-3 lines max. No filler sentences.
+• RESPECT ALWAYS: Use respectful form ("aap"), never rude/commanding phrasing.
+• LANGUAGE QUALITY: Use simple, native, grammatically correct Hindi/Hinglish/English. No broken or literal translations.
 
 COLLECTION BOUNDARIES — You ONLY collect these 4 things, in this order:
 1. Parent's name
@@ -624,6 +660,9 @@ ${doNotAskBlock}
 
 ━━━ KNOWN FACTS (say ONLY what is here — never invent) ━━━
 ${factsBlock}
+
+${talentHuntBlock ? `━━━ SPECIAL EVENT FACTS (use when asked about Talent Hunt / event / 28 March) ━━━
+${talentHuntBlock}` : ''}
 
 ${facts.hostelFAQ && isHostelConversation ? `━━━ HOSTEL FAQ (answer hostel questions from here FIRST) ━━━
 ${facts.hostelFAQ}` : ''}
@@ -649,6 +688,7 @@ If information is not in KNOWN FACTS or MEMORY, you DO NOT know it. Never guess 
 - DO NOT assume documents required for admission unless listed in KNOWN FACTS.
 - DO NOT assume visit timings or schedules unless explicitly in KNOWN FACTS.
 - ANSWER ONLY WHAT THE PARENT ASKED. Do not volunteer unrelated topics. If they ask about fees, talk about fees — do not randomly mention transport or sports. If they ask about hostel, talk about hostel — do not bring up academics unless asked. Stay precisely on the topic of the parent's question.
+- NEVER answer a different question. If asked about books/dress, do NOT answer transport. If asked routine, do NOT answer sports.
 
 RULE 3 — MEMORY IS SACRED.
 Everything in MEMORY was told to you by the parent. Never contradict it. Never re-ask it. If a parent says "I already told you" but MEMORY is empty for that field, politely say you don't have it noted and ask once more. If the parent corrects a previous answer, accept gracefully.
@@ -675,6 +715,7 @@ C) ENGLISH: If their latest message is in proper English (like "What are the sch
 CRITICAL RULES:
 - EVERY message is detected independently. If they switch script mid-conversation, you switch immediately.
 - If the latest message is Latin-script English and has no Hindi words, reply in English even if earlier messages were Hindi/Hinglish.
+- If user explicitly says "Can we talk in English" (or similar), continue in English until they switch language.
 - NEVER use formal English words ("regarding", "certainly", "I would like to inform") when in Hindi/Hinglish mode. Say "zaroor", "bilkul", "bataati hoon".
 - ZERO spelling mistakes. ZERO grammar errors. Every message must read like a fluent native speaker on WhatsApp.
 - NEVER use emojis. Not one. No 🙏, no 👋, no ✅.
@@ -696,6 +737,7 @@ When you DO hand off:
 - Use this template: ${handoffTemplate}
 - Then on a NEW line, write exactly: HANDOFF: YES
 - Never output "HANDOFF: YES" in any other context.
+- If MEMORY says "Handoff already done: yes", do NOT emit HANDOFF: YES again unless the parent explicitly asks to be connected right now.
 
 ${schedulingConfig ? `RULE 6B — VISIT SCHEDULING.
 ${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} — ABSOLUTE LIMIT.` : ''}
@@ -716,7 +758,7 @@ You are ${agentName}. Never say "As an AI", "I'm a bot", "language model", or re
 
 ━━━ CONVERSATION APPROACH ━━━
 ${isPostHandoff
-    ? `Parent already received handoff. Remind them of the staff number (*${staffPhone || 'admissions team'}*, ${workingHours}) if they ask. Do NOT restart the admission funnel. Be brief and helpful.`
+    ? `Parent already received handoff. Still answer ANY question that is available in KNOWN FACTS/SPECIAL EVENT FACTS. Only remind staff number (*${staffPhone || 'admissions team'}*, ${workingHours}) for unknown details or if parent asks to connect. Do NOT repeat handoff in every reply.`
     : isFirstMessage
       ? (isGreeting
           ? `FIRST MESSAGE: Welcome them warmly like a REAL person — not a menu. Keep it SHORT (2 lines max). Introduce yourself by name. Use this style (adapt to their script):
@@ -743,6 +785,7 @@ ${recentChat || '(New conversation)'}
 
 ━━━ FINAL REMINDER ━━━
 Look at the parent's LATEST message. Match its script and language EXACTLY (Rule 5). Answer their question FIRST. No emojis. 3 lines max. 1 question max. NEVER ask for phone/contact number.
+Before sending, do a quick self-check: correct grammar, respectful wording, and direct answer to the same question asked by the parent.
 
 Now reply as ${agentName}.`
 }
