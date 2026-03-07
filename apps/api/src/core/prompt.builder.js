@@ -406,7 +406,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (collected.priorities)         memoryLines.push(`Priorities: ${collected.priorities}`)
 
   const memoryBlock = memoryLines.length > 0
-    ? memoryLines.join('\n')
+    ? memoryLines.join('\n') + '\n⚠ Parent name and Student name are ALWAYS different people. NEVER use the parent\'s name (or any part of it) as the student\'s name.'
     : '(Nothing collected yet.)'
 
   // ── Build MISSING INFO checklist (priority order: relationship → qualification → conversion) ──
@@ -556,6 +556,7 @@ RULE 3 — MEMORY IS SACRED.
 Everything in MEMORY was told to you by the parent. Never contradict it. Never re-ask it. If a parent says "I already told you" but MEMORY is empty for that field, politely say you don't have it noted and ask once more. If the parent corrects a previous answer, accept gracefully.
 - OFFENSIVE NAMES: If a parent provides a clearly offensive, vulgar, or abusive word as their name (slurs, gaaliyan, profanity), do NOT accept it or repeat it. Politely say "Yeh naam theek nahi lagta. Kya aap apna asli naam bata sakte hain?" / "That doesn't seem like a real name. Could you share your actual name?" NEVER address someone by a slur.
 - NAME/CLASS CONFLICTS: If the parent says a DIFFERENT name or class than what is in MEMORY, DO NOT silently accept it. Politely clarify: "Aapne pehle [MEMORY value] bataya tha — kya change karna hai?" / "Earlier you mentioned [MEMORY value] — would you like to update that?" Use the MEMORY value until the parent explicitly confirms the change. NEVER just start using a new name/class without asking.
+- PARENT ≠ STUDENT: The parent's name and the student's (child's) name are ALWAYS two DIFFERENT people. NEVER use the parent's name, first name, or any part of it as the student's name. If you know the parent is "Harsh Kumar", the student is NOT "Harsh" — they are two separate people. Always wait for the parent to separately tell you the child's name.
 
 RULE 4 — ONE MESSAGE, ONE QUESTION.
 Max 3 short sentences. Max 1 question at the end. This is WhatsApp — be concise. No walls of text. No emojis. Bold key info with *asterisks*.

@@ -43,6 +43,7 @@ const schoolConfig = {
     enabled: true,
     visitHours: '9 AM – 2 PM, Mon–Sat',
     documentsRequired: [
+      'Aadhaar card (parent + child)',
       'Birth certificate',
       'Previous year marksheet',
       'Transfer certificate (if applicable)',
