@@ -162,6 +162,22 @@ function buildKBSummary(kb) {
     facts.hostelFAQ = c.hostelFAQ.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n---\n')
   }
 
+  // General parent FAQ — content.generalFAQ[]
+  // Pre-formulated answers for common parent questions (student-teacher ratio,
+  // computer education, optional subjects, achievements, session, overall development etc.)
+  if (Array.isArray(c.generalFAQ) && c.generalFAQ.length > 0) {
+    facts.generalFAQ = c.generalFAQ.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n---\n')
+  }
+
+  // Academic session start — content.about.academicSession
+  if (c.about?.academicSession) facts.academicSession = c.about.academicSession
+
+  // Student-teacher ratio — content.staff.studentTeacherRatio
+  if (c.staff?.studentTeacherRatio) facts.studentTeacherRatio = c.staff.studentTeacherRatio
+
+  // UDISE code — content.about.udiseCode
+  if (c.about?.udiseCode) facts.udiseCode = c.about.udiseCode
+
   // Simplified fees — content.feeSimplified
   if (c.feeSimplified?.perClass?.length > 0) {
     facts.feeSimplified = c.feeSimplified.perClass.map(f => `${f.classes}: ${f.monthlyTotal}`).join('\n')
@@ -236,6 +252,7 @@ function buildKBSummary(kb) {
     'vicePrincipal', 'primaryWingIC', 'officeStaff', 'schoolRules',
     'founderTribute', 'nearbyLocations', 'nearbyLandmarks',
     'complaintRedressal', 'laboratories', 'hostelFAQ', 'feeSimplified',
+    'generalFAQ', 'computerEducation',
   ])
   for (const [key, val] of Object.entries(c)) {
     if (!KNOWN_KEYS.has(key) && typeof val === 'string') {
@@ -415,7 +432,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   const factLines = []
   if (facts.name)             factLines.push(`Name: ${facts.name}`)
   if (facts.address)          factLines.push(`Address: ${facts.address}`)
-  if (facts.board)            factLines.push(`Board: ${facts.board}${facts.affiliationNo ? ` (${facts.affiliationNo})` : ''}`)
+  if (facts.board)            factLines.push(`Board: ${facts.board}${facts.affiliationNo ? ` (Affiliation No. ${facts.affiliationNo})` : ''}${facts.udiseCode ? ` | UDISE Code: ${facts.udiseCode}` : ''}`)
   if (facts.classes)          factLines.push(`Classes offered: ${facts.classes}`)
   if (facts.streams)          factLines.push(`Streams (11-12): ${facts.streams}`)
   // If feeSimplified exists (parent-friendly totals), skip the verbose class-wise breakdown to save tokens
@@ -423,11 +440,13 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.results)          factLines.push(`Results: ${facts.results}`)
   if (facts.infrastructure)   factLines.push(`Campus: ${facts.infrastructure}`)
   if (facts.timing)           factLines.push(`School hours: ${facts.timing}`)
+  if (facts.academicSession)  factLines.push(`Academic session starts: ${facts.academicSession}`)
   if (facts.admissionStatus)  factLines.push(`Admissions: ${facts.admissionStatus}`)
   if (facts.admissionProcess) factLines.push(`Process: ${facts.admissionProcess}`)
   if (facts.transport)        factLines.push(`Transport: ${facts.transport}`)
   if (facts.transportBuses)   factLines.push(`Buses: ${facts.transportBuses}`)
   if (facts.students)         factLines.push(`Students: ${facts.students}`)
+  if (facts.studentTeacherRatio) factLines.push(`Student-teacher ratio: ${facts.studentTeacherRatio}`)
   if (facts.vicePrincipal)    factLines.push(`Vice Principal: ${facts.vicePrincipal}`)
   if (facts.nearbyLocations)  factLines.push(`Nearby: ${facts.nearbyLocations}`)
   if (facts.highlights)       factLines.push(`Highlights: ${facts.highlights}`)
@@ -609,6 +628,9 @@ ${factsBlock}
 ${facts.hostelFAQ && isHostelConversation ? `━━━ HOSTEL FAQ (answer hostel questions from here FIRST) ━━━
 ${facts.hostelFAQ}` : ''}
 
+${facts.generalFAQ ? `━━━ GENERAL PARENT FAQ (check here FIRST for ratio, computer, optional subjects, achievements, session, development, communication questions) ━━━
+${facts.generalFAQ}` : ''}
+
 ━━━ 7 RULES (follow in exact priority order) ━━━
 
 RULE 1 — ANSWER FIRST, ALWAYS.
@@ -617,8 +639,8 @@ When a parent asks a direct question (fees? address? timing? transport? results?
   Example (match latest language mode): ${feeExample}
 - For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
 - For SPECIALITY/FEATURE questions (e.g. "school mein kya khaas hai", "what makes your school special"): Lead with the school's most academically distinctive features FIRST — AI & robotics lab, STEM education, Tinkering lab, smart board digital classrooms, science & computer labs. Mention sports, music, art, dance and other extracurricular activities only AFTER academic highlights, or if the parent specifically asks. Never lead with generic facilities.
-- If the answer is NOT in KNOWN FACTS, say so honestly IN THE PARENT'S LANGUAGE and redirect to the website *${tenantSettings?.websiteUrl || 'https://www.santpathikvidyalaya.org/'}*${staffPhone ? ` and/or staff phone *${staffPhone}*` : '.'}
-  Example (adapt to parent's language): "Yeh detail mere paas nahi hai. Aap website *${tenantSettings?.websiteUrl || 'https://www.santpathikvidyalaya.org/'}* dekh sakte hain${staffPhone ? ` ya *${staffPhone}* pe call kar sakte hain` : '.'}"
+- If the answer is NOT in KNOWN FACTS or GENERAL PARENT FAQ above (e.g. school timings, section count, uniform/book vendor, admission test dates, pre-admission counseling availability, hostel evening tuition, online payment QR code), say so briefly in the parent's language and IMMEDIATELY trigger handoff — use the handoff template and write HANDOFF: YES on a new line. Do NOT just redirect to a website. Connect them with a real person who can answer.
+  Example: "Yeh specific detail mere paas abhi nahi hai, main aapko seedha school team se connect karti hoon." → then use handoff template → HANDOFF: YES
 
 RULE 2 — NEVER HALLUCINATE.
 If information is not in KNOWN FACTS or MEMORY, you DO NOT know it. Never guess an address, fee, route, timing, or any detail. Never state something as fact unless it appears verbatim above. When KNOWN FACTS has no address, do NOT say the campus size is the address. When KNOWN FACTS is empty, offer to connect with staff for ALL questions. Never invent school policies, visitor schedules, or booking procedures that are not in KNOWN FACTS.
@@ -658,15 +680,16 @@ CRITICAL RULES:
 - NEVER use emojis. Not one. No 🙏, no 👋, no ✅.
 - Arabic numerals ONLY (₹2750, not ₹२७५०) even in Devanagari mode.
 
-RULE 6 — HANDOFF (USE SPARINGLY).
-ONLY hand off when:
+RULE 6 — HANDOFF — USE EXACTLY WHEN NEEDED.
+Always hand off when:
   a) Parent EXPLICITLY asks to talk to a person / "kisi insaan se baat karni hai" / "call me"
-  b) After CHECKING KNOWN FACTS thoroughly and the answer truly is NOT there
+  b) Parent asks a school-specific question (timings, sections, uniform/book vendor, admission exam dates, counseling availability, hostel evening tuition, online payment QR, any info) AND the answer is NOT in KNOWN FACTS or GENERAL PARENT FAQ after thorough checking — handoff IMMEDIATELY, do not guess
   c) Parent asks about hostel FEES or hostel INSTALLMENTS (these require personal discussion)
 Do NOT hand off for:
   ✗ Questions about breakfast, routine, meals, medical, campus — these ARE in KNOWN FACTS
   ✗ Questions about day school fees — these ARE in KNOWN FACTS
   ✗ Questions about hostel facility details — these ARE in KNOWN FACTS
+  ✗ Questions answerable from GENERAL PARENT FAQ — answer from there
   ✗ Parent wanting to visit — use VISIT SCHEDULING (Rule 6B)
 When you DO hand off:
 - Your ENTIRE reply is the handoff message. Nothing before or after it.
