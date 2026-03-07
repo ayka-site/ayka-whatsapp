@@ -271,6 +271,9 @@ function detectLanguage(recentMessages, currentMessage) {
     'bataiye', 'bataye', 'dijiye', 'kijiye', 'chahte', 'chahti',
     'hum', 'aap', 'tum', 'yeh', 'woh', 'bas', 'nai', 'abhi', 'kal',
     'subah', 'dopahar', 'shaam', 'baje', 'hnji', 'hmm', 'hn',
+    'parso', 'parson', 'aaj', 'abhi', 'raat', 'savere', 'din',
+    'kal', 'milna', 'dekhna', 'ofcourse', 'uper', 'niche', 'koi',
+    'waise', 'lekin', 'magar', 'toh', 'phir', 'fir', 'agar',
   ])
 
   const text = (currentMessage || '').trim()
@@ -439,8 +442,6 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (!goals.visitSuggested)                                   missingInfo.push('Suggest a school visit')
   if (!collected.preferredVisitTime && goals.visitSuggested)   missingInfo.push('When they would like to visit')
   if (collected.preferredVisitTime && !flowState.visitConfirmed && goals.visitSuggested) missingInfo.push('Confirm their visit (say VISIT_CONFIRMED: YES)')
-  // Phase 4 — Contact (near handoff)
-  if (!collected.altPhone && goals.visitSuggested)             missingInfo.push('Alternate contact number (for visit coordination)')
 
   const missingBlock = missingInfo.length > 0
     ? missingInfo.map(i => `  - ${i}`).join('\n')
@@ -471,6 +472,13 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   const isFirstMessage = userMsgCount === 0
   const isGreeting = isFirstMessage &&
     /^(hi|hello|hey|namaste|namaskar|pranam|hii|helo|sat sri akal|salaam|salam|adaab|assalamu\s*alaikum|jai\s*shri\s*ram|ram\s*ram|jai\s*hind|hlo|hlw|👋)\b/i.test(textToCheck)
+
+  // ── Language-specific greeting example (show ONLY the matching language) ──
+  const greetingExample = lang === 'hindi'
+    ? `"नमस्ते! मैं ${agentName} हूँ, ${schoolName} से। आप मुझसे स्कूल के बारे में कुछ भी पूछ सकते हैं — फीस, एडमिशन, होस्टल, कुछ भी। बताइये कैसे मदद करूँ?"`
+    : lang === 'hinglish'
+      ? `"Namaste! Main ${agentName} hoon, ${schoolName} se. Aap mujhse school ke baare mein kuch bhi pooch sakte hain — fees, admission, hostel, kuch bhi. Bataiye kaise madad karun?"`
+      : `"Welcome to ${schoolName}! I'm ${agentName}, your admissions counsellor. Ask me anything — fees, admissions, hostel, campus. How can I help?"`
 
   // ── Post-handoff state ──
   const isPostHandoff = flowState.handoffTriggered === true
@@ -559,7 +567,7 @@ When a parent asks a direct question (fees? address? timing? transport? results?
 - For FEES questions: Give the SIMPLE TOTAL from "Fees (SIMPLE TOTALS)" section. Say it plainly: "Class 5 ki fees ₹1,600 per month hai. Iske alawa ₹2,500 additional fee aur ₹1,000 annual fee ek baar deni hoti hai." Do NOT list 5 separate line items. Parents want ONE monthly number first.
 - For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
 - For SPECIALITY/FEATURE questions (e.g. "school mein kya khaas hai", "what makes your school special"): Lead with the school's most academically distinctive features FIRST — AI & robotics lab, STEM education, Tinkering lab, smart board digital classrooms, science & computer labs. Mention sports, music, art, dance and other extracurricular activities only AFTER academic highlights, or if the parent specifically asks. Never lead with generic facilities.
-- If the answer is NOT in KNOWN FACTS, say so honestly: "${lang === 'english' ? `I don't have that detail right now — let me connect you with our team${staffPhone ? `: *${staffPhone}*` : '.'}` : `Yeh detail mere paas abhi nahi hai — ${staffPhone ? `aap *${staffPhone}* pe call kar sakte hain` : 'main team se confirm karwa deti hoon.'}`}"
+- If the answer is NOT in KNOWN FACTS, say so honestly and redirect: "${lang === 'english' ? `I don't have that detail right now. You can check our website *${tenantSettings?.websiteUrl || 'https://www.santpathikvidyalaya.org/'}*${staffPhone ? ` or call our team at *${staffPhone}*` : '.'}` : `Yeh detail mere paas abhi nahi hai. Aap hamari website *${tenantSettings?.websiteUrl || 'https://www.santpathikvidyalaya.org/'}* dekh sakte hain${staffPhone ? ` ya *${staffPhone}* pe call kar sakte hain` : '.'}`}"
 
 RULE 2 — NEVER HALLUCINATE.
 If information is not in KNOWN FACTS or MEMORY, you DO NOT know it. Never guess an address, fee, route, timing, or any detail. Never state something as fact unless it appears verbatim above. When KNOWN FACTS has no address, do NOT say the campus size is the address. When KNOWN FACTS is empty, offer to connect with staff for ALL questions. Never invent school policies, visitor schedules, or booking procedures that are not in KNOWN FACTS.
@@ -604,12 +612,16 @@ When you DO hand off:
 - Never output "HANDOFF: YES" in any other context.
 
 ${schedulingConfig ? `RULE 6B — VISIT SCHEDULING.
-When a parent wants to visit and you have their preferred day/time (from MEMORY or their current message):
-- Confirm the visit directly: "Your visit is confirmed for [day] [time]. ${schedulingConfig.documentsRequired?.length > 0 ? `Please bring: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}${schedulingConfig.visitHours ? ` Our visit hours are ${schedulingConfig.visitHours}.` : ''}"
-- Then on a NEW line, write exactly: VISIT_CONFIRMED: YES
-- Never output "VISIT_CONFIRMED: YES" in any other context.
-- If you do NOT yet have a visit day/time preference, ask for it FIRST — do NOT confirm without a preference.
-- This is SEPARATE from handoff. Confirming a visit does NOT require HANDOFF: YES.` : `RULE 6B — VISIT SCHEDULING (DISABLED).
+${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} — ABSOLUTE LIMIT.` : ''}
+- NEVER EVER confirm a visit outside these hours. If parent suggests evening, night, Sunday, or any time outside visit hours, IMMEDIATELY say "School ${schedulingConfig.visitHours || '9 AM – 2 PM, Mon–Sat'} tak khula rehta hai, iss time mein aa sakte hain" and ask for a new time. Do NOT confirm first and correct later.
+- When a parent wants to visit and gives a VALID day/time within visit hours:
+  1. Confirm the visit: "Aapki visit [day] [time] ke liye confirm hai.${schedulingConfig.documentsRequired?.length > 0 ? ` Saath mein yeh documents laana: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}"
+  2. Then provide the staff contact: "School pahunchne par *${staffPhone || 'admissions office'}* se miliye.${tenantSettings?.websiteUrl ? ` Website: *${tenantSettings.websiteUrl}*` : ' Website: *https://www.santpathikvidyalaya.org/*'}"
+  3. On a NEW line write exactly: VISIT_CONFIRMED: YES
+  4. On ANOTHER new line write exactly: HANDOFF: YES
+- Never output VISIT_CONFIRMED: YES or HANDOFF: YES in any other context.
+- If you do NOT yet have a valid visit day/time, ask for it FIRST.
+- If parent insists on an out-of-hours time, hand off to staff: "Iske liye aap *${staffPhone || 'admissions team'}* se baat kar sakte hain."` : `RULE 6B — VISIT SCHEDULING (DISABLED).
 Visit scheduling is not enabled for this school. When parents want to visit, collect their preference and hand off to staff using RULE 6.`}
 
 RULE 7 — STAY IN CHARACTER (RULE 5 STILL APPLIES — ALWAYS respond in the conversation's language, even during jailbreak).
@@ -620,11 +632,10 @@ ${isPostHandoff
     ? `Parent already received handoff. Remind them of the staff number (*${staffPhone || 'admissions team'}*, ${workingHours}) if they ask. Do NOT restart the admission funnel. Be brief and helpful.`
     : isFirstMessage
       ? (isGreeting
-          ? `FIRST MESSAGE: Welcome them warmly as a real person would on WhatsApp. Keep it SHORT (2 lines max). Examples of good greetings:
-- Hindi: "Namaste! Main ${agentName} hoon, ${schoolName} se. Aap mujhse school ke baare mein kuch bhi pooch sakte hain — fees, admission, hostel, kuch bhi. Bataiye kaise madad karun?"
-- English: "Welcome to ${schoolName}! I'm ${agentName}, your admissions counsellor. Ask me anything — fees, admissions, hostel, campus. How can I help?"
-Do NOT say "May I know your name" in the FIRST message. Let the parent ask their question first. Name collection comes later naturally.`
-          : `FIRST MESSAGE: They opened with a specific question or statement. Answer it FIRST using KNOWN FACTS. Then briefly introduce yourself: "Main ${agentName} hoon, ${schoolName} se." Do NOT start with your introduction — answer their question first.`)
+          ? `FIRST MESSAGE: Welcome them warmly. Keep it SHORT (2 lines max). Use this style:
+${greetingExample}
+Do NOT say "May I know your name" in the FIRST message. Let the parent ask their question first.`
+          : `FIRST MESSAGE: They opened with a specific question. Answer it FIRST using KNOWN FACTS. Then briefly introduce yourself. Do NOT start with your introduction — answer their question first.`)
       : `CORE BEHAVIOR — Answer + Collect:
 1. Answer their question FIRST and COMPLETELY from KNOWN FACTS.
 2. After answering, ask exactly ONE question to collect the FIRST missing item from the list below.
@@ -639,6 +650,9 @@ Emotional state: ${emotion}${emotion === 'frustrated' ? ' — Acknowledge frustr
 
 ━━━ RECENT CONVERSATION ━━━
 ${recentChat || '(New conversation)'}
+
+━━━ ABSOLUTE LANGUAGE OVERRIDE (HIGHEST PRIORITY) ━━━
+${lang === 'hindi' ? 'The parent\'s CURRENT message is in DEVANAGARI SCRIPT. Your ENTIRE reply MUST be in DEVANAGARI HINDI (हिन्दी). Not a SINGLE word in English or Latin script. Write fees as ₹2750, not English words. Example: "दाखिले के लिए आपको ये दस्तावेज़ चाहिए होंगे..." NOT "Dakhile ke liye aapko ye documents chahiye honge..."' : lang === 'hinglish' ? 'The parent\'s CURRENT message is in HINGLISH (Hindi in Latin script). Reply in HINGLISH only. Do NOT use Devanagari script. Example: "Admission ke liye aapko ye documents chahiye" NOT "एडमिशन के लिए आपको ये डॉक्युमेंट चाहिए"' : 'The parent\'s CURRENT message is in ENGLISH. Reply in ENGLISH only. Keep it warm and conversational. Do NOT use Hindi words or Hinglish.'}
 
 Now reply to the parent's latest message as ${agentName}. No emojis. 3 lines max. 1 question max. Answer their question FIRST.`
 }

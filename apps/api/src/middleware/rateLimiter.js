@@ -17,7 +17,7 @@ async function rateLimiter(req, res, next) {
     // for WhatsApp rate limiting and harder to game than a fixed window.
     const [count] = await redis.pipeline().incr(key).expire(key, 60).exec()
 
-    req.isRateLimited = count > 10
+    req.isRateLimited = count > 25
     req.rateLimitCount = count
     next()
   } catch (err) {

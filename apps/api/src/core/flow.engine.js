@@ -222,21 +222,26 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
       const enrollmentPatterns = [
         /\b(?:admission|enrol(?:l(?:ment)?)?|join|seeking|want|need|looking)\s+(?:for|in|into)?\s*(?:class|grade|std|standard)?\s*([1-9]|1[0-2])\b/i,
         /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\s+(?:admission|enrol|join)/i,
-        /\b([1-9]|1[0-2])(?:st|nd|rd|th)?\s+(?:admission|enrol|class\s+mein\s+daakhila)/i,
+        /\b([1-9]|1[0-2])(?:st|nd|rd|th|vi|vin|veen|va|wan|wi)?\s+(?:admission|enrol|class\s+mein\s+daakhila)/i,
+        /\b(?:admission|daakhila|dakhila).*(?:class|grade|kaksha)?\s*([1-9]|1[0-2])(?:vi|vin|veen|va|wan|wi)?\b/i,
+        /\b([1-9]|1[0-2])(?:vi|vin|veen|va|wan|wi)\s+(?:class|mein|me|mai|ke\s+liye)\b/i,
+        // "Class X ke liye admission" / "10vi ke liye daakhila"
+        /\b(?:class|grade|kaksha)?\s*([1-9]|1[0-2])(?:vi|vin|veen|va|wan|wi)?\s+ke\s+liye\s+(?:admission|daakhila|dakhila)/i,
       ]
 
       // Tier 2 guard: skip if message context is possessive or "currently studying"
       // e.g. "class 5 ke teacher" | "mein padhta hai" | "currently in 8th grade"
+      // BUT NOT "class 10 ke liye admission" — "ke liye" means "for" (enrollment intent)
       const isPossessiveOrCurrent =
-        /mein\s+(?:padhta|padhti)\b|currently\s+in\b|\b(?:is|was|are|were)\s+in\s+(?:class|grade)?\s*\d|class\s*\d+\s*ke\b/i
+        /mein\s+(?:padhta|padhti)\b|currently\s+in\b|\b(?:is|was|are|were)\s+in\s+(?:class|grade)?\s*\d|class\s*\d+\s*ke\s+(?!liye\b)/i
         .test(userMessage)
 
       // Tier 2: Standard class mention (only if not possessive/current context)
       const classPatterns = [
         /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\b/i,
-        /\b([1-9]|1[0-2])(?:st|nd|rd|th)?\s*(?:class|grade|standard|mein|me|mai)\b/i,
+        /\b([1-9]|1[0-2])(?:st|nd|rd|th|vi|vin|veen|va|wan|wi)?\s*(?:class|grade|standard|mein|me|mai)\b/i,
         /\b(nursery|lkg|ukg|kindergarten|prep|pre-?school|play\s*group)\b/i,
-        /^\s*([1-9]|1[0-2])(?:st|nd|rd|th)?\s*$/i,   // bare standalone number
+        /^\s*([1-9]|1[0-2])(?:st|nd|rd|th|vi|vin|veen|va|wan|wi)?\s*$/i,   // bare standalone number with optional suffix
       ]
 
       let rawClass = null
@@ -361,7 +366,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
           const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
           if (allAlpha) {
             const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-            if (candidate.length > 2 && !NOT_A_NAME.has(candidate.toLowerCase()) && !PROFANITY_BLOCKLIST.has(candidate.toLowerCase())) {
+            if (candidate.length > 2 && !NOT_A_NAME.has(candidate.toLowerCase()) && !PROFANITY_BLOCKLIST.has(candidate.toLowerCase()) && !words.some(w => PROFANITY_BLOCKLIST.has(w.toLowerCase()))) {
               updated.collectedData.studentName  = candidate
               updated.goals.studentInfoCollected = true
             }
