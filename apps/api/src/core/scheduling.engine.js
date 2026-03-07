@@ -30,7 +30,8 @@ function _loadVerticalConfig(vertical) {
     const config = require(`../verticals/${vertical}/config`)
     _configCache[vertical] = config
     return config
-  } catch {
+  } catch (err) {
+    logger.warn({ err, vertical }, 'Vertical config not found for scheduling')
     return null
   }
 }

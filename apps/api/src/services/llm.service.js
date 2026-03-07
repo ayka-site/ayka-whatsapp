@@ -5,7 +5,7 @@ const logger  = require('../utils/logger')
  * llm.service.js v4.0 — Azure OpenAI gateway (gpt-4o-mini)
  *
  * Single provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
- * On failure: silent 2-second retry once, then throw (caller sends natural msg).
+ * On failure: retries with capped backoff, then throws (caller sends natural msg).
  * No Groq, no Gemini, no fallback chain.
  */
 
@@ -28,6 +28,7 @@ logger.info({ deployment: DEPLOYMENT }, 'Azure OpenAI initialized (gpt-4o-mini)'
 
 // ─── CONCURRENCY LIMITER ────────────────────────────────────────
 const MAX_CONCURRENT = parseInt(process.env.LLM_MAX_CONCURRENCY) || 5
+const MAX_CONTEXT_TOKENS = parseInt(process.env.LLM_MAX_CONTEXT_TOKENS || '6000', 10)
 let activeCalls = 0
 const waitQueue = []
 
@@ -61,14 +62,40 @@ function getLLMStats() {
   }
 }
 
+/**
+ * estimateTokens - Rough token estimate used for pre-send context trimming.
+ * @param {string} text - Text to estimate.
+ * @returns {number} Approximate token count.
+ */
+function estimateTokens(text) {
+  return Math.ceil(String(text || '').length / 4)
+}
+
+/**
+ * trimRecentMessagesToTokenBudget - Keep newest turns while staying under token budget.
+ * @param {Array<{role:string,content:any}>} recentMessages - Message history.
+ * @param {number} budgetTokens - Max tokens for non-system history.
+ * @returns {Array<{role:string,content:string}>} Trimmed messages in chronological order.
+ */
+function trimRecentMessagesToTokenBudget(recentMessages, budgetTokens) {
+  const normalized = (recentMessages || []).map(msg => ({
+    role: msg.role === 'assistant' ? 'assistant' : 'user',
+    content: msg.content?.text || msg.content || '',
+  }))
+
+  let total = normalized.reduce((sum, msg) => sum + estimateTokens(msg.content), 0)
+  while (normalized.length > 1 && total > budgetTokens) {
+    const removed = normalized.shift()
+    total -= estimateTokens(removed.content)
+  }
+  return normalized
+}
+
 // ─── CORE AZURE CALL ────────────────────────────────────────────
 async function _callAzure(systemPrompt, recentMessages) {
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...recentMessages.slice(-10).map(msg => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content?.text || msg.content || '',
-    })),
+    ...trimRecentMessagesToTokenBudget(recentMessages.slice(-20), MAX_CONTEXT_TOKENS),
   ]
 
   const response = await client.chat.completions.create({
@@ -88,7 +115,7 @@ async function _callAzure(systemPrompt, recentMessages) {
  * callLLM(systemPrompt, recentMessages) → string
  *
  * Primary: Azure OpenAI gpt-4o-mini
- * On failure: silent 2s retry once, then throw.
+ * On failure: retries up to 3 attempts (1s/2s/4s backoff for 429), then throws.
  */
 async function callLLM(systemPrompt, recentMessages) {
   llmStats.totalCalls++
@@ -97,27 +124,31 @@ async function callLLM(systemPrompt, recentMessages) {
   if (activeCalls > llmStats.peakConcurrency) llmStats.peakConcurrency = activeCalls
 
   try {
-    // ── Attempt 1 ──
-    try {
-      const result = await _callAzure(systemPrompt, recentMessages)
-      llmStats.successes++
-      return result
-    } catch (err) {
-      logger.warn({ err: err.message, status: err.status }, 'Azure OpenAI first attempt failed — retrying in 2s')
-      llmStats.retries++
-    }
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (attempt > 1) llmStats.retries++
+        if (attempt > 1) {
+          const delayMs = Math.pow(2, attempt - 2) * 1000 // 1s, 2s, 4s
+          await new Promise(resolve => setTimeout(resolve, delayMs))
+        }
 
-    // ── Silent retry after 2 seconds ──
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    try {
-      const result = await _callAzure(systemPrompt, recentMessages)
-      llmStats.successes++
-      return result
-    } catch (err) {
-      logger.error({ err: err.message, status: err.status }, 'Azure OpenAI retry also failed')
-      llmStats.failures++
-      throw err
+        const result = await _callAzure(systemPrompt, recentMessages)
+        llmStats.successes++
+        return result
+      } catch (err) {
+        const status = err?.status || err?.response?.status
+        if (status === 429 && attempt < 3) {
+          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI rate limited — retrying with backoff')
+          continue
+        }
+        if (attempt < 3 && status !== 429) {
+          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI call failed — retrying once')
+          continue
+        }
+        logger.error({ err: err.message, status }, 'Azure OpenAI retries exhausted')
+        llmStats.failures++
+        throw err
+      }
     }
   } finally {
     releaseSemaphore()

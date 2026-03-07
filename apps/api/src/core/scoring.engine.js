@@ -13,6 +13,7 @@
  *   4. Deterministic — same input always produces same output
  *   5. Multi-tenant safe — no global state, no side effects
  */
+const logger = require('../utils/logger')
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Vertical config registry — lazy-loaded, cached after first access
@@ -26,7 +27,8 @@ function loadVerticalConfig(vertical) {
     const config = require(`../verticals/${vertical}/config`)
     _configCache[vertical] = config
     return config
-  } catch {
+  } catch (err) {
+    logger.warn({ err, vertical }, 'Vertical config not found for scoring')
     return null
   }
 }

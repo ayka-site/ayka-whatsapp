@@ -1,6 +1,6 @@
 const sessionService = require('../services/session.service')
 const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
-const { buildSystemPrompt } = require('./prompt.builder')
+const { buildSystemPrompt, sanitizeUserMessageForPrompt } = require('./prompt.builder')
 const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
 const { computeLeadScore } = require('./scoring.engine')
@@ -22,6 +22,8 @@ const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please try again in 
 
 async function processWebMessage(businessId, visitorId, messageText, visitorInfo = {}) {
   const sessionKey = `web:${visitorId}`
+
+  const sanitizedMessage = sanitizeUserMessageForPrompt(messageText)
 
   // ── 1. Load business to get vertical + settings ──
   const { Business } = require('@ayka/db')
@@ -134,7 +136,8 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
         flowState:  session.flowState,
       })
       // Increment contact's conversation counter
-      Contact.updateOne({ _id: contact._id }, { $inc: { totalConversations: 1 } }).catch(() => {})
+      Contact.updateOne({ _id: contact._id }, { $inc: { totalConversations: 1 } })
+        .catch(err => logger.warn({ err, contactId: contact._id }, 'Failed to increment contact conversation counter (web widget)'))
     }
 
     session.conversationId = conversation._id.toString()
@@ -155,17 +158,21 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     if (!kb) {
       kb = await KnowledgeBase.findOne({ businessId }).lean()
       if (kb) {
-        try { await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 }) } catch {}
+        try {
+          await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 })
+        } catch (cacheErr) {
+          logger.warn({ cacheErr, businessId }, 'Redis KB cache write failed (web widget)')
+        }
       }
     }
 
     // ── 6. Build system prompt ──
-    const systemPrompt = buildSystemPrompt(kb, session, tenant.settings, messageText)
+    const systemPrompt = buildSystemPrompt(kb, session, tenant.settings, sanitizedMessage)
 
     // ── 7. Append user message ──
     session.recentMessages.push({
-      role: 'user',
-      content: { text: messageText, contentType: 'text' },
+        role: 'user',
+        content: { text: sanitizedMessage, contentType: 'text' },
       timestamp: Date.now(),
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
@@ -178,7 +185,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 10. Extract structured data ──
-    const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState)
+    const finalFlowState = extractDataFromMessages(sanitizedMessage, cleanResponse, updatedFlowState)
     session.flowState = finalFlowState
 
     // ── 11. Compute lead score ──
@@ -217,7 +224,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
       Message.create({
         conversationId: conversation._id, businessId, contactId: contact._id,
         direction: 'inbound', role: 'user',
-        content: { contentType: 'text', text: messageText },
+        content: { contentType: 'text', text: sanitizedMessage },
         status: 'delivered', timestamp: new Date(),
       }),
       Message.create({

@@ -75,6 +75,7 @@ const conversationSchema = new Schema({
 }, { timestamps: true })
 
 conversationSchema.index({ businessId: 1, status: 1 })
+conversationSchema.index({ businessId: 1, phone: 1, status: 1 })
 conversationSchema.index({ businessId: 1, contactId: 1 })
 conversationSchema.index({ contactId: 1, openedAt: -1 })
 conversationSchema.index({ businessId: 1, leadScore: 1, openedAt: -1 })

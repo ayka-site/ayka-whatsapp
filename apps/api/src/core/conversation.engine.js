@@ -1,6 +1,6 @@
 const sessionService = require('../services/session.service')
 const { KnowledgeBase, Contact, Conversation, Message, Appointment } = require('@ayka/db')
-const { buildSystemPrompt } = require('./prompt.builder')
+const { buildSystemPrompt, sanitizeUserMessageForPrompt } = require('./prompt.builder')
 const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
 const { computeLeadScore } = require('./scoring.engine')
@@ -9,6 +9,7 @@ const { triggerHandoff }    = require('./handoff.engine')
 const { sendTextMessage, markAsRead } = require('../services/whatsapp.service')
 const redis  = require('../config/redis')
 const logger = require('../utils/logger')
+const { normalizePhoneE164 } = require('../utils/phone')
 
 /**
  * conversation.engine.js v4.0 — Main message processing pipeline
@@ -23,6 +24,7 @@ const logger = require('../utils/logger')
  */
 
 const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
+const PROCESS_LOCK_TTL = 30
 
 // In-memory dedup layer — catches race conditions where two webhook calls arrive
 // simultaneously before either's Redis SET NX completes (especially with Upstash HTTP latency)
@@ -59,6 +61,56 @@ async function isDuplicate(waMessageId, businessId) {
     logger.warn({ err, waMessageId }, 'Dedup Redis check failed — in-memory guard active')
     return false
   }
+}
+
+/**
+ * buildProcessLockKey - Build Redis lock key for one business+phone processing lane.
+ * @param {string} businessId - Tenant business identifier.
+ * @param {string} phone - Normalized E.164 phone.
+ * @returns {string} Redis key used for mutex.
+ */
+function buildProcessLockKey(businessId, phone) {
+  return `lock:process:${businessId}:${phone}`
+}
+
+/**
+ * acquireProcessLock - Acquire a short-lived mutex for a phone conversation.
+ * @param {string} key - Redis lock key.
+ * @param {string} token - Random lock token.
+ * @returns {Promise<boolean>} True if lock acquired, false otherwise.
+ */
+async function acquireProcessLock(key, token) {
+  const result = await redis.set(key, token, { ex: PROCESS_LOCK_TTL, nx: true })
+  return result !== null
+}
+
+/**
+ * releaseProcessLock - Release lock only if caller still owns it.
+ * @param {string} key - Redis lock key.
+ * @param {string} token - Lock token originally used to acquire lock.
+ * @returns {Promise<void>} Completes after best-effort unlock.
+ */
+async function releaseProcessLock(key, token) {
+  try {
+    await redis._client.eval(
+      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+      1,
+      key,
+      token
+    )
+  } catch (err) {
+    logger.warn({ err }, 'Failed to release conversation lock')
+  }
+}
+
+/**
+ * isContentFilterError - Detect Azure OpenAI content filter rejection.
+ * @param {any} err - Error thrown by Azure SDK/http layer.
+ * @returns {boolean} True when error matches content_filter rejection.
+ */
+function isContentFilterError(err) {
+  const code = err?.code || err?.error?.code || err?.response?.data?.error?.code
+  return err?.status === 400 && code === 'content_filter'
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -127,7 +179,7 @@ async function processMessage(req) {
 
   if (!msgObj) return
 
-  const phone       = msgObj.from
+  const phone       = normalizePhoneE164(msgObj.from)
   const waMessageId = msgObj.id
   const referral    = msgObj.referral || null
   const msgType     = msgObj.type || 'text'
@@ -142,8 +194,7 @@ async function processMessage(req) {
   let messageText = await resolveMessageText(msgObj, tenant)
 
   // Sanitize: strip any HANDOFF or VISIT_CONFIRMED injection attempts from user input
-  messageText = messageText.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '[?]').trim()
-  messageText = messageText.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '[?]').trim()
+  messageText = sanitizeUserMessageForPrompt(messageText)
 
   // ── Load session early — needed for language-aware media fallback messages ──
   let session = await sessionService.getSession(tenant.businessId, phone)
@@ -163,7 +214,7 @@ async function processMessage(req) {
   }
 
   if (messageText === '__CONTACT_CARD_RECEIVED__') {
-    // TODO: extract phone from contact card in future
+    logger.info({ phone }, 'Contact card received; awaiting text follow-up')
     return
   }
 
@@ -181,6 +232,14 @@ async function processMessage(req) {
     } catch (err) {
       logger.error({ err }, 'Failed to send voice fallback')
     }
+    return
+  }
+
+  const lockKey = buildProcessLockKey(tenant.businessId, phone)
+  const lockToken = `${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
+  const hasLock = await acquireProcessLock(lockKey, lockToken)
+  if (!hasLock) {
+    logger.info({ phone }, 'Concurrent message detected; skipping duplicate processing lane')
     return
   }
 
@@ -274,7 +333,8 @@ async function processMessage(req) {
         flowState: session.flowState,
       })
       // Increment contact's conversation counter
-      Contact.updateOne({ _id: contact._id }, { $inc: { totalConversations: 1 } }).catch(() => {})
+      Contact.updateOne({ _id: contact._id }, { $inc: { totalConversations: 1 } })
+        .catch(err => logger.warn({ err, contactId: contact._id }, 'Failed to increment contact conversation counter'))
     }
 
     session.conversationId = conversation._id.toString()
@@ -317,7 +377,21 @@ async function processMessage(req) {
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
     // ── 7. Call LLM (Azure OpenAI gpt-4o-mini) ──
-    const rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
+    let rawAIResponse
+    try {
+      rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
+    } catch (llmErr) {
+      if (isContentFilterError(llmErr)) {
+        const digitsOnly = (phone || '').replace(/\D/g, '')
+        const isIndian = digitsOnly.startsWith('91')
+        const contentFilterReply = isIndian
+          ? 'Main Priya hoon, aur main sirf school admissions mein help karti hoon. Aap admission, fees, ya school visit ke baare mein pooch sakte hain.'
+          : 'I am Priya, and I can only help with school admissions. You can ask me about admissions, fees, or school visits.'
+        await sendTextMessage(phone, contentFilterReply, tenant.phoneNumberId, tenant.accessToken)
+        return contentFilterReply
+      }
+      throw llmErr
+    }
 
     // ── 8. Parse AI response (detect handoff, clean response text) ──
     const alreadyHandedOff = session.flowState.handoffTriggered === true
@@ -436,7 +510,7 @@ async function processMessage(req) {
       // Language-aware natural error message — never sound robotic
       const hasDevanagari = /[\u0900-\u097F]/.test(messageText || '')
       const hasHindiWords = /\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap)\b/i.test(messageText || '')
-      const isIndian = (phone || '').startsWith('91')
+      const isIndian = (phone || '').replace(/\D/g, '').startsWith('91')
 
       let fallback
       if (hasDevanagari) {
@@ -452,6 +526,9 @@ async function processMessage(req) {
       logger.error({ sendErr }, 'Failed to send fallback message')
     }
   }
+  finally {
+    await releaseProcessLock(lockKey, lockToken)
+  }
 }
 
 // Session-aware language detection for media fallback messages
@@ -464,7 +541,7 @@ function detectLanguageFromContext(session, phone) {
     if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|boliye|bataiye)\b/i.test(text)) return 'hi'
   }
   // Fallback: Indian phone number → Hindi, else English
-  return (phone || '').startsWith('91') ? 'hi' : 'en'
+  return (phone || '').replace(/\D/g, '').startsWith('91') ? 'hi' : 'en'
 }
 
 module.exports = { processMessage }

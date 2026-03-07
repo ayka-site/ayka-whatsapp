@@ -4,11 +4,22 @@ const mongoose = require('mongoose')
 const { authenticateJWT, requireRole, enforceBusinessScope } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
 const { Conversation, Contact, Message, Appointment, KnowledgeBase, Business } = require('@ayka/db')
+const redis = require('../config/redis')
 
 // All client routes require auth + client role + business scope
 router.use(authenticateJWT, requireRole('client'), enforceBusinessScope)
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
+
+/**
+ * flushKbCacheForBusiness - Remove Redis KB cache for a business.
+ * @param {string} businessId - Business identifier string.
+ * @returns {Promise<boolean>} True when flush command succeeds.
+ */
+async function flushKbCacheForBusiness(businessId) {
+  await redis.del(`kb:${businessId}`)
+  return true
+}
 
 // Helper: get date range from period string
 function getDateRange(period) {
@@ -497,6 +508,13 @@ router.get('/settings', asyncHandler(async (req, res) => {
       documentsRequired: kb?.content?.admissions?.documentsRequired || [],
     },
   })
+}))
+
+// POST /api/client/flush-kb
+router.post('/flush-kb', asyncHandler(async (req, res) => {
+  const businessId = req.user.businessId
+  await flushKbCacheForBusiness(businessId)
+  res.json({ success: true, message: 'KB cache flushed' })
 }))
 
 // GET /api/client/export/leads (CSV stream)

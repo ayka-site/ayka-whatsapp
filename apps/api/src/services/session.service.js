@@ -18,6 +18,7 @@ const logger = require('../utils/logger')
 
 const SESSION_TTL   = 86400 // 24 hours
 const MAX_MESSAGES  = 20    // store last 20 messages in session (enough for 35-40 msg convos)
+const MAX_SESSION_AGE_DAYS = 180
 
 function sessionKey(businessId, phone) {
   return `session:${businessId}:${phone}`
@@ -45,10 +46,20 @@ async function getSession(businessId, phone) {
           status: { $in: ['active', 'handed_off'] },
         })
         if (!stillValid) {
-          await redis.del(key).catch(() => {}) // best-effort cleanup
+          await redis.del(key).catch(delErr =>
+            logger.warn({ delErr, key }, 'Failed to clear stale Redis session')
+          ) // best-effort cleanup
           // Fall through to MongoDB rebuild ↓
         } else {
-          return session
+          const lastUpdatedMs = Number(session.lastUpdatedAt || 0)
+          const maxAgeMs = MAX_SESSION_AGE_DAYS * 24 * 60 * 60 * 1000
+          if (lastUpdatedMs && (Date.now() - lastUpdatedMs) > maxAgeMs) {
+            await redis.del(key).catch(delErr =>
+              logger.warn({ delErr, key }, 'Failed to clear expired Redis session')
+            )
+          } else {
+            return session
+          }
         }
       } else {
         return session
@@ -62,7 +73,12 @@ async function getSession(businessId, phone) {
   // ── Fallback: rebuild session from MongoDB ──
   try {
     const convo = await Conversation.findOne(
-      { businessId, phone, status: { $in: ['active', 'handed_off'] } }
+      {
+        businessId,
+        phone,
+        status: { $in: ['active', 'handed_off'] },
+        updatedAt: { $gte: new Date(Date.now() - (MAX_SESSION_AGE_DAYS * 24 * 60 * 60 * 1000)) },
+      }
     ).sort({ _id: -1 }).lean()
     if (!convo) return null
 
@@ -83,6 +99,7 @@ async function getSession(businessId, phone) {
       contactId:      convo.contactId?.toString(),
       flowState:      convo.flowState,
       recentMessages: messages.reverse(),
+      lastUpdatedAt: Date.now(),
     }
 
     // Write-back to Redis (best-effort — if Redis is down, we still work)
@@ -105,6 +122,7 @@ async function getSession(businessId, phone) {
 async function saveSession(session) {
   const key = sessionKey(session.businessId, session.phone)
   try {
+    session.lastUpdatedAt = Date.now()
     await redis.set(key, JSON.stringify(session), { ex: SESSION_TTL })
   } catch (err) {
     // Redis failure on save is non-fatal — next request will rebuild from MongoDB

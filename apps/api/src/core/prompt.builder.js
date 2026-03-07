@@ -277,6 +277,64 @@ function detectLanguage(recentMessages, currentMessage) {
   return 'english' // callers that still use old API get a safe default
 }
 
+/**
+ * sanitizeUserMessageForPrompt - Remove prompt-injection/control markers from user text.
+ * @param {string} input - Raw user text.
+ * @returns {string} Sanitized text safe to inject into system prompt.
+ */
+function sanitizeUserMessageForPrompt(input) {
+  let text = String(input || '')
+  const patterns = [
+    /HANDOFF:\s*/gi,
+    /VISIT_CONFIRMED:\s*/gi,
+    /<script/gi,
+    /ignore\s+previous/gi,
+    /ignore\s+all/gi,
+    /you\s+are\s+now/gi,
+    /as\s+dan/gi,
+    /jailbreak/gi,
+  ]
+  for (const pattern of patterns) text = text.replace(pattern, '')
+  return text.trim()
+}
+
+/**
+ * escapePromptValue - Escape interpolated dynamic values to keep prompt structure stable.
+ * @param {any} value - Dynamic value to insert in prompt.
+ * @returns {string} Escaped one-line string representation.
+ */
+function escapePromptValue(value) {
+  return String(value ?? '')
+    .replace(/[`$]/g, '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/**
+ * detectLanguageMode - Detect Devanagari, Hinglish, or English from latest message.
+ * @param {string} currentMessage - Latest user message.
+ * @param {Array} recentMessages - Recent session message history.
+ * @returns {'devanagari'|'hinglish'|'english'} Language mode for examples/directives.
+ */
+function detectLanguageMode(currentMessage, recentMessages) {
+  const text = String(currentMessage || '').trim()
+  if (/[\u0900-\u097F]/.test(text)) return 'devanagari'
+
+  const hindiLatinWords = /\b(hai|hain|kya|ka|ki|ke|mein|main|aap|mujhe|batao|bataiye|admission|fees|hostel|visit|kal|aaj|nahi|haan|school|bachcha|beta|beti|kaise|kab)\b/i
+  if (hindiLatinWords.test(text)) return 'hinglish'
+
+  const recentUser = (recentMessages || [])
+    .filter(m => m.role === 'user')
+    .slice(-2)
+    .map(m => m.content?.text || '')
+    .join(' ')
+  if (recentUser && /[\u0900-\u097F]/.test(recentUser)) return 'devanagari'
+  if (recentUser && hindiLatinWords.test(recentUser)) return 'hinglish'
+
+  return 'english'
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // detectEmotion — score-based emotion from last user message + flow state
 // ═════════════════════════════════════════════════════════════════════════════
@@ -326,21 +384,22 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   const flowState      = session?.flowState || {}
   const collected      = flowState.collectedData || {}
   const goals          = flowState.goals || {}
+  const sanitizedCurrentMessage = sanitizeUserMessageForPrompt(currentMessage)
 
   // ── Resolve persona name (DB: settings.agentName → fallback 'Priya') ──
-  const agentName  = tenantSettings?.agentName || 'Priya'
-  const schoolName = kb?.content?.about?.name   || tenantSettings?.displayName  || tenantSettings?.businessName || 'our school'
+  const agentName  = escapePromptValue(tenantSettings?.agentName || 'Priya')
+  const schoolName = escapePromptValue(kb?.content?.about?.name || tenantSettings?.displayName || tenantSettings?.businessName || 'our school')
 
   // ── Build facts from KB (correct MongoDB field paths) ──
   const facts = buildKBSummary(kb)
 
   // ── Detect script (Devanagari vs Latin) for hardcoded strings only ──
   // Language intelligence is FULLY delegated to the LLM — no JS override.
-  const script  = detectScript(currentMessage, recentMessages)
   const emotion = detectEmotion(recentMessages, flowState, currentMessage)
+  const languageMode = detectLanguageMode(sanitizedCurrentMessage, recentMessages)
 
   // ── Staff phone + hours for handoff (KB first, then tenant settings) ──
-  const staffPhone   = facts.staffPhone   || tenantSettings?.handoffPhone || null
+  const staffPhone   = escapePromptValue(facts.staffPhone || tenantSettings?.handoffPhone || '')
   const workingHours = facts.workingHours || '9 AM – 4 PM, Mon–Sat'
 
   // ── Load vertical scheduling config (if available) ──
@@ -348,7 +407,9 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   try {
     const verticalConfig = require(`../verticals/${session?.vertical || 'school'}/config`)
     if (verticalConfig?.scheduling?.enabled) schedulingConfig = verticalConfig.scheduling
-  } catch { /* vertical not found — scheduling disabled */ }
+  } catch (err) {
+    logger.warn({ err, vertical: session?.vertical || 'school' }, 'Vertical config load failed; scheduling disabled')
+  }
 
   // ── Build KNOWN FACTS section — only include what actually exists ──
   const factLines = []
@@ -390,24 +451,26 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.alumni)            factLines.push(`Notable alumni: ${facts.alumni}`)
   if (facts.examSchedule)      factLines.push(`Exams: ${facts.examSchedule}`)
   if (facts.activities)        factLines.push(`Activities: ${facts.activities}`)
-  if (staffPhone)              factLines.push(`Staff phone: ${staffPhone} (${workingHours})`)
+  if (staffPhone)              factLines.push(`Staff phone: ${staffPhone} (${escapePromptValue(workingHours)})`)
 
   const factsBlock = factLines.length > 0
     ? factLines.map(l => `• ${l}`).join('\n')
     : '(No knowledge base loaded — for ALL questions, offer to connect with admissions staff.)'
 
   // ── Build MEMORY block ──
-  const memoryLines = []
-  if (collected.parentName)         memoryLines.push(`Parent name: ${collected.parentName}`)
-  if (collected.studentName)        memoryLines.push(`Student name: ${collected.studentName}`)
-  if (collected.interestedClass)    memoryLines.push(`Class interested: ${collected.interestedClass}`)
-  if (collected.preferredVisitTime) memoryLines.push(`Visit time: ${collected.preferredVisitTime}`)
-  if (collected.altPhone)           memoryLines.push(`Alternate phone: ${collected.altPhone}`)
-  if (collected.priorities)         memoryLines.push(`Priorities: ${collected.priorities}`)
+  const safeParent = escapePromptValue(collected.parentName || '[not yet collected]')
+  const safeStudentRaw = collected.studentName ? escapePromptValue(collected.studentName) : '[not yet collected]'
+  const safeStudent = safeStudentRaw === safeParent ? '[not yet collected]' : safeStudentRaw
+  const memoryLines = [
+    `Parent name: ${safeParent}`,
+    `Student name: ${safeStudent}`,
+  ]
+  if (collected.interestedClass)    memoryLines.push(`Class interested: ${escapePromptValue(collected.interestedClass)}`)
+  if (collected.preferredVisitTime) memoryLines.push(`Visit time: ${escapePromptValue(collected.preferredVisitTime)}`)
+  if (collected.altPhone)           memoryLines.push(`Alternate phone: ${escapePromptValue(collected.altPhone)}`)
+  if (collected.priorities)         memoryLines.push(`Priorities: ${escapePromptValue(collected.priorities)}`)
 
-  const memoryBlock = memoryLines.length > 0
-    ? memoryLines.join('\n') + '\n⚠ Parent name and Student name are ALWAYS different people. NEVER use the parent\'s name (or any part of it) as the student\'s name.'
-    : '(Nothing collected yet.)'
+  const memoryBlock = memoryLines.join('\n') + '\n⚠ Parent name and Student name are ALWAYS different people. NEVER use the parent\'s name (or any part of it) as the student\'s name.'
 
   // ── Build MISSING INFO checklist (priority order: relationship → qualification → conversion) ──
   const missingInfo = []
@@ -446,15 +509,27 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
 
   // ── Greeting detection (uses currentMessage, not recentMessages) ──
   const userMsgCount = recentMessages.filter(m => m.role === 'user').length
-  const textToCheck  = currentMessage.trim()
+  const textToCheck  = sanitizedCurrentMessage.trim()
   const isFirstMessage = userMsgCount === 0
   const isGreeting = isFirstMessage &&
     /^(hi|hello|hey|namaste|namaskar|pranam|hii|helo|sat sri akal|salaam|salam|adaab|assalamu\s*alaikum|jai\s*shri\s*ram|ram\s*ram|jai\s*hind|hlo|hlw|👋)\b/i.test(textToCheck)
 
   // ── Language-specific greeting example (based on Unicode script only) ──
-  const greetingExample = script === 'devanagari'
+  const greetingExample = languageMode === 'devanagari'
     ? `"नमस्ते! मैं ${agentName}, ${schoolName} से बोल रही हूँ। बताइये, कैसे मदद कर सकती हूँ?"`
-    : `"Namaste! Main ${agentName}, ${schoolName} se bol rahi hoon. Bataiye, kaise madad kar sakti hoon?"`
+    : languageMode === 'hinglish'
+      ? `"Namaste! Main ${agentName}, ${schoolName} se bol rahi hoon. Bataiye, kaise madad kar sakti hoon?"`
+      : `"Hello! I’m ${agentName} from ${schoolName}. How can I help you with admissions today?"`
+  const feeExample = languageMode === 'devanagari'
+    ? '"कक्षा 5 की फीस ₹1600 प्रति माह है। इसके अलावा ₹2500 अतिरिक्त शुल्क और ₹1000 वार्षिक शुल्क एक बार लगता है।"'
+    : languageMode === 'hinglish'
+      ? '"Class 5 ki fees ₹1600 per month hai. Iske alawa ₹2500 additional aur ₹1000 annual fee ek baar lagti hai."'
+      : '"The monthly fee for Class 5 is ₹1,600. There is also a one-time ₹2,500 additional fee and ₹1,000 annual fee."'
+  const visitExample = languageMode === 'devanagari'
+    ? `"आपकी विजिट मंगलवार सुबह 10 बजे के लिए कन्फर्म है। स्कूल पहुंचकर *${staffPhone || 'admissions office'}* से मिलिए।"`
+    : languageMode === 'hinglish'
+      ? `"Aapki visit Tuesday 10 baje morning ke liye confirm hai. School pahunchkar *${staffPhone || 'admissions office'}* se miliye."`
+      : `"Your school visit is confirmed for Tuesday at 10 AM. Please meet *${staffPhone || 'admissions office'}* on arrival."`
 
   // ── Post-handoff state ──
   const isPostHandoff = flowState.handoffTriggered === true
@@ -466,7 +541,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
 
   // ── hostelFAQ: only inject when the conversation is actually about hostel (saves ~900 tokens otherwise) ──
   const hostelKeywords = /hostel|boarding|\bरहना\b|\bरहने\b|छात्रावास|\bmatron\b|\bwarden\b|\bmess\b|night\s*stay|rehne\s*ki|reh\s*sakte|rehna|bachcha.*ghar\s*se\s*dur|khana\s*milta|\bभोजन\b|\bवार्डेन\b|\bमेस\b|\bनाश्ता\b|\bbreakfast\b|dorm/i
-  const isHostelConversation = hostelKeywords.test(currentMessage) ||
+  const isHostelConversation = hostelKeywords.test(sanitizedCurrentMessage) ||
     recentMessages.slice(-4).some(m => hostelKeywords.test(m.content?.text || m.content || ''))
 
   // ── Build recent conversation context ──
@@ -475,7 +550,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // double-inject it (Problem 10), wasting tokens and causing context confusion.
   const chatLines = recentMessages.slice(-10).map(m => {
     const role = m.role === 'user' ? 'Parent' : agentName
-    return `${role}: ${m.content?.text || ''}`
+    return `${role}: ${sanitizeUserMessageForPrompt(m.content?.text || '')}`
   })
   const recentChat = chatLines.join('\n')
 
@@ -539,6 +614,7 @@ ${facts.hostelFAQ}` : ''}
 RULE 1 — ANSWER FIRST, ALWAYS.
 When a parent asks a direct question (fees? address? timing? transport? results? hostel? breakfast? routine?), answer it COMPLETELY and IMMEDIATELY from KNOWN FACTS above. Only AFTER answering, you may ask ONE follow-up.
 - For FEES questions: Give the SIMPLE TOTAL from "Fees (SIMPLE TOTALS)" section. Say it plainly: "Class 5 ki fees ₹1,600 per month hai. Iske alawa ₹2,500 additional fee aur ₹1,000 annual fee ek baar deni hoti hai." Do NOT list 5 separate line items. Parents want ONE monthly number first.
+  Example (match latest language mode): ${feeExample}
 - For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
 - For SPECIALITY/FEATURE questions (e.g. "school mein kya khaas hai", "what makes your school special"): Lead with the school's most academically distinctive features FIRST — AI & robotics lab, STEM education, Tinkering lab, smart board digital classrooms, science & computer labs. Mention sports, music, art, dance and other extracurricular activities only AFTER academic highlights, or if the parent specifically asks. Never lead with generic facilities.
 - If the answer is NOT in KNOWN FACTS, say so honestly IN THE PARENT'S LANGUAGE and redirect to the website *${tenantSettings?.websiteUrl || 'https://www.santpathikvidyalaya.org/'}*${staffPhone ? ` and/or staff phone *${staffPhone}*` : '.'}
@@ -576,6 +652,7 @@ C) ENGLISH: If their latest message is in proper English (like "What are the sch
 
 CRITICAL RULES:
 - EVERY message is detected independently. If they switch script mid-conversation, you switch immediately.
+- If the latest message is Latin-script English and has no Hindi words, reply in English even if earlier messages were Hindi/Hinglish.
 - NEVER use formal English words ("regarding", "certainly", "I would like to inform") when in Hindi/Hinglish mode. Say "zaroor", "bilkul", "bataati hoon".
 - ZERO spelling mistakes. ZERO grammar errors. Every message must read like a fluent native speaker on WhatsApp.
 - NEVER use emojis. Not one. No 🙏, no 👋, no ✅.
@@ -602,6 +679,7 @@ ${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} —
 - NEVER EVER confirm a visit outside these hours. If parent suggests evening, night, Sunday, or any time outside visit hours, IMMEDIATELY say "School ${schedulingConfig.visitHours || '9 AM – 2 PM, Mon–Sat'} tak khula rehta hai, iss time mein aa sakte hain" and ask for a new time. Do NOT confirm first and correct later.
 - When a parent wants to visit and gives a VALID day/time within visit hours:
   1. Confirm the visit: "Aapki visit [day] [time] ke liye confirm hai.${schedulingConfig.documentsRequired?.length > 0 ? ` Saath mein yeh documents laana: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}"
+  Example (match latest language mode): ${visitExample}
   2. Then provide the staff contact: "School pahunchne par *${staffPhone || 'admissions office'}* se miliye.${tenantSettings?.websiteUrl ? ` Website: *${tenantSettings.websiteUrl}*` : ' Website: *https://www.santpathikvidyalaya.org/*'}"
   3. On a NEW line write exactly: VISIT_CONFIRMED: YES
   4. On ANOTHER new line write exactly: HANDOFF: YES
@@ -648,6 +726,7 @@ Now reply as ${agentName}.`
 
 module.exports = {
   buildKBSummary,
+  sanitizeUserMessageForPrompt,
   detectScript,
   detectLanguage, // legacy alias — wraps detectScript
   detectEmotion,

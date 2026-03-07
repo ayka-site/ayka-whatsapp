@@ -37,7 +37,7 @@ async function handleWhatsAppWebhook(req, res) {
       Message.updateOne(
         { waMessageId: status.id },
         { $set: { status: status.status } }
-      ).catch(() => {}) // fire-and-forget — status updates are not critical
+      ).catch(err => logger.warn({ err, waMessageId: status.id }, 'Failed to persist WhatsApp status update')) // fire-and-forget — status updates are not critical
       return
     }
 
@@ -46,6 +46,21 @@ async function handleWhatsAppWebhook(req, res) {
 
     const msgObj = value.messages[0]
     const msgType = msgObj.type || 'text'
+    const { normalizePhoneE164 } = require('../utils/phone')
+    const redis = require('../config/redis')
+
+    // Normalize once so all downstream keys (rate limit/session/cache) stay consistent.
+    msgObj.from = normalizePhoneE164(msgObj.from)
+
+    // WhatsApp retries same webhook/event; skip duplicates for 5 minutes.
+    if (msgObj.id) {
+      const dedupKey = `processed:${msgObj.id}`
+      const isNew = await redis.set(dedupKey, '1', { ex: 300, nx: true })
+      if (isNew === null) {
+        logger.info({ waMessageId: msgObj.id }, 'Duplicate webhook delivery skipped')
+        return
+      }
+    }
 
     // Log non-text messages for visibility
     if (msgType !== 'text') {
@@ -60,12 +75,13 @@ async function handleWhatsAppWebhook(req, res) {
 
     // ── Rate limit check (set by rateLimiter middleware) ──
     if (req.isRateLimited) {
-      // Only send waiting message ONCE — first time rate limit triggers (count === 11)
+      // Only send waiting message ONCE — first time rate limit triggers (count === 21)
       // Subsequent rate-limited messages are silently dropped to avoid spamming
-      if (req.rateLimitCount === 41) {
+      if (req.rateLimitCount === 21) {
         const tenant = req.tenant
-        const phone = msgObj.from
-        const isIndian = phone.startsWith('91')
+        const phone = req.normalizedPhone || msgObj.from
+        const digitsOnly = phone.replace(/\D/g, '')
+        const isIndian = digitsOnly.startsWith('91')
         const reply = isIndian
           ? 'Ek minute rukiye, main aapka pichla message padh rahi hoon.'
           : 'Just a moment please, I\'m reading your previous message.'
@@ -73,7 +89,7 @@ async function handleWhatsAppWebhook(req, res) {
         await sendTextMessage(
           phone, reply,
           tenant.phoneNumberId, tenant.accessToken
-        ).catch(() => {})
+        ).catch(err => logger.warn({ err, phone }, 'Failed to send rate-limit wait message'))
       }
       return
     }

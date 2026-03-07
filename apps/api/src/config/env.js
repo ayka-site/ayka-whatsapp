@@ -3,7 +3,8 @@ const required = [
   'META_APP_SECRET',
   'META_WEBHOOK_VERIFY_TOKEN',
   'ENCRYPTION_KEY',
-  'NODE_ENV'
+  'NODE_ENV',
+  'JWT_SECRET'
 ]
 
 function validateEnv() {

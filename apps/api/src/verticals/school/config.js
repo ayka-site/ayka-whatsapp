@@ -47,6 +47,7 @@ const schoolConfig = {
       'Birth certificate',
       'Previous year marksheet',
       'Transfer certificate (if applicable)',
+      '2 passport photos',
     ],
   },
 

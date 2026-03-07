@@ -24,7 +24,12 @@ const redis = {
   async get(key) {
     const val = await ioClient.get(key)
     if (val === null) return null
-    try { return JSON.parse(val) } catch { return val }
+    try {
+      return JSON.parse(val)
+    } catch (parseErr) {
+      logger.warn({ parseErr, key }, 'Redis value is not JSON; returning raw string')
+      return val
+    }
   },
 
   async set(key, value, opts = {}) {

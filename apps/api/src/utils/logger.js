@@ -6,6 +6,22 @@
 const pino = require('pino')
 
 const logger = pino({
+  redact: {
+    paths: [
+      'phone',
+      '*.phone',
+      '*.*.phone',
+      'parentName',
+      '*.parentName',
+      'studentName',
+      '*.studentName',
+      'to',
+      '*.to',
+      'accessToken',
+      '*.accessToken',
+    ],
+    censor: '[REDACTED]',
+  },
   transport: process.env.NODE_ENV !== 'production' ? {
     target: 'pino-pretty',
     options: { colorize: true }

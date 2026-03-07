@@ -4,10 +4,20 @@ const mongoose = require('mongoose')
 const { authenticateJWT, requireRole, enforceResellerScope } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
 const { Conversation, Contact, Message, Appointment, Business, KnowledgeBase, Reseller } = require('@ayka/db')
+const redis = require('../config/redis')
 
 router.use(authenticateJWT, requireRole('reseller'), enforceResellerScope)
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
+
+/**
+ * flushKbCache - Delete Redis KB cache key for a business.
+ * @param {string} businessId - Business ID to flush.
+ * @returns {Promise<void>} Resolves after cache delete.
+ */
+async function flushKbCache(businessId) {
+  await redis.del(`kb:${businessId}`)
+}
 
 function getDateRange(period) {
   const now = new Date()
@@ -596,6 +606,17 @@ router.patch('/clients/:businessId/bot', asyncHandler(async (req, res) => {
 
   const updated = await Business.findByIdAndUpdate(businessId, { $set: { isActive } }, { new: true })
   res.json({ message: isActive ? 'Bot resumed' : 'Bot paused', client: updated })
+}))
+
+// POST /api/admin/flush-kb/:businessId
+router.post('/flush-kb/:businessId', asyncHandler(async (req, res) => {
+  const resellerId = toObjectId(req.user.resellerId)
+  const businessId = toObjectId(req.params.businessId)
+  const business = await Business.findOne({ _id: businessId, resellerId }, { _id: 1 }).lean()
+  if (!business) return res.status(404).json({ error: 'Client not found or not in your portfolio' })
+
+  await flushKbCache(req.params.businessId)
+  res.json({ success: true, message: 'KB cache flushed', businessId: req.params.businessId })
 }))
 
 // ─── WIDGET CONFIGURATION ───────────────────────────────────────

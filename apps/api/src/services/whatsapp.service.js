@@ -19,14 +19,25 @@
 // Export all three functions.
 const axios  = require('axios')
 const logger = require('../utils/logger')
+const { toWhatsAppRecipient } = require('../utils/phone')
+
+/**
+ * normalizeRecipient - Ensure recipient value is valid for WhatsApp Cloud API.
+ * @param {string} to - Raw recipient (E.164 or digits).
+ * @returns {string} Digits-only WhatsApp recipient.
+ */
+function normalizeRecipient(to) {
+  return toWhatsAppRecipient(to)
+}
 
 async function sendTextMessage(to, text, phoneNumberId, accessToken) {
   try {
+    const recipient = normalizeRecipient(to)
     const response = await axios.post(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
       {
         messaging_product: 'whatsapp',
-        to,
+        to: recipient,
         type: 'text',
         text: { body: text }
       },
@@ -43,11 +54,12 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
 
 async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, accessToken) {
   try {
+    const recipient = normalizeRecipient(to)
     const response = await axios.post(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
       {
         messaging_product: 'whatsapp',
-        to,
+        to: recipient,
         type: 'interactive',
         interactive: { type: 'button', body: { text: bodyText }, action: { buttons } }
       },

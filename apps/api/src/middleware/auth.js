@@ -1,7 +1,10 @@
 const jwt = require('jsonwebtoken')
 const { User } = require('@ayka/db')
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ayka-jwt-secret-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required')
+}
 
 /**
  * authenticateJWT — Verifies JWT from Authorization header.
