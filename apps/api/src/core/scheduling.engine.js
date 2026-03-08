@@ -44,6 +44,31 @@ function isSchedulingEnabled(vertical) {
   return config?.scheduling?.enabled === true
 }
 
+/**
+ * _isWithinVisitHoursNowIST - Check whether current IST time is within Mon-Sat 9 AM-2 PM.
+ * @returns {boolean} True when current IST falls within valid visit window.
+ */
+function _isWithinVisitHoursNowIST() {
+  const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const day = nowIST.getDay() // 0=Sun, 1=Mon ... 6=Sat
+  const minutes = (nowIST.getHours() * 60) + nowIST.getMinutes()
+  const opensAt = 9 * 60
+  const closesAt = 14 * 60
+  return day >= 1 && day <= 6 && minutes >= opensAt && minutes < closesAt
+}
+
+/**
+ * _isTodayVisitStillPossibleNowIST - Check if same-day visit can still fit in today's window.
+ * @returns {boolean} True when today is Mon-Sat and current IST time is before 2:00 PM.
+ */
+function _isTodayVisitStillPossibleNowIST() {
+  const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const day = nowIST.getDay() // 0=Sun, 1=Mon ... 6=Sat
+  const minutes = (nowIST.getHours() * 60) + nowIST.getMinutes()
+  const closesAt = 14 * 60
+  return day >= 1 && day <= 6 && minutes < closesAt
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // scheduleVisit — main public API
 //
@@ -71,9 +96,20 @@ async function scheduleVisit(session, tenant) {
   // ── Server-side operating hours validation ──
   // School hours: 9 AM – 2 PM, Mon–Sat. Reject clearly invalid times.
   const invalidTimeMarkers = /raat|night|sunday|itwar|itwaar|evening|shaam|sham|midnight/i
-  const invalidHour = /\b([3-9]|1[0-2])\s*pm\b|\b([3-8])\s*baje\s*(raat|shaam)?/i
-  if (invalidTimeMarkers.test(rawPreference) || invalidHour.test(rawPreference)) {
-    logger.warn({ rawPreference, phone }, 'Visit time outside operating hours — skipping appointment creation')
+  const invalidHour = /\b(?:2\s*:\s*[0-5]\d\s*pm|(?:[3-9]|1[0-2])(?:\s*:\s*[0-5]\d)?\s*pm|([3-8])\s*baje\s*(raat|shaam)?)\b/i
+  const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
+  const todayPattern = /\b(today|aaj)\b/i
+  const asksForImmediateNow = immediateNowPattern.test(rawPreference)
+  const asksForToday = todayPattern.test(rawPreference)
+  const missingTime = !time
+  if (
+    missingTime ||
+    invalidTimeMarkers.test(rawPreference) ||
+    invalidHour.test(rawPreference) ||
+    (asksForImmediateNow && !_isWithinVisitHoursNowIST()) ||
+    (asksForToday && !_isTodayVisitStillPossibleNowIST())
+  ) {
+    logger.warn({ rawPreference, phone }, 'Visit time invalid or outside operating hours — skipping appointment creation')
     return null
   }
 
@@ -191,7 +227,7 @@ function _parseVisitComponents(raw) {
   // Date-like tokens
   const dateMatch = s.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|kal|aaj|parso)\b/i)
   // Time-like tokens
-  const timeMatch = s.match(/\b(morning|afternoon|evening|subah|dopahar|shaam|\d{1,2}\s*(?:am|pm|baje))\b/i)
+  const timeMatch = s.match(/\b(morning|afternoon|evening|subah|dopahar|shaam|\d{1,2}(?::\d{2})?\s*(?:am|pm|baje))\b/i)
 
   return {
     date: dateMatch ? dateMatch[0].trim() : null,

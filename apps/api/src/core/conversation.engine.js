@@ -31,6 +31,48 @@ const PROCESS_LOCK_TTL = 30
 const _recentIds = new Map()
 const INMEM_TTL  = 60000 // 60 seconds
 
+/**
+ * escapeForRegex - Escape a dynamic string for safe regex usage.
+ * @param {string} value - Raw string to escape.
+ * @returns {string} Regex-safe escaped string.
+ */
+function escapeForRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * normalizeStudentNameHonorific - Remove parent-style honorific from student name in output.
+ * @param {string} text - Assistant response text.
+ * @param {string|null|undefined} studentName - Collected child name.
+ * @returns {string} Cleaned response text.
+ */
+function normalizeStudentNameHonorific(text, studentName) {
+  const response = String(text || '')
+  const name = String(studentName || '').trim()
+  if (!name) return response
+
+  const escaped = escapeForRegex(name)
+  return response
+    .replace(new RegExp(`(${escaped})\\s+ji\\b`, 'gi'), '$1')
+    .replace(new RegExp(`(${escaped})\\s+जी`, 'g'), '$1')
+}
+
+/**
+ * buildVisitWindowFallbackReply - Return language-aware correction when visit time is invalid.
+ * @param {string} userMessage - Latest user message.
+ * @returns {string} Natural fallback asking for valid visit slot.
+ */
+function buildVisitWindowFallbackReply(userMessage) {
+  const text = String(userMessage || '')
+  if (/[\u0900-\u097F]/.test(text)) {
+    return 'स्कूल विजिट का समय सोमवार से शनिवार, सुबह 9 बजे से दोपहर 2 बजे तक है। कृपया इसी समय में कोई दिन और समय बताइए।'
+  }
+  if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|kal|aaj)\b/i.test(text)) {
+    return 'School visit ka time Monday se Saturday, 9 AM se 2 PM tak hai. Kripya isi range me koi day aur time batayein.'
+  }
+  return 'School visit hours are Monday to Saturday, 9 AM to 2 PM. Please share a day and time within this window.'
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Deduplication — two-layer: in-memory (instant) + Redis (durable)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -403,6 +445,7 @@ async function processMessage(req) {
     // ── 9. Extract structured data from this exchange ──
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
+    let outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
 
     // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
@@ -410,7 +453,7 @@ async function processMessage(req) {
     // ── 10. Append AI response to session window ──
     session.recentMessages.push({
       role: 'assistant',
-      content: { text: cleanResponse },
+      content: { text: outboundResponse },
       timestamp: Date.now(),
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
@@ -428,9 +471,23 @@ async function processMessage(req) {
     // false via flow.engine reschedule detection). Prevents duplicate scheduling
     // if the bot re-emits the signal on subsequent messages.
     if (visitConfirmed && !wasVisitPreviouslyConfirmed) {
-      await scheduleVisit(session, tenant).catch(err =>
+      let appointment = null
+      try {
+        appointment = await scheduleVisit(session, tenant)
+      } catch (err) {
         logger.error({ err }, 'Visit scheduling failed — parent still gets response')
-      )
+      }
+
+      // REVIEW: Keep session state aligned with backend truth. A visit is only
+      // considered confirmed if an appointment row was created successfully.
+      if (!appointment) {
+        session.flowState.visitConfirmed = false
+        session.flowState.visitConfirmedAt = null
+        outboundResponse = buildVisitWindowFallbackReply(messageText)
+        const lastMsg = session.recentMessages[session.recentMessages.length - 1]
+        if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
+        logger.warn({ phone, businessId: tenant.businessId }, 'VISIT_CONFIRMED signal ignored because appointment was not created')
+      }
     }
 
     // ── 11.6. Update confirmed appointment with newly-collected profile data ──
@@ -469,7 +526,7 @@ async function processMessage(req) {
         contactId:      contact._id,
         direction:      'outbound',
         role:           'assistant',
-        content:        { contentType: 'text', text: cleanResponse },
+        content:        { contentType: 'text', text: outboundResponse },
         status:         'sent',
         timestamp:      new Date(),
       }),
@@ -500,9 +557,9 @@ async function processMessage(req) {
     ]).catch(err => logger.error({ err }, 'Non-blocking DB write failed'))
 
     // ── 14. Send response to parent ──
-    await sendTextMessage(phone, cleanResponse, tenant.phoneNumberId, tenant.accessToken)
+    await sendTextMessage(phone, outboundResponse, tenant.phoneNumberId, tenant.accessToken)
 
-    return cleanResponse
+    return outboundResponse
 
   } catch (err) {
     logger.error({ err, phone, businessId: tenant.businessId }, 'processMessage failed')

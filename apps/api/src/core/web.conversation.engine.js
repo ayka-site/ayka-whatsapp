@@ -20,6 +20,32 @@ const logger = require('../utils/logger')
 
 const FALLBACK_MSG = 'Sorry, I had a small technical issue. Please try again in a moment.'
 
+/**
+ * escapeForRegex - Escape a dynamic string for safe regex usage.
+ * @param {string} value - Raw string to escape.
+ * @returns {string} Regex-safe escaped string.
+ */
+function escapeForRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * normalizeStudentNameHonorific - Remove parent-style honorific from student name in output.
+ * @param {string} text - Assistant response text.
+ * @param {string|null|undefined} studentName - Collected child name.
+ * @returns {string} Cleaned response text.
+ */
+function normalizeStudentNameHonorific(text, studentName) {
+  const response = String(text || '')
+  const name = String(studentName || '').trim()
+  if (!name) return response
+
+  const escaped = escapeForRegex(name)
+  return response
+    .replace(new RegExp(`(${escaped})\\s+ji\\b`, 'gi'), '$1')
+    .replace(new RegExp(`(${escaped})\\s+जी`, 'g'), '$1')
+}
+
 async function processWebMessage(businessId, visitorId, messageText, visitorInfo = {}) {
   const sessionKey = `web:${visitorId}`
 
@@ -187,6 +213,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     // ── 10. Extract structured data ──
     const finalFlowState = extractDataFromMessages(sanitizedMessage, cleanResponse, updatedFlowState)
     session.flowState = finalFlowState
+    const outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
 
     // ── 11. Compute lead score ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
@@ -194,7 +221,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     // ── 12. Append AI response ──
     session.recentMessages.push({
       role: 'assistant',
-      content: { text: cleanResponse },
+      content: { text: outboundResponse },
       timestamp: Date.now(),
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
@@ -230,7 +257,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
       Message.create({
         conversationId: conversation._id, businessId, contactId: contact._id,
         direction: 'outbound', role: 'assistant',
-        content: { contentType: 'text', text: cleanResponse },
+        content: { contentType: 'text', text: outboundResponse },
         status: 'sent', timestamp: new Date(),
       }),
       Contact.updateOne({ _id: contact._id }, {
@@ -251,7 +278,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
 
     // ── 16. Return response directly (no WhatsApp send) ──
     return {
-      response:       cleanResponse,
+      response:       outboundResponse,
       conversationId: conversation._id.toString(),
       flowState:      finalFlowState,
     }

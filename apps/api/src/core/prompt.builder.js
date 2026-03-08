@@ -301,9 +301,10 @@ function detectLanguage(recentMessages, currentMessage) {
 function sanitizeUserMessageForPrompt(input) {
   let text = String(input || '')
   const patterns = [
-    /HANDOFF:\s*/gi,
-    /VISIT_CONFIRMED:\s*/gi,
+    /HANDOFF\s*:\s*/gi,
+    /VISIT_CONFIRMED\s*:\s*/gi,
     /<script/gi,
+    /ignore\s+(?:all\s+)?previous/gi,
     /ignore\s+previous/gi,
     /ignore\s+all/gi,
     /you\s+are\s+now/gi,
@@ -440,6 +441,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // ── Staff phone + hours for handoff (KB first, then tenant settings) ──
   const staffPhone   = escapePromptValue(facts.staffPhone || tenantSettings?.handoffPhone || '')
   const workingHours = facts.workingHours || '9 AM – 4 PM, Mon–Sat'
+  const looksLikeStaffPhone = /^\+?\d{8,15}$/.test(staffPhone.replace(/[^\d+]/g, ''))
 
   // ── Load vertical scheduling config (if available) ──
   let schedulingConfig = null
@@ -582,11 +584,22 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
     : languageMode === 'hinglish'
       ? '"Class 5 ki fees ₹1600 per month hai. Iske alawa ₹2500 additional aur ₹1000 annual fee ek baar lagti hai."'
       : '"The monthly fee for Class 5 is ₹1,600. There is also a one-time ₹2,500 additional fee and ₹1,000 annual fee."'
-  const visitExample = scriptMode === 'devanagari'
-    ? `"आपकी विजिट मंगलवार सुबह 10 बजे के लिए कन्फर्म है। स्कूल पहुंचकर *${staffPhone || 'admissions office'}* से मिलिए।"`
+  const visitContactInstruction = scriptMode === 'devanagari'
+    ? (looksLikeStaffPhone
+        ? `स्कूल पहुंचने पर इस नंबर पर कॉल करें: *${staffPhone || 'admissions office'}*।`
+        : `स्कूल पहुंचने पर *${staffPhone || 'admissions office'}* से मिलिए।`)
     : languageMode === 'hinglish'
-      ? `"Aapki visit Tuesday 10 baje morning ke liye confirm hai. School pahunchkar *${staffPhone || 'admissions office'}* se miliye."`
-      : `"Your school visit is confirmed for Tuesday at 10 AM. Please meet *${staffPhone || 'admissions office'}* on arrival."`
+      ? (looksLikeStaffPhone
+          ? `School pahunchne par is number par call karein: *${staffPhone || 'admissions office'}*.`
+          : `School pahunchne par *${staffPhone || 'admissions office'}* se miliye.`)
+      : (looksLikeStaffPhone
+          ? `On arrival, please call this number: *${staffPhone || 'admissions office'}*.`
+          : `On arrival, please meet *${staffPhone || 'admissions office'}*.`)
+  const visitExample = scriptMode === 'devanagari'
+    ? `"आपकी विजिट मंगलवार सुबह 10 बजे के लिए कन्फर्म है। ${visitContactInstruction}"`
+    : languageMode === 'hinglish'
+      ? `"Aapki visit Tuesday 10 baje morning ke liye confirm hai. ${visitContactInstruction}"`
+      : `"Your school visit is confirmed for Tuesday at 10 AM. ${visitContactInstruction}"`
   const toneExample = scriptMode === 'devanagari'
     ? `Parent: "एडमिशन का प्रोसेस बताइए"
 Priya: "जी बिल्कुल। पहले फॉर्म भरना होता है, फिर डॉक्यूमेंट वेरिफिकेशन होता है। आप चाहें तो मैं विजिट का सही समय भी बता दूँ?"`
@@ -715,6 +728,7 @@ Everything in MEMORY was told to you by the parent. Never contradict it. Never r
 - OFFENSIVE NAMES: If a parent provides a clearly offensive, vulgar, or abusive word as their name (slurs, gaaliyan, profanity), do NOT accept it or repeat it. Politely say "Yeh naam theek nahi lagta. Kya aap apna asli naam bata sakte hain?" / "That doesn't seem like a real name. Could you share your actual name?" NEVER address someone by a slur.
 - NAME/CLASS CONFLICTS: If the parent says a DIFFERENT name or class than what is in MEMORY, DO NOT silently accept it. Politely clarify: "Aapne pehle [MEMORY value] bataya tha — kya change karna hai?" / "Earlier you mentioned [MEMORY value] — would you like to update that?" Use the MEMORY value until the parent explicitly confirms the change. NEVER just start using a new name/class without asking.
 - PARENT ≠ STUDENT: The parent's name and the student's (child's) name are ALWAYS two DIFFERENT people. NEVER use the parent's name, first name, or any part of it as the student's name. If you know the parent is "Harsh Kumar", the student is NOT "Harsh" — they are two separate people. Always wait for the parent to separately tell you the child's name.
+- CHILD NAME ETIQUETTE: When acknowledging the child's name, NEVER address the child as "[Name] ji". Use neutral phrasing like "Priya ke liye admission" / "for Priya's admission". Use "ji" only for the parent in conversation.
 
 RULE 4 — ONE MESSAGE, ONE QUESTION.
 Max 3 short sentences. Max 1 question at the end. This is WhatsApp — be concise. No walls of text. No emojis. Bold key info with *asterisks*.
@@ -762,10 +776,11 @@ When you DO hand off:
 ${schedulingConfig ? `RULE 6B — VISIT SCHEDULING.
 ${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} — ABSOLUTE LIMIT.` : ''}
 - NEVER EVER confirm a visit outside these hours. If parent suggests evening, night, Sunday, or any time outside visit hours, IMMEDIATELY say "School ${schedulingConfig.visitHours || '9 AM – 2 PM, Mon–Sat'} tak khula rehta hai, iss time mein aa sakte hain" and ask for a new time. Do NOT confirm first and correct later.
+- If parent says "abhi", "right now", "now", or "turant", treat it as immediate current-time request. If current IST time is outside visit hours, DO NOT confirm; ask for a valid slot within visit hours.
 - When a parent wants to visit and gives a VALID day/time within visit hours:
   1. Confirm the visit: "Aapki visit [day] [time] ke liye confirm hai.${schedulingConfig.documentsRequired?.length > 0 ? ` Saath mein yeh documents laana: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}"
   Example (match latest language mode): ${visitExample}
-  2. Then provide the staff contact: "School pahunchne par *${staffPhone || 'admissions office'}* se miliye.${tenantSettings?.websiteUrl ? ` Website: *${tenantSettings.websiteUrl}*` : ' Website: *https://www.santpathikvidyalaya.org/*'}"
+  2. Then provide the staff contact: "${visitContactInstruction}${tenantSettings?.websiteUrl ? ` Website: *${tenantSettings.websiteUrl}*` : ' Website: *https://www.santpathikvidyalaya.org/*'}"
   3. On a NEW line write exactly: VISIT_CONFIRMED: YES
   4. On ANOTHER new line write exactly: HANDOFF: YES
 - Never output VISIT_CONFIRMED: YES or HANDOFF: YES in any other context.

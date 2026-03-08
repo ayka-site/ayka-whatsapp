@@ -47,20 +47,20 @@ function parseAIResponse(rawResponse, flowState) {
   let shouldHandoff    = false
 
   // Require HANDOFF: YES to appear on its own line — prevents embedded/quoted triggers
-  if (/(^|\n)\s*HANDOFF:\s*YES\s*($|\n)/i.test(cleanResponse)) {
+  if (/(^|\n)\s*HANDOFF\s*:\s*YES\s*($|\n)/i.test(cleanResponse)) {
     shouldHandoff = true
     updatedFlowState.handoffTriggered = true
     updatedFlowState.handoffAt        = new Date()
-    cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF:\s*YES\s*/gi, '').trim()
+    cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF\s*:\s*YES\s*/gi, '').trim()
   }
 
   // Detect VISIT_CONFIRMED: YES signal — bot confirmed a visit appointment
   let visitConfirmed = false
-  if (/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*($|\n)/i.test(cleanResponse)) {
+  if (/(^|\n)\s*VISIT_CONFIRMED\s*:\s*YES\s*($|\n)/i.test(cleanResponse)) {
     visitConfirmed = true
     updatedFlowState.visitConfirmed   = true
     updatedFlowState.visitConfirmedAt = new Date()
-    cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED:\s*YES\s*/gi, '').trim()
+    cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED\s*:\s*YES\s*/gi, '').trim()
   }
 
   cleanResponse = normalizeModelResponse(cleanResponse)
@@ -103,6 +103,31 @@ const DEVANAGARI_NUMBER_MAP = {
   'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पाँच': 5, 'पांच': 5,
   'छह': 6, 'छः': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
   'ग्यारह': 11, 'बारह': 12,
+}
+
+/**
+ * isWithinVisitHoursNowIST - Check whether current IST time is within school visit window.
+ * @returns {boolean} True for Mon-Sat between 9:00 AM and 2:00 PM IST.
+ */
+function isWithinVisitHoursNowIST() {
+  const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const day = nowIST.getDay() // 0=Sun, 1=Mon, ... 6=Sat
+  const minutes = (nowIST.getHours() * 60) + nowIST.getMinutes()
+  const opensAt = 9 * 60
+  const closesAt = 14 * 60
+  return day >= 1 && day <= 6 && minutes >= opensAt && minutes < closesAt
+}
+
+/**
+ * isTodayVisitStillPossibleNowIST - Check if a same-day visit can still happen in IST.
+ * @returns {boolean} True when today is Mon-Sat and current IST time is before 2:00 PM.
+ */
+function isTodayVisitStillPossibleNowIST() {
+  const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const day = nowIST.getDay() // 0=Sun, 1=Mon, ... 6=Sat
+  const minutes = (nowIST.getHours() * 60) + nowIST.getMinutes()
+  const closesAt = 14 * 60
+  return day >= 1 && day <= 6 && minutes < closesAt
 }
 
 function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessages) {
@@ -528,12 +553,19 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.collectedData.preferredVisitTime) {
     const timePatterns = [
       /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i,
+      /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i,
       /\b(morning|afternoon|subah|dopahar|10\s*(?:am|baje)|11\s*(?:am|baje)|12\s*(?:pm|baje)|1\s*(?:pm|baje)|2\s*(?:pm|baje))\b/i,
     ]
 
     // BLOCK invalid times — night, evening, Sunday are outside school hours (9AM–2PM Mon–Sat)
     const INVALID_TIME_MARKERS = /\b(raat|night|sunday|itwar|itwaar|evening|shaam|sham|rat\s*ke?|midnight|3\s*(?:am|pm|baje)|4\s*(?:pm|baje)|5\s*(?:pm|baje)|6\s*(?:pm|baje)|7\s*(?:pm|baje)|8\s*(?:pm|baje)|9\s*(?:pm|baje)|10\s*pm|11\s*pm|12\s*am)\b/i
+    const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
+    const todayPattern = /\b(today|aaj)\b/i
+    const asksForImmediateNow = immediateNowPattern.test(userLc)
+    const asksForToday = todayPattern.test(userLc)
     const hasInvalidTime = INVALID_TIME_MARKERS.test(userLc)
+      || (asksForImmediateNow && !isWithinVisitHoursNowIST())
+      || (asksForToday && !isTodayVisitStillPossibleNowIST())
 
     // Only extract if the message clearly has visit intent AND is not at an invalid time
     if (!hasInvalidTime && /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)) {
