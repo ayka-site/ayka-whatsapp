@@ -264,11 +264,10 @@ function buildKBSummary(kb) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// detectScript — lightweight Unicode script detector (NOT language intelligence)
+// detectScript — lightweight Unicode script detector
 //
-// Purpose: Only used for hardcoded strings the LLM doesn't generate
-//   (greeting examples, error fallback messages, media fallback messages).
-// NOT used for LLM language directives — the LLM detects language itself.
+// Purpose: Used for dynamic language directives in the system prompt and
+//   hardcoded fallback strings.
 //
 // Returns: 'devanagari' | 'latin'
 // ═════════════════════════════════════════════════════════════════════════════
@@ -428,10 +427,15 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // ── Build facts from KB (correct MongoDB field paths) ──
   const facts = buildKBSummary(kb)
 
-  // ── Detect script (Devanagari vs Latin) for hardcoded strings only ──
-  // Language intelligence is FULLY delegated to the LLM — no JS override.
+  // ── Detect script + language mode for dynamic prompt directives ──
+  const scriptMode = detectScript(sanitizedCurrentMessage, recentMessages)
   const emotion = detectEmotion(recentMessages, flowState, currentMessage)
   const languageMode = detectLanguageMode(sanitizedCurrentMessage, recentMessages)
+  const languageDirective = scriptMode === 'devanagari'
+    ? 'LATEST INPUT SCRIPT = DEVANAGARI. Your next reply MUST be fully in natural Devanagari Hindi. Do not use Roman-script Hindi.'
+    : languageMode === 'hinglish'
+      ? 'LATEST INPUT STYLE = HINGLISH (Latin script + Hindi words). Your next reply MUST be in respectful Hinglish using aap/ji naturally.'
+      : 'LATEST INPUT STYLE = ENGLISH (Latin script, no Hindi words). Your next reply MUST be fully in English.'
 
   // ── Staff phone + hours for handoff (KB first, then tenant settings) ──
   const staffPhone   = escapePromptValue(facts.staffPhone || tenantSettings?.handoffPhone || '')
@@ -568,21 +572,29 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
     /^(hi|hello|hey|namaste|namaskar|pranam|hii|helo|sat sri akal|salaam|salam|adaab|assalamu\s*alaikum|jai\s*shri\s*ram|ram\s*ram|jai\s*hind|hlo|hlw|👋)\b/i.test(textToCheck)
 
   // ── Language-specific greeting example (based on Unicode script only) ──
-  const greetingExample = languageMode === 'devanagari'
+  const greetingExample = scriptMode === 'devanagari'
     ? `"नमस्ते! मैं ${agentName}, ${schoolName} से बोल रही हूँ। बताइये, कैसे मदद कर सकती हूँ?"`
     : languageMode === 'hinglish'
       ? `"Namaste! Main ${agentName}, ${schoolName} se bol rahi hoon. Bataiye, kaise madad kar sakti hoon?"`
       : `"Hello! I’m ${agentName} from ${schoolName}. How can I help you with admissions today?"`
-  const feeExample = languageMode === 'devanagari'
+  const feeExample = scriptMode === 'devanagari'
     ? '"कक्षा 5 की फीस ₹1600 प्रति माह है। इसके अलावा ₹2500 अतिरिक्त शुल्क और ₹1000 वार्षिक शुल्क एक बार लगता है।"'
     : languageMode === 'hinglish'
       ? '"Class 5 ki fees ₹1600 per month hai. Iske alawa ₹2500 additional aur ₹1000 annual fee ek baar lagti hai."'
       : '"The monthly fee for Class 5 is ₹1,600. There is also a one-time ₹2,500 additional fee and ₹1,000 annual fee."'
-  const visitExample = languageMode === 'devanagari'
+  const visitExample = scriptMode === 'devanagari'
     ? `"आपकी विजिट मंगलवार सुबह 10 बजे के लिए कन्फर्म है। स्कूल पहुंचकर *${staffPhone || 'admissions office'}* से मिलिए।"`
     : languageMode === 'hinglish'
       ? `"Aapki visit Tuesday 10 baje morning ke liye confirm hai. School pahunchkar *${staffPhone || 'admissions office'}* se miliye."`
       : `"Your school visit is confirmed for Tuesday at 10 AM. Please meet *${staffPhone || 'admissions office'}* on arrival."`
+  const toneExample = scriptMode === 'devanagari'
+    ? `Parent: "एडमिशन का प्रोसेस बताइए"
+Priya: "जी बिल्कुल। पहले फॉर्म भरना होता है, फिर डॉक्यूमेंट वेरिफिकेशन होता है। आप चाहें तो मैं विजिट का सही समय भी बता दूँ?"`
+    : languageMode === 'hinglish'
+      ? `Parent: "Pls process batao"
+Priya: "Ji bilkul. Admission process simple hai: pehle form fill hota hai, phir document verification hota hai. Aap chahein to main visit ka sahi time bhi bata doon?"`
+      : `Parent: "Please explain the process"
+Priya: "Sure. The process is simple: first form submission, then document verification. Would you like me to share the best visit time as well?"`
 
   // ── Post-handoff state ──
   const isPostHandoff = flowState.handoffTriggered === true
@@ -617,6 +629,9 @@ You are NOT an AI. You are a real person who genuinely cares about helping paren
 
 Today: ${nowIST}
 
+━━━ DYNAMIC LANGUAGE DIRECTIVE (HIGHEST PRIORITY) ━━━
+${languageDirective}
+
 ━━━ LOCALIZATION — BAHRAICH AUDIENCE ━━━
 You are speaking to parents from the Bahraich area (eastern UP, Awadhi belt). Key demographic realities:
 • Bahraich city is ~56% Muslim and ~42% Hindu. Parents from both communities will message you.
@@ -646,6 +661,11 @@ CONVERSATION STYLE — Sound like a REAL PERSON on WhatsApp, not a chatbot:
 • Keep replies TIGHT — 2-3 lines max. No filler sentences.
 • RESPECT ALWAYS: Use respectful form ("aap"), never rude/commanding phrasing.
 • LANGUAGE QUALITY: Use simple, native, grammatically correct Hindi/Hinglish/English. No broken or literal translations.
+
+TONE MIRROR — USE THIS STYLE (sentence-level reference):
+${toneExample}
+Avoid stiff textbook language like: "Aapko is prakar avagat karaya jata hai..."
+Prefer natural WhatsApp phrasing like: "Ji bilkul, main batati hoon..."
 
 COLLECTION BOUNDARIES — You ONLY collect these 4 things, in this order:
 1. Parent's name
