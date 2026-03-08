@@ -44,7 +44,7 @@ async function resolveTenant(req, res, next) {
     req.tenant = tenant
     next()
   } catch (err) {
-    logger.error({ err }, err.message)
+    logger.error({ err }, 'resolveTenant failed')
     res.sendStatus(500)
   }
 }

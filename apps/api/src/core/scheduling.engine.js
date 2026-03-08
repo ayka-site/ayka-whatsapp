@@ -69,6 +69,58 @@ function _isTodayVisitStillPossibleNowIST() {
   return day >= 1 && day <= 6 && minutes < closesAt
 }
 
+/**
+ * _minutesFromVisitTimeToken - Parse natural time token to minutes since midnight.
+ * @param {string} token - Parsed visit time token like "1:30 pm" or "11 baje".
+ * @returns {number|null} Minutes since midnight in IST context, or null when unparseable.
+ */
+function _minutesFromVisitTimeToken(token) {
+  const t = String(token || '').trim().toLowerCase()
+  if (!t) return null
+  if (t === 'morning' || t === 'subah') return 10 * 60
+  if (t === 'afternoon' || t === 'dopahar') return 12 * 60
+
+  const match = t.match(/\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm|baje)\b/)
+  if (!match) return null
+
+  const hour = Number.parseInt(match[1], 10)
+  const minute = Number.parseInt(match[2] || '0', 10)
+  const marker = match[3]
+  if (!Number.isFinite(hour) || hour < 1 || hour > 12 || !Number.isFinite(minute)) return null
+
+  if (marker === 'am') {
+    const normalizedHour = hour % 12
+    return (normalizedHour * 60) + minute
+  }
+  if (marker === 'pm') {
+    const normalizedHour = (hour % 12) + 12
+    return (normalizedHour * 60) + minute
+  }
+
+  // "baje" is ambiguous; infer typical school-visit usage:
+  // 9-11 => morning, 12-2 => day-time, 3-8 => evening.
+  if (hour >= 9 && hour <= 11) return (hour * 60) + minute
+  if (hour === 12) return (12 * 60) + minute
+  if (hour === 1) return (13 * 60) + minute
+  if (hour === 2) return (14 * 60) + minute
+  if (hour >= 3 && hour <= 8) return ((hour + 12) * 60) + minute
+
+  return null
+}
+
+/**
+ * _isValidVisitTimeToken - Validate parsed time token against school visit hours.
+ * @param {string} token - Parsed visit time token from user preference.
+ * @returns {boolean} True when token falls in Mon-Sat allowed time window (9:00 to 2:00 inclusive).
+ */
+function _isValidVisitTimeToken(token) {
+  const minutes = _minutesFromVisitTimeToken(token)
+  if (!Number.isFinite(minutes)) return false
+  const opensAt = 9 * 60
+  const closesAtInclusive = 14 * 60
+  return minutes >= opensAt && minutes <= closesAtInclusive
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // scheduleVisit — main public API
 //
@@ -96,16 +148,16 @@ async function scheduleVisit(session, tenant) {
   // ── Server-side operating hours validation ──
   // School hours: 9 AM – 2 PM, Mon–Sat. Reject clearly invalid times.
   const invalidTimeMarkers = /raat|night|sunday|itwar|itwaar|evening|shaam|sham|midnight/i
-  const invalidHour = /\b(?:2\s*:\s*[0-5]\d\s*pm|(?:[3-9]|1[0-2])(?:\s*:\s*[0-5]\d)?\s*pm|([3-8])\s*baje\s*(raat|shaam)?)\b/i
   const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
   const todayPattern = /\b(today|aaj)\b/i
   const asksForImmediateNow = immediateNowPattern.test(rawPreference)
   const asksForToday = todayPattern.test(rawPreference)
   const missingTime = !time
+  const hasOutOfWindowTime = time ? !_isValidVisitTimeToken(time) : true
   if (
     missingTime ||
     invalidTimeMarkers.test(rawPreference) ||
-    invalidHour.test(rawPreference) ||
+    hasOutOfWindowTime ||
     (asksForImmediateNow && !_isWithinVisitHoursNowIST()) ||
     (asksForToday && !_isTodayVisitStillPossibleNowIST())
   ) {

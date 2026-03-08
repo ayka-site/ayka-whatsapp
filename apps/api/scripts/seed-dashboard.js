@@ -13,9 +13,13 @@
 require('dotenv').config()
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
+const crypto = require('crypto')
 const { User, Reseller, Business } = require('@ayka/db')
 
 const MONGO_URI = process.env.MONGODB_URI
+const SEED_SUPERADMIN_PASSWORD = process.env.SEED_SUPERADMIN_PASSWORD || crypto.randomBytes(12).toString('base64url')
+const SEED_RESELLER_PASSWORD = process.env.SEED_RESELLER_PASSWORD || crypto.randomBytes(12).toString('base64url')
+const SEED_CLIENT_PASSWORD = process.env.SEED_CLIENT_PASSWORD || crypto.randomBytes(12).toString('base64url')
 
 async function seed() {
   await mongoose.connect(MONGO_URI)
@@ -109,7 +113,7 @@ async function seed() {
   const users = [
     {
       email: 'superadmin@ayka.in',
-      password: 'AyKaSuperAdmin2026!',
+      password: SEED_SUPERADMIN_PASSWORD,
       role: 'superadmin',
       displayName: 'AyKa Super Admin',
       businessId: null,
@@ -140,7 +144,7 @@ async function seed() {
     },
     {
       email: 'admin@welltechup.com',
-      password: 'WellTechUp2026!',
+      password: SEED_RESELLER_PASSWORD,
       role: 'reseller',
       displayName: 'Harsh (WellTechUp)',
       businessId: null,
@@ -171,7 +175,7 @@ async function seed() {
     },
     {
       email: 'admin@santpathik.in',
-      password: 'SPV2026!',
+      password: SEED_CLIENT_PASSWORD,
       role: 'client',
       displayName: 'SPV Admin',
       businessId: spvBusiness._id,
@@ -236,9 +240,12 @@ async function seed() {
   console.log('\n════════════════════════════════════════════')
   console.log('  DASHBOARD CREDENTIALS')
   console.log('════════════════════════════════════════════')
-  console.log('  Super Admin:  superadmin@ayka.in / AyKaSuperAdmin2026!')
-  console.log('  Reseller:     admin@welltechup.com / WellTechUp2026!')
-  console.log('  Client:       admin@santpathik.in / SPV2026!')
+  console.log(`  Super Admin:  superadmin@ayka.in / ${SEED_SUPERADMIN_PASSWORD}`)
+  console.log(`  Reseller:     admin@welltechup.com / ${SEED_RESELLER_PASSWORD}`)
+  console.log(`  Client:       admin@santpathik.in / ${SEED_CLIENT_PASSWORD}`)
+  if (!process.env.SEED_SUPERADMIN_PASSWORD || !process.env.SEED_RESELLER_PASSWORD || !process.env.SEED_CLIENT_PASSWORD) {
+    console.log('  NOTE: One or more passwords were auto-generated for this run. Set SEED_* env vars for fixed credentials.')
+  }
   console.log('════════════════════════════════════════════\n')
 
   await mongoose.disconnect()

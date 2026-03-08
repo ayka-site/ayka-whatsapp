@@ -36,6 +36,35 @@ const rateLimitMap = new Map()
 const RATE_LIMIT   = 20
 const RATE_WINDOW  = 60 * 1000 // 1 minute
 
+/**
+ * normalizeOrigin - Canonicalize an origin string for secure comparison.
+ * @param {string} value - Raw origin or URL value.
+ * @returns {string|null} Normalized origin (scheme+host+port) or null if invalid.
+ */
+function normalizeOrigin(value) {
+  const input = String(value || '').trim()
+  if (!input) return null
+  try {
+    return new URL(input).origin
+  } catch (err) {
+    return null
+  }
+}
+
+/**
+ * isWidgetOriginAllowed - Check request origin against business widget allowlist.
+ * @param {object} business - Business document containing widget.allowedOrigins.
+ * @param {string} requestOrigin - Origin or referer header from request.
+ * @returns {boolean} True when origin is allowed or allowlist is empty.
+ */
+function isWidgetOriginAllowed(business, requestOrigin) {
+  const origins = business?.widget?.allowedOrigins || []
+  if (origins.length === 0) return true
+  const requestOriginNorm = normalizeOrigin(requestOrigin)
+  const allowedOriginSet = new Set(origins.map(normalizeOrigin).filter(Boolean))
+  return requestOriginNorm ? allowedOriginSet.has(requestOriginNorm) : false
+}
+
 function checkRateLimit(visitorId) {
   const now = Date.now()
   const entry = rateLimitMap.get(visitorId)
@@ -69,12 +98,8 @@ router.get('/config/:businessId', async (req, res) => {
     if (!business.widget?.enabled) return res.status(404).json({ error: 'Widget not enabled' })
 
     // Origin allowlist check
-    const origins = business.widget.allowedOrigins || []
-    if (origins.length > 0) {
-      const requestOrigin = req.headers.origin || req.headers.referer || ''
-      const allowed = origins.some(o => requestOrigin.startsWith(o))
-      if (!allowed) return res.status(403).json({ error: 'Origin not allowed' })
-    }
+    const requestOrigin = req.headers.origin || req.headers.referer || ''
+    if (!isWidgetOriginAllowed(business, requestOrigin)) return res.status(403).json({ error: 'Origin not allowed' })
 
     res.json({
       businessId:     business._id,
@@ -107,6 +132,8 @@ router.post('/init', async (req, res) => {
     const business = await Business.findById(businessId, { widget: 1, isActive: 1 }).lean()
     if (!business || !business.isActive) return res.status(404).json({ error: 'Business not found' })
     if (!business.widget?.enabled) return res.status(404).json({ error: 'Widget not enabled' })
+    const requestOrigin = req.headers.origin || req.headers.referer || ''
+    if (!isWidgetOriginAllowed(business, requestOrigin)) return res.status(403).json({ error: 'Origin not allowed' })
 
     const visitorId = `v_${crypto.randomBytes(16).toString('hex')}`
     res.json({ visitorId })
@@ -135,6 +162,15 @@ router.post('/message', async (req, res) => {
     if (!checkRateLimit(visitorId)) {
       return res.status(429).json({ error: 'Too many messages. Please wait a moment.' })
     }
+
+    const business = await Business.findById(businessId, {
+      isActive: 1,
+      widget: 1,
+    }).lean()
+    if (!business || !business.isActive) return res.status(404).json({ error: 'Business not found' })
+    if (!business.widget?.enabled) return res.status(404).json({ error: 'Widget not enabled' })
+    const requestOrigin = req.headers.origin || req.headers.referer || ''
+    if (!isWidgetOriginAllowed(business, requestOrigin)) return res.status(403).json({ error: 'Origin not allowed' })
 
     const result = await processWebMessage(businessId, visitorId, message.trim(), visitorInfo || {})
 

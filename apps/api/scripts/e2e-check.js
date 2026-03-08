@@ -1,5 +1,11 @@
 require('dotenv').config();
 const API = 'http://localhost:3000';
+const SA_EMAIL = process.env.E2E_SUPERADMIN_EMAIL || 'superadmin@ayka.in';
+const SA_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD || '';
+const RESELLER_EMAIL = process.env.E2E_RESELLER_EMAIL || 'admin@welltechup.com';
+const RESELLER_PASSWORD = process.env.E2E_RESELLER_PASSWORD || '';
+const CLIENT_EMAIL = process.env.E2E_CLIENT_EMAIL || 'admin@santpathik.in';
+const CLIENT_PASSWORD = process.env.E2E_CLIENT_PASSWORD || '';
 
 async function j(url, opts) {
   const r = await fetch(url, opts);
@@ -7,9 +13,13 @@ async function j(url, opts) {
 }
 
 async function main() {
-  const sa = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'superadmin@ayka.in', password: 'AyKaSuperAdmin2026!' }) }).then(r => r.json());
-  const ad = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@welltechup.com', password: 'WellTechUp2026!' }) }).then(r => r.json());
-  const cl = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@santpathik.in', password: 'SPV2026!' }) }).then(r => r.json());
+  if (!SA_PASSWORD || !RESELLER_PASSWORD || !CLIENT_PASSWORD) {
+    throw new Error('Set E2E_SUPERADMIN_PASSWORD, E2E_RESELLER_PASSWORD, and E2E_CLIENT_PASSWORD before running this script.');
+  }
+
+  const sa = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: SA_EMAIL, password: SA_PASSWORD }) }).then(r => r.json());
+  const ad = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: RESELLER_EMAIL, password: RESELLER_PASSWORD }) }).then(r => r.json());
+  const cl = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD }) }).then(r => r.json());
 
   const checks = [
     ['SA Leads', API + '/api/superadmin/leads', sa.token],

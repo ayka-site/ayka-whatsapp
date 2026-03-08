@@ -29,10 +29,11 @@ logger.info({ deployment: DEPLOYMENT }, 'Azure OpenAI initialized (gpt-4o-mini)'
 // ─── CONCURRENCY LIMITER ────────────────────────────────────────
 const MAX_CONCURRENT = parseInt(process.env.LLM_MAX_CONCURRENCY) || 5
 const MAX_CONTEXT_TOKENS = parseInt(process.env.LLM_MAX_CONTEXT_TOKENS || '6000', 10)
-const configuredTemperature = Number.parseFloat(process.env.LLM_TEMPERATURE || '0.82')
+// Balanced default for natural yet fact-grounded admissions responses.
+const configuredTemperature = Number.parseFloat(process.env.LLM_TEMPERATURE || '0.68')
 const LLM_TEMPERATURE = Number.isFinite(configuredTemperature)
   ? Math.min(Math.max(configuredTemperature, 0), 1.2)
-  : 0.82
+  : 0.68
 let activeCalls = 0
 const waitQueue = []
 

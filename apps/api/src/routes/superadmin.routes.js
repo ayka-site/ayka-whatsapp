@@ -5,6 +5,7 @@ const { authenticateJWT, requireRole } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
 const { encrypt } = require('../utils/encryption')
 const { Conversation, Contact, Message, Appointment, Business, KnowledgeBase, Reseller, User } = require('@ayka/db')
+const logger = require('../utils/logger')
 
 router.use(authenticateJWT, requireRole('superadmin'))
 
@@ -333,7 +334,9 @@ router.get('/system/api-usage', asyncHandler(async (req, res) => {
   try {
     const { getLLMStats } = require('../services/llm.service')
     llmStats = getLLMStats()
-  } catch (e) { /* llm service may not be loaded */ }
+  } catch (err) {
+    logger.warn({ err }, 'Unable to load LLM stats for superadmin api-usage endpoint')
+  }
 
   res.json({
     groqTokensToday: messagesToday * 500,

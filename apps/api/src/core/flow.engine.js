@@ -130,6 +130,63 @@ function isTodayVisitStillPossibleNowIST() {
   return day >= 1 && day <= 6 && minutes < closesAt
 }
 
+/**
+ * extractExplicitStudentNameCandidate - Pull explicit child-name statements from user text.
+ * @param {string} userMessage - Raw parent message.
+ * @returns {string|null} Normalized student name candidate, or null when not explicit.
+ */
+function extractExplicitStudentNameCandidate(userMessage) {
+  const msg = String(userMessage || '').trim()
+  if (!msg) return null
+
+  const latinPatterns = [
+    /\bmy\s+(?:son|daughter|child|beta|beti)(?:'s name)?\s+(?:is\s+)?([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})\b/i,
+    /\b(?:mera|meri|hamara|hamari|mere|hamare)\s+(?:beta|beti|bacha|bachcha|bachchi|bache|bacche)\s+(?:ka\s+naam\s+|ki\s+naam\s+)?(?:hai\s+)?(?:is\s+)?([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})\b/i,
+    /\b(?:mera|meri|mere|hamare)\s+(?:bache|bacche|bachche|bachchon)\s+ka\s+naam\s+([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})/i,
+  ]
+  for (const p of latinPatterns) {
+    const m = msg.match(p)
+    if (m?.[1]) {
+      const candidate = m[1]
+        .trim()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+      if (candidate.length >= 2) return candidate
+    }
+  }
+
+  const dev = msg.match(/(?:मेर[\u0947\u0940\u093e]\s+(?:बेट[\u0947\u0940\u093e]|बच्च[\u0947\u093e]|बचे)(?:\s+का\s+नाम)?\s*(?:है\s+)?)\s*([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)
+  if (dev?.[1] && dev[1].trim().length >= 2) return dev[1].trim()
+
+  return null
+}
+
+/**
+ * didAssistantRecentlyAskForVisitTime - Detect if last assistant turn requested visit day/time.
+ * @param {Array<{role:string, content:any}>} recentMessages - Recent conversation window.
+ * @returns {boolean} True when previous assistant message asked for a visit slot.
+ */
+function didAssistantRecentlyAskForVisitTime(recentMessages) {
+  const lastAssistant = (recentMessages || [])
+    .filter(m => m.role === 'assistant')
+    .slice(-1)[0]
+  const text = String(lastAssistant?.content?.text || lastAssistant?.content || '').toLowerCase()
+  if (!text) return false
+
+  return /\b(visit|school\s+visit|kab\s+aana|kis\s+din|kis\s+time|kaunsa\s+time|what\s+time|which\s+day|day\s+and\s+time|samay|timing|9\s*am|2\s*pm)\b/i.test(text)
+}
+
+/**
+ * isOutOfHoursVisitMarker - Detect explicit out-of-hours day/time markers for school visit.
+ * @param {string} text - Lowercased user message.
+ * @returns {boolean} True when message clearly requests invalid visit timing.
+ */
+function isOutOfHoursVisitMarker(text) {
+  const s = String(text || '')
+  return /\b(raat|night|sunday|itwar|itwaar|evening|shaam|sham|rat\s*ke?|midnight|2\s*:\s*(?:0[1-9]|[1-5]\d)\s*(?:pm|baje)|(?:3|4|5|6|7|8)\s*(?:pm|baje)|(?:9|10|11)\s*pm|12\s*am)\b/i.test(s)
+}
+
 function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessages) {
   const updated = JSON.parse(JSON.stringify(flowState)) // deep clone
   updated.recentMessages = recentMessages || [] // attach for bare-name detection
@@ -466,6 +523,15 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     'also', 'only', 'just', 'even', 'very',
     'help', 'info', 'detail', 'please', 'thanks', 'okay', 'yes', 'no',
   ])
+  const explicitStudentCandidate = extractExplicitStudentNameCandidate(userMessage)
+  if (updated.collectedData.studentName && explicitStudentCandidate) {
+    const prev = String(updated.collectedData.studentName).trim()
+    if (prev.toLowerCase() !== explicitStudentCandidate.toLowerCase()) {
+      updated.collectedData.studentName = explicitStudentCandidate
+      updated.goals.studentInfoCollected = true
+    }
+  }
+
   if (!updated.collectedData.studentName) {
     const studentPatterns = [
       // English: "my son/daughter NAME" — up to 3 words captured
@@ -550,32 +616,40 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   }
 
   // ── Extract preferred visit time ──
-  if (!updated.collectedData.preferredVisitTime) {
-    const timePatterns = [
-      /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i,
-      /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i,
-      /\b(morning|afternoon|subah|dopahar|10\s*(?:am|baje)|11\s*(?:am|baje)|12\s*(?:pm|baje)|1\s*(?:pm|baje)|2\s*(?:pm|baje))\b/i,
-    ]
-
-    // BLOCK invalid times — night, evening, Sunday are outside school hours (9AM–2PM Mon–Sat)
-    const INVALID_TIME_MARKERS = /\b(raat|night|sunday|itwar|itwaar|evening|shaam|sham|rat\s*ke?|midnight|3\s*(?:am|pm|baje)|4\s*(?:pm|baje)|5\s*(?:pm|baje)|6\s*(?:pm|baje)|7\s*(?:pm|baje)|8\s*(?:pm|baje)|9\s*(?:pm|baje)|10\s*pm|11\s*pm|12\s*am)\b/i
+  // Allow updates before confirmation so parent can correct day/time naturally.
+  if (!updated.visitConfirmed) {
+    const dateTokenPattern = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i
     const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
+    const validTimePattern = /\b(morning|afternoon|subah|dopahar|(?:0?9|10|11)(?::[0-5]\d)?\s*(?:am|baje)|(?:12|1)(?::[0-5]\d)?\s*(?:pm|baje)|2(?::00)?\s*(?:pm|baje))\b/i
+
+    // BLOCK explicit invalid times — night/evening/Sunday/out-of-window clock terms.
     const todayPattern = /\b(today|aaj)\b/i
     const asksForImmediateNow = immediateNowPattern.test(userLc)
     const asksForToday = todayPattern.test(userLc)
-    const hasInvalidTime = INVALID_TIME_MARKERS.test(userLc)
+    const hasInvalidTime = isOutOfHoursVisitMarker(userLc)
       || (asksForImmediateNow && !isWithinVisitHoursNowIST())
       || (asksForToday && !isTodayVisitStillPossibleNowIST())
+    const assistantAskedVisit = didAssistantRecentlyAskForVisitTime(updated.recentMessages || [])
+    const hasDateOrTimeHint = dateTokenPattern.test(userMessage)
+      || immediateNowPattern.test(userMessage)
+      || validTimePattern.test(userMessage)
+    const hasVisitIntent = /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)
+      || (assistantAskedVisit && hasDateOrTimeHint)
 
     // Only extract if the message clearly has visit intent AND is not at an invalid time
-    if (!hasInvalidTime && /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)) {
-      for (const pattern of timePatterns) {
-        const match = userMessage.match(pattern)
-        if (match) {
-          updated.collectedData.preferredVisitTime = match[0].trim()
-          break
-        }
-      }
+    if (!hasInvalidTime && hasVisitIntent) {
+      const dateMatch = userMessage.match(dateTokenPattern)?.[0]?.trim() || null
+      const nowMatch = userMessage.match(immediateNowPattern)?.[0]?.trim() || null
+      const timeMatch = userMessage.match(validTimePattern)?.[0]?.trim() || null
+
+      let extractedPreference = null
+      if (dateMatch && timeMatch) extractedPreference = `${dateMatch} ${timeMatch}`
+      else if (nowMatch && timeMatch) extractedPreference = `${nowMatch} ${timeMatch}`
+      else if (timeMatch) extractedPreference = timeMatch
+      else if (dateMatch) extractedPreference = dateMatch
+      else if (nowMatch) extractedPreference = nowMatch
+
+      if (extractedPreference) updated.collectedData.preferredVisitTime = extractedPreference
     }
   }
 

@@ -338,8 +338,15 @@ function detectLanguageMode(currentMessage, recentMessages) {
   const text = String(currentMessage || '').trim()
   if (/[\u0900-\u097F]/.test(text)) return 'devanagari'
 
-  const hindiLatinWords = /\b(hai|hain|kya|ka|ki|ke|mein|main|aap|mujhe|batao|bataiye|admission|fees|hostel|visit|kal|aaj|nahi|haan|school|bachcha|beta|beti|kaise|kab)\b/i
-  if (hindiLatinWords.test(text)) return 'hinglish'
+  const hindiCueRegex = /\b(hai|hain|kya|mein|main|aap|mujhe|batao|bataiye|kal|aaj|nahi|haan|kaise|kab|mera|meri|mere|hum|tum|kyu|kyon|batana|boliye|ka|ki|ke|ko|se|kr|karo|kariye|plz|pls)\b/gi
+  const englishCueRegex = /\b(what|when|where|which|who|how|please|can|could|would|should|is|are|do|does|tell|share|process|admission|fees|hostel|visit|school|class|timing|stream|facility|transport)\b/gi
+  const hindiScore = (text.match(hindiCueRegex) || []).length
+  const englishScore = (text.match(englishCueRegex) || []).length
+
+  if (hindiScore >= 2) return 'hinglish'
+  if (hindiScore >= 1 && englishScore >= 1) return 'hinglish'
+  if (hindiScore >= 1 && englishScore === 0) return 'hinglish'
+  if (englishScore >= 1) return 'english'
 
   const recentUser = (recentMessages || [])
     .filter(m => m.role === 'user')
@@ -347,7 +354,7 @@ function detectLanguageMode(currentMessage, recentMessages) {
     .map(m => m.content?.text || '')
     .join(' ')
   if (recentUser && /[\u0900-\u097F]/.test(recentUser)) return 'devanagari'
-  if (recentUser && hindiLatinWords.test(recentUser)) return 'hinglish'
+  if (recentUser && /\b(hai|hain|kya|mein|main|aap|mujhe|batao|bataiye|kal|aaj|nahi|haan|kaise|kab|mera|meri|mere|hum|tum|kyu|kyon|ka|ki|ke|ko|se)\b/i.test(recentUser)) return 'hinglish'
 
   return 'english'
 }
@@ -441,6 +448,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // ── Staff phone + hours for handoff (KB first, then tenant settings) ──
   const staffPhone   = escapePromptValue(facts.staffPhone || tenantSettings?.handoffPhone || '')
   const workingHours = facts.workingHours || '9 AM – 4 PM, Mon–Sat'
+  const websiteUrl = escapePromptValue(kb?.content?.about?.website || tenantSettings?.websiteUrl || '')
   const looksLikeStaffPhone = /^\+?\d{8,15}$/.test(staffPhone.replace(/[^\d+]/g, ''))
 
   // ── Load vertical scheduling config (if available) ──
@@ -598,7 +606,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   const visitExample = scriptMode === 'devanagari'
     ? `"आपकी विजिट मंगलवार सुबह 10 बजे के लिए कन्फर्म है। ${visitContactInstruction}"`
     : languageMode === 'hinglish'
-      ? `"Aapki visit Tuesday 10 baje morning ke liye confirm hai. ${visitContactInstruction}"`
+      ? `"Aapki visit Tuesday ko 10 baje confirm hai. ${visitContactInstruction}"`
       : `"Your school visit is confirmed for Tuesday at 10 AM. ${visitContactInstruction}"`
   const toneExample = scriptMode === 'devanagari'
     ? `Parent: "एडमिशन का प्रोसेस बताइए"
@@ -776,11 +784,12 @@ When you DO hand off:
 ${schedulingConfig ? `RULE 6B — VISIT SCHEDULING.
 ${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} — ABSOLUTE LIMIT.` : ''}
 - NEVER EVER confirm a visit outside these hours. If parent suggests evening, night, Sunday, or any time outside visit hours, IMMEDIATELY say "School ${schedulingConfig.visitHours || '9 AM – 2 PM, Mon–Sat'} tak khula rehta hai, iss time mein aa sakte hain" and ask for a new time. Do NOT confirm first and correct later.
+- VALID SLOT EXAMPLES (inside hours): 9:00 AM, 11:30 AM, 1:30 PM, 2:00 PM. Do NOT reject these as out-of-hours.
 - If parent says "abhi", "right now", "now", or "turant", treat it as immediate current-time request. If current IST time is outside visit hours, DO NOT confirm; ask for a valid slot within visit hours.
 - When a parent wants to visit and gives a VALID day/time within visit hours:
   1. Confirm the visit: "Aapki visit [day] [time] ke liye confirm hai.${schedulingConfig.documentsRequired?.length > 0 ? ` Saath mein yeh documents laana: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}"
   Example (match latest language mode): ${visitExample}
-  2. Then provide the staff contact: "${visitContactInstruction}${tenantSettings?.websiteUrl ? ` Website: *${tenantSettings.websiteUrl}*` : ' Website: *https://www.santpathikvidyalaya.org/*'}"
+  2. Then provide the staff contact: "${visitContactInstruction}${websiteUrl ? ` Website: *${websiteUrl}*` : ''}"
   3. On a NEW line write exactly: VISIT_CONFIRMED: YES
   4. On ANOTHER new line write exactly: HANDOFF: YES
 - Never output VISIT_CONFIRMED: YES or HANDOFF: YES in any other context.

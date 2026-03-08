@@ -39,18 +39,28 @@ const ALLOWED_ORIGINS = [
   'https://dashboard.ayka.site',
   'https://ayka.site',
 ]
-app.use(cors({
-  origin: (origin, cb) => {
-    // No origin = server-to-server / curl / webhooks — always allow
-    if (!origin) return cb(null, true)
-    // Widget & health paths are public embeds — allow any origin
-    // Dashboard paths restrict to known origins
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
-    // Allow any origin for widget embeds (they can be on any client website)
-    cb(null, true)
-  },
-  credentials: true,
-}))
+
+/**
+ * buildCorsOptions - Resolve CORS policy per request path.
+ * @param {import('express').Request} req - Incoming request.
+ * @param {Function} cb - CORS callback.
+ * @returns {void} Calls callback with CORS options or error.
+ */
+function buildCorsOptions(req, cb) {
+  const origin = req.header('Origin')
+  const isPublicPath = req.path.startsWith('/widget')
+    || req.path === '/health'
+    || req.path.startsWith('/webhook/whatsapp')
+
+  // Server-to-server/webhook requests usually have no Origin header.
+  if (!origin) return cb(null, { origin: true, credentials: false })
+
+  if (isPublicPath) return cb(null, { origin: true, credentials: false })
+  if (ALLOWED_ORIGINS.includes(origin)) return cb(null, { origin: true, credentials: true })
+  return cb(new Error('Origin not allowed by CORS'))
+}
+
+app.use(cors(buildCorsOptions))
 
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf } }))
 
@@ -71,6 +81,9 @@ app.use('/api/admin', require('./src/routes/admin.routes'))
 app.use('/api/superadmin', require('./src/routes/superadmin.routes'))
 
 app.use((err, req, res, next) => {
+  if (err?.message === 'Origin not allowed by CORS') {
+    return res.status(403).json({ error: 'Origin not allowed' })
+  }
   logger.error(err)
   res.status(500).json({ error: 'Internal server error' })
 })

@@ -211,7 +211,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 10. Extract structured data ──
-    const finalFlowState = extractDataFromMessages(sanitizedMessage, cleanResponse, updatedFlowState)
+    const finalFlowState = extractDataFromMessages(sanitizedMessage, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
     const outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
 
@@ -270,7 +270,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
       Conversation.updateOne({ _id: conversation._id }, {
         $set: {
           flowState: finalFlowState,
-          status: shouldHandoff ? 'handed_off' : 'active',
+          status: finalFlowState.handoffTriggered ? 'handed_off' : 'active',
           leadScore, leadScoreReason, leadScoreUpdatedAt: new Date(),
         },
       }),

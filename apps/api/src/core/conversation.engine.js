@@ -24,7 +24,10 @@ const { normalizePhoneE164 } = require('../utils/phone')
  */
 
 const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
-const PROCESS_LOCK_TTL = 30
+const configuredProcessLockTtl = Number.parseInt(process.env.PROCESS_LOCK_TTL_SECONDS || '45', 10)
+const PROCESS_LOCK_TTL = Number.isFinite(configuredProcessLockTtl) && configuredProcessLockTtl >= 15
+  ? configuredProcessLockTtl
+  : 45
 
 // In-memory dedup layer — catches race conditions where two webhook calls arrive
 // simultaneously before either's Redis SET NX completes (especially with Upstash HTTP latency)
@@ -60,15 +63,24 @@ function normalizeStudentNameHonorific(text, studentName) {
 /**
  * buildVisitWindowFallbackReply - Return language-aware correction when visit time is invalid.
  * @param {string} userMessage - Latest user message.
+ * @param {Array<{role:string, content:any}>} recentMessages - Recent conversation history.
  * @returns {string} Natural fallback asking for valid visit slot.
  */
-function buildVisitWindowFallbackReply(userMessage) {
-  const text = String(userMessage || '')
+function buildVisitWindowFallbackReply(userMessage, recentMessages = []) {
+  const current = String(userMessage || '').trim()
+  const isControlOnly = /^(?:HANDOFF|VISIT_CONFIRMED)\s*:?\s*YES$/i.test(current)
+  const lastUserText = (recentMessages || [])
+    .filter(m => m.role === 'user')
+    .slice(-3)
+    .map(m => m.content?.text || m.content || '')
+    .join(' ')
+  const text = isControlOnly ? lastUserText : current
+
   if (/[\u0900-\u097F]/.test(text)) {
     return 'स्कूल विजिट का समय सोमवार से शनिवार, सुबह 9 बजे से दोपहर 2 बजे तक है। कृपया इसी समय में कोई दिन और समय बताइए।'
   }
   if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|kal|aaj)\b/i.test(text)) {
-    return 'School visit ka time Monday se Saturday, 9 AM se 2 PM tak hai. Kripya isi range me koi day aur time batayein.'
+    return 'School visit ka timing Monday se Saturday, 9 AM se 2 PM hai. Aap isi time range me koi day aur time bata dein.'
   }
   return 'School visit hours are Monday to Saturday, 9 AM to 2 PM. Please share a day and time within this window.'
 }
@@ -478,12 +490,12 @@ async function processMessage(req) {
         logger.error({ err }, 'Visit scheduling failed — parent still gets response')
       }
 
-      // REVIEW: Keep session state aligned with backend truth. A visit is only
+      // Keep session state aligned with backend truth: a visit is only
       // considered confirmed if an appointment row was created successfully.
       if (!appointment) {
         session.flowState.visitConfirmed = false
         session.flowState.visitConfirmedAt = null
-        outboundResponse = buildVisitWindowFallbackReply(messageText)
+        outboundResponse = buildVisitWindowFallbackReply(messageText, session.recentMessages)
         const lastMsg = session.recentMessages[session.recentMessages.length - 1]
         if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
         logger.warn({ phone, businessId: tenant.businessId }, 'VISIT_CONFIRMED signal ignored because appointment was not created')
@@ -546,7 +558,7 @@ async function processMessage(req) {
         {
           $set: {
             flowState: finalFlowState,
-            status: shouldHandoff ? 'handed_off' : 'active',
+            status: finalFlowState.handoffTriggered ? 'handed_off' : 'active',
             leadScore,
             leadScoreReason,
             leadScoreUpdatedAt: new Date(),

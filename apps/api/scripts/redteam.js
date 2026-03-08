@@ -6,10 +6,10 @@ const flow = require('../src/core/flow.engine')
 
 let pass = 0, fail = 0, total = 0
 
-function test(label, msg, expect, preloaded = {}) {
+function test(label, msg, expect, preloaded = {}, recentMessages = []) {
   total++
   const s = { collectedData: { ...preloaded }, goals: {} }
-  const r = flow.extractDataFromMessages(msg, '', s).collectedData
+  const r = flow.extractDataFromMessages(msg, '', s, recentMessages).collectedData
 
   const checks = []
   if ('parent'   in expect) checks.push({ key: 'parentName',         got: r.parentName         || 'null', want: expect.parent  || 'null' })
@@ -105,6 +105,11 @@ test('visit: schedule Saturday',       'I want to schedule a visit for Saturday 
 test('visit: kal campus',              'main kal campus dekhne aa sakta hoon',           { visit: 'kal' })
 test('visit: come tomorrow',           'I will come tomorrow to see the campus',         { visit: 'tomorrow' })
 test('visit: book Tuesday',            'can I book a visit for Tuesday',                 { visit: 'Tuesday' })
+test('visit follow-up: tomorrow 1:30 PM works', 'Tomorrow 1:30 PM works',               { visit: 'Tomorrow 1:30 PM' }, {}, [
+  { role: 'assistant', content: { text: 'School 9 AM se 2 PM tak khula rehta hai. Aap kab aana chahenge?' } },
+])
+test('visit boundary: 2:00 PM valid',  'Please book visit tomorrow 2:00 PM',            { visit: 'tomorrow 2:00 PM' })
+test('visit boundary: 2:30 PM invalid','Please book visit tomorrow 2:30 PM',            { visit: null })
 
 // ════════════════════════════════════════════════════════
 // 4. altPhone edge cases
