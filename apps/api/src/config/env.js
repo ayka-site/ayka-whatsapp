@@ -14,8 +14,8 @@ function validateEnv() {
   }
 
   // Azure OpenAI is required for the LLM service
-  if (!process.env.AZURE_OPENAI_KEY) {
-    throw new Error('AZURE_OPENAI_KEY is required for the LLM service')
+  if (!process.env.AZURE_OPENAI_KEY && !process.env.AZURE_OPENAI_API_KEY) {
+    throw new Error('AZURE_OPENAI_KEY (or AZURE_OPENAI_API_KEY) is required for the LLM service')
   }
 
   // ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes for AES-256-CBC)

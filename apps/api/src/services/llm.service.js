@@ -10,9 +10,23 @@ const logger  = require('../utils/logger')
  */
 
 // ─── AZURE OPENAI CLIENT ────────────────────────────────────────
-const AZURE_OPENAI_KEY = process.env.AZURE_OPENAI_KEY || ''
+const AZURE_OPENAI_KEY = process.env.AZURE_OPENAI_KEY || process.env.AZURE_OPENAI_API_KEY || ''
 const DEPLOYMENT       = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1-mini'
-const AZURE_OPENAI_BASE_URL = `https://aykachatbot-resource.openai.azure.com/openai/deployments/${DEPLOYMENT}`
+const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || 'https://aykachatbot-resource.cognitiveservices.azure.com'
+
+/**
+ * buildAzureOpenAIBaseUrl - Normalize endpoint/deployment into Azure Chat Completions base URL.
+ * @param {string} endpoint - Azure OpenAI resource endpoint from env.
+ * @param {string} deployment - Azure deployment name.
+ * @returns {string} Base URL suitable for openai SDK client.
+ */
+function buildAzureOpenAIBaseUrl(endpoint, deployment) {
+  const cleaned = String(endpoint || '').trim().replace(/\/+$/, '')
+  if (cleaned.includes('/openai/deployments/')) return cleaned
+  return `${cleaned}/openai/deployments/${deployment}`
+}
+
+const AZURE_OPENAI_BASE_URL = buildAzureOpenAIBaseUrl(AZURE_OPENAI_ENDPOINT, DEPLOYMENT)
 
 if (!AZURE_OPENAI_KEY) {
   logger.error('AZURE_OPENAI_KEY not set — LLM calls will fail')
