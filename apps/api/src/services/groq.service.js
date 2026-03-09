@@ -238,7 +238,7 @@ async function callGroq(systemPrompt, recentMessages) {
       groqStats.fallbackCalls++
       logger.info('Falling back to Azure OpenAI')
       try {
-        const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
+        const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1-mini'
         const response = await azure.chat.completions.create({
           model: deployment,
           messages,

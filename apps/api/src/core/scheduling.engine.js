@@ -75,17 +75,21 @@ function _isTodayVisitStillPossibleNowIST() {
  * @returns {number|null} Minutes since midnight in IST context, or null when unparseable.
  */
 function _minutesFromVisitTimeToken(token) {
-  const t = String(token || '').trim().toLowerCase()
+  const t = String(token || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s*(?:tk|tak)\b/g, '')
+    .trim()
   if (!t) return null
   if (t === 'morning' || t === 'subah') return 10 * 60
   if (t === 'afternoon' || t === 'dopahar') return 12 * 60
 
-  const match = t.match(/\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm|baje)\b/)
+  const match = t.match(/\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm|baje)?\b/)
   if (!match) return null
 
   const hour = Number.parseInt(match[1], 10)
   const minute = Number.parseInt(match[2] || '0', 10)
-  const marker = match[3]
+  const marker = match[3] || ''
   if (!Number.isFinite(hour) || hour < 1 || hour > 12 || !Number.isFinite(minute)) return null
 
   if (marker === 'am') {
@@ -97,7 +101,8 @@ function _minutesFromVisitTimeToken(token) {
     return (normalizedHour * 60) + minute
   }
 
-  // "baje" is ambiguous; infer typical school-visit usage:
+  // No AM/PM marker (or "baje" without AM/PM context) is ambiguous;
+  // infer typical school-visit usage in 12-hour format:
   // 9-11 => morning, 12-2 => day-time, 3-8 => evening.
   if (hour >= 9 && hour <= 11) return (hour * 60) + minute
   if (hour === 12) return (12 * 60) + minute
@@ -279,7 +284,7 @@ function _parseVisitComponents(raw) {
   // Date-like tokens
   const dateMatch = s.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|kal|aaj|parso)\b/i)
   // Time-like tokens
-  const timeMatch = s.match(/\b(morning|afternoon|evening|subah|dopahar|shaam|\d{1,2}(?::\d{2})?\s*(?:am|pm|baje))\b/i)
+  const timeMatch = s.match(/\b(morning|afternoon|evening|subah|dopahar|shaam|\d{1,2}:\d{2}\s*(?:am|pm|baje)?(?:\s*(?:tk|tak))?|\d{1,2}\s*(?:am|pm|baje))\b/i)
 
   return {
     date: dateMatch ? dateMatch[0].trim() : null,

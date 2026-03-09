@@ -620,7 +620,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.visitConfirmed) {
     const dateTokenPattern = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso)\b/i
     const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
-    const validTimePattern = /\b(morning|afternoon|subah|dopahar|(?:0?9|10|11)(?::[0-5]\d)?\s*(?:am|baje)|(?:12|1)(?::[0-5]\d)?\s*(?:pm|baje)|2(?::00)?\s*(?:pm|baje))\b/i
+    const validTimePattern = /\b(morning|afternoon|subah|dopahar|(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:am|pm|baje)|(?:0?[1-9]|1[0-2]):[0-5]\d(?:\s*(?:tk|tak))?)\b/i
 
     // BLOCK explicit invalid times — night/evening/Sunday/out-of-window clock terms.
     const todayPattern = /\b(today|aaj)\b/i
@@ -640,7 +640,10 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     if (!hasInvalidTime && hasVisitIntent) {
       const dateMatch = userMessage.match(dateTokenPattern)?.[0]?.trim() || null
       const nowMatch = userMessage.match(immediateNowPattern)?.[0]?.trim() || null
-      const timeMatch = userMessage.match(validTimePattern)?.[0]?.trim() || null
+      const rawTimeMatch = userMessage.match(validTimePattern)?.[0]?.trim() || null
+      const timeMatch = rawTimeMatch
+        ? rawTimeMatch.replace(/\s*(?:tk|tak)\b/i, '').trim()
+        : null
 
       let extractedPreference = null
       if (dateMatch && timeMatch) extractedPreference = `${dateMatch} ${timeMatch}`

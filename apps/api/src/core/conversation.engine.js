@@ -79,10 +79,42 @@ function buildVisitWindowFallbackReply(userMessage, recentMessages = []) {
   if (/[\u0900-\u097F]/.test(text)) {
     return 'स्कूल विजिट का समय सोमवार से शनिवार, सुबह 9 बजे से दोपहर 2 बजे तक है। कृपया इसी समय में कोई दिन और समय बताइए।'
   }
-  if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|kal|aaj)\b/i.test(text)) {
+  if (/\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap|ji|haan|accha|theek|kal|aaj|abhi|parso|subah|shaam|baje|tak|tk|aa|sakta|sakti|chahte|chahungi)\b/i.test(text)) {
     return 'School visit ka timing Monday se Saturday, 9 AM se 2 PM hai. Aap isi time range me koi day aur time bata dein.'
   }
   return 'School visit hours are Monday to Saturday, 9 AM to 2 PM. Please share a day and time within this window.'
+}
+
+/**
+ * buildAutoVisitConfirmationReply - Build deterministic confirmation reply after backend slot validation.
+ * @param {string} userMessage - Latest parent message used for language/script mirroring.
+ * @param {string} rawPreference - Visit slot text captured from conversation.
+ * @param {string[]} documentsAdvised - Required documents to carry for visit.
+ * @param {string|null|undefined} staffPhone - Staff contact number for arrival help.
+ * @returns {string} Natural confirmation response in matching language mode.
+ */
+function buildAutoVisitConfirmationReply(userMessage, rawPreference, documentsAdvised = [], staffPhone) {
+  const text = String(userMessage || '').trim()
+  const slot = String(rawPreference || '').trim() || 'the shared time'
+  const docs = Array.isArray(documentsAdvised) ? documentsAdvised.filter(Boolean) : []
+  const contact = String(staffPhone || '').trim()
+
+  if (/[\u0900-\u097F]/.test(text)) {
+    const docsLine = docs.length > 0 ? ` साथ में ये दस्तावेज़ लाएं: ${docs.join(', ')}।` : ''
+    const contactLine = contact ? ` स्कूल पहुंचकर कृपया इस नंबर पर कॉल करें: *${contact}*।` : ''
+    return `आपकी विजिट ${slot} के लिए कन्फर्म है।${docsLine}${contactLine}`
+  }
+
+  const isHinglish = /\b(kya|hai|hain|aap|mujhe|mera|meri|kal|aaj|parso|abhi|baje|aa|sakta|sakti|karna|karni|chahte|chahungi)\b/i.test(text)
+  if (isHinglish) {
+    const docsLine = docs.length > 0 ? ` Saath me yeh documents laaiye: ${docs.join(', ')}.` : ''
+    const contactLine = contact ? ` School pahunchkar is number par call karein: *${contact}*.` : ''
+    return `Aapki visit ${slot} ke liye confirm hai.${docsLine}${contactLine}`
+  }
+
+  const docsLine = docs.length > 0 ? ` Please carry these documents: ${docs.join(', ')}.` : ''
+  const contactLine = contact ? ` On arrival, please call *${contact}*.` : ''
+  return `Your school visit is confirmed for ${slot}.${docsLine}${contactLine}`
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -430,7 +462,7 @@ async function processMessage(req) {
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // ── 7. Call LLM (Azure OpenAI gpt-4o-mini) ──
+    // ── 7. Call LLM (Azure OpenAI deployment) ──
     let rawAIResponse
     try {
       rawAIResponse = await callLLM(systemPrompt, session.recentMessages)
@@ -452,12 +484,29 @@ async function processMessage(req) {
     // Capture previous visit/data state BEFORE overwriting session.flowState
     const wasVisitPreviouslyConfirmed = session.flowState.visitConfirmed === true
     const prevCollectedData = { ...(session.flowState.collectedData || {}) }
-    const { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
+    let { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 9. Extract structured data from this exchange ──
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
     let outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
+    const previousPreferredVisitTime = prevCollectedData.preferredVisitTime || null
+    const currentPreferredVisitTime = finalFlowState.collectedData?.preferredVisitTime || null
+    const preferredVisitUpdated = Boolean(currentPreferredVisitTime && currentPreferredVisitTime !== previousPreferredVisitTime)
+    let autoVisitConfirmed = false
+
+    // If parent shared a new slot but model missed VISIT_CONFIRMED token,
+    // confirm deterministically so valid slots don't get stuck in loops.
+    if (!visitConfirmed && !shouldHandoff && !wasVisitPreviouslyConfirmed && preferredVisitUpdated) {
+      visitConfirmed = true
+      autoVisitConfirmed = true
+      session.flowState.visitConfirmed = true
+      session.flowState.visitConfirmedAt = new Date()
+      logger.info(
+        { phone, businessId: tenant.businessId, preferredVisitTime: currentPreferredVisitTime },
+        'Auto-confirming visit from structured slot extraction'
+      )
+    }
 
     // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
@@ -499,14 +548,23 @@ async function processMessage(req) {
         const lastMsg = session.recentMessages[session.recentMessages.length - 1]
         if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
         logger.warn({ phone, businessId: tenant.businessId }, 'VISIT_CONFIRMED signal ignored because appointment was not created')
+      } else if (autoVisitConfirmed) {
+        outboundResponse = buildAutoVisitConfirmationReply(
+          messageText,
+          appointment.rawPreference || currentPreferredVisitTime,
+          appointment.documentsAdvised || [],
+          tenant.settings?.handoffPhone
+        )
+        const lastMsg = session.recentMessages[session.recentMessages.length - 1]
+        if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
       }
     }
 
     // ── 11.6. Update confirmed appointment with newly-collected profile data ──
     // Student name / parent name are often collected AFTER the appointment is first
     // created (bot asks "what's your child's name?" after confirming the visit time).
-    if (finalFlowState.visitConfirmed) {
-      const { studentName: newStudent, parentName: newParent } = finalFlowState.collectedData
+    if (session.flowState.visitConfirmed) {
+      const { studentName: newStudent, parentName: newParent } = session.flowState.collectedData || {}
       const { studentName: oldStudent, parentName: oldParent } = prevCollectedData
       if (newStudent !== oldStudent || newParent !== oldParent) {
         Appointment.updateOne(

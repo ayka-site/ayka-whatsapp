@@ -2,7 +2,7 @@ const OpenAI  = require('openai')
 const logger  = require('../utils/logger')
 
 /**
- * llm.service.js v4.0 — Azure OpenAI gateway (gpt-4o-mini)
+ * llm.service.js v4.0 — Azure OpenAI gateway (gpt-4.1-mini)
  *
  * Single provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
  * On failure: retries with capped backoff, then throws (caller sends natural msg).
@@ -11,7 +11,8 @@ const logger  = require('../utils/logger')
 
 // ─── AZURE OPENAI CLIENT ────────────────────────────────────────
 const AZURE_OPENAI_KEY = process.env.AZURE_OPENAI_KEY || ''
-const DEPLOYMENT       = 'gpt-4o-mini'
+const DEPLOYMENT       = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1-mini'
+const AZURE_OPENAI_BASE_URL = `https://aykachatbot-resource.openai.azure.com/openai/deployments/${DEPLOYMENT}`
 
 if (!AZURE_OPENAI_KEY) {
   logger.error('AZURE_OPENAI_KEY not set — LLM calls will fail')
@@ -19,12 +20,12 @@ if (!AZURE_OPENAI_KEY) {
 
 const client = new OpenAI({
   apiKey:  AZURE_OPENAI_KEY,
-  baseURL: 'https://aykachatbot-resource.openai.azure.com/openai/deployments/gpt-4o-mini',
+  baseURL: AZURE_OPENAI_BASE_URL,
   defaultQuery:   { 'api-version': '2024-05-01-preview' },
   defaultHeaders: { 'api-key': AZURE_OPENAI_KEY },
 })
 
-logger.info({ deployment: DEPLOYMENT }, 'Azure OpenAI initialized (gpt-4o-mini)')
+logger.info({ deployment: DEPLOYMENT }, 'Azure OpenAI initialized')
 
 // ─── CONCURRENCY LIMITER ────────────────────────────────────────
 const MAX_CONCURRENT = parseInt(process.env.LLM_MAX_CONCURRENCY) || 5
@@ -121,7 +122,7 @@ async function _callAzure(systemPrompt, recentMessages) {
 /**
  * callLLM(systemPrompt, recentMessages) → string
  *
- * Primary: Azure OpenAI gpt-4o-mini
+ * Primary: Azure OpenAI gpt-4.1-mini
  * On failure: retries up to 3 attempts (1s/2s/4s backoff for 429), then throws.
  */
 async function callLLM(systemPrompt, recentMessages) {
