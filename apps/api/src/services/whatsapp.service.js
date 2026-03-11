@@ -52,6 +52,31 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
   }
 }
 
+async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToken) {
+  try {
+    const recipient = normalizeRecipient(to)
+    const image = { link: String(imageUrl || '').trim() }
+    if (caption && String(caption).trim()) image.caption = String(caption).trim()
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to: recipient,
+        type: 'image',
+        image,
+      },
+      {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    )
+    return response.data
+  } catch (err) {
+    logger.error({ err: err.response?.data || err.message, to, imageUrl }, 'Failed to send image message')
+    throw err
+  }
+}
+
 async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, accessToken) {
   try {
     const recipient = normalizeRecipient(to)
@@ -94,4 +119,4 @@ async function markAsRead(waMessageId, phoneNumberId, accessToken) {
   }
 }
 
-module.exports = { sendTextMessage, sendInteractiveButtons, markAsRead }
+module.exports = { sendTextMessage, sendImageMessage, sendInteractiveButtons, markAsRead }

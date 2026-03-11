@@ -169,6 +169,16 @@ function buildKBSummary(kb) {
     facts.generalFAQ = c.generalFAQ.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n---\n')
   }
 
+  // Online payment QR metadata — optional
+  if (c.onlinePaymentQR) {
+    const qr = c.onlinePaymentQR
+    const parts = []
+    if (qr.note) parts.push(qr.note)
+    if (qr.contactPhone) parts.push(`For help call: ${qr.contactPhone}`)
+    if (qr.imageUrl) parts.push(`QR image URL: ${qr.imageUrl}`)
+    if (parts.length > 0) facts.onlinePaymentQR = parts.join(' | ')
+  }
+
   // Academic session start — content.about.academicSession
   if (c.about?.academicSession) facts.academicSession = c.about.academicSession
 
@@ -252,7 +262,7 @@ function buildKBSummary(kb) {
     'vicePrincipal', 'primaryWingIC', 'officeStaff', 'schoolRules',
     'founderTribute', 'nearbyLocations', 'nearbyLandmarks',
     'complaintRedressal', 'laboratories', 'hostelFAQ', 'feeSimplified',
-    'generalFAQ', 'computerEducation',
+    'generalFAQ', 'computerEducation', 'onlinePaymentQR',
   ])
   for (const [key, val] of Object.entries(c)) {
     if (!KNOWN_KEYS.has(key) && typeof val === 'string') {
@@ -274,10 +284,12 @@ function buildKBSummary(kb) {
 function detectScript(text, recentMessages) {
   const msg = (text || '').trim()
 
-  // Primary: check current message for Devanagari characters
-  if (msg.length > 0 && /[\u0900-\u097F]/.test(msg)) return 'devanagari'
+  // Primary: detect from the latest message only.
+  if (msg.length > 0) {
+    return /[\u0900-\u097F]/.test(msg) ? 'devanagari' : 'latin'
+  }
 
-  // Fallback: check recent user messages
+  // Fallback only when latest message is empty/non-text.
   const userMsgs = (recentMessages || []).filter(m => m.role === 'user').slice(-3)
   for (const m of userMsgs) {
     if (/[\u0900-\u097F]/.test(m.content?.text || '')) return 'devanagari'
@@ -338,16 +350,22 @@ function detectLanguageMode(currentMessage, recentMessages) {
   const text = String(currentMessage || '').trim()
   if (/[\u0900-\u097F]/.test(text)) return 'devanagari'
 
-  const hindiCueRegex = /\b(hai|hain|kya|mein|main|aap|mujhe|batao|bataiye|kal|aaj|nahi|haan|kaise|kab|mera|meri|mere|hum|tum|kyu|kyon|batana|boliye|ka|ki|ke|ko|se|kr|karo|kariye|plz|pls)\b/gi
-  const englishCueRegex = /\b(what|when|where|which|who|how|please|can|could|would|should|is|are|do|does|tell|share|process|admission|fees|hostel|visit|school|class|timing|stream|facility|transport)\b/gi
+  const hasLatinLetters = /[a-z]/i.test(text)
+
+  // Keep this list strongly Hindi-leaning so pure English ("yes tomorrow 12pm works")
+  // is never misclassified as Hinglish.
+  const hindiCueRegex = /\b(hai|hain|kya|mein|main|aap|mujhe|mujhko|batao|bataiye|bataye|hn|haan|han|nahi|nahin|kaise|kab|mera|meri|mere|hum|tum|kyu|kyon|ka|ki|ke|ko|se|kr|kar|karo|kariye|karwa|karwana|chahiye|chahiye?|bolo|boliye|btado|btao|dikhao|dikhaiye|samjhao|samjhaiye|aji|ji|thik|theek|achha|acha|parso|kal|aaj|abhi|waise|bhai|behen|madad)\b/gi
+  const englishCueRegex = /\b(yes|yeah|yep|no|not|hello|hi|hey|sorry|please|thanks|thank|tomorrow|today|works|work|need|help|can|could|would|should|what|when|where|which|who|why|how|is|are|do|does|tell|share|process|admission|fees|hostel|visit|school|class|timing|stream|facility|transport|book|confirm|reschedule|okay|ok|fine)\b/gi
   const hindiScore = (text.match(hindiCueRegex) || []).length
   const englishScore = (text.match(englishCueRegex) || []).length
 
-  if (hindiScore >= 2) return 'hinglish'
-  if (hindiScore >= 1 && englishScore >= 1) return 'hinglish'
   if (hindiScore >= 1 && englishScore === 0) return 'hinglish'
+  if (hindiScore >= 1 && englishScore >= 1) return 'hinglish'
   if (englishScore >= 1) return 'english'
+  if (hasLatinLetters) return 'english'
 
+  // Fallback for non-alphabetic short replies (e.g., "12", "?")
+  // where latest message gives insufficient signal.
   const recentUser = (recentMessages || [])
     .filter(m => m.role === 'user')
     .slice(-2)
@@ -469,8 +487,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.board)            factLines.push(`Board: ${facts.board}${facts.affiliationNo ? ` (Affiliation No. ${facts.affiliationNo})` : ''}${facts.udiseCode ? ` | UDISE Code: ${facts.udiseCode}` : ''}`)
   if (facts.classes)          factLines.push(`Classes offered: ${facts.classes}`)
   if (facts.streams)          factLines.push(`Streams (11-12): ${facts.streams}`)
-  // If feeSimplified exists (parent-friendly totals), skip the verbose class-wise breakdown to save tokens
-  if (facts.fees && !facts.feeSimplified)  factLines.push(`Fees (2026-27, class-wise — FIXED, no negotiation):\n${facts.fees}`)
+  if (facts.fees)          factLines.push(`Fees (2026-27, class-wise — FIXED, no negotiation):\n${facts.fees}`)
   if (facts.results)          factLines.push(`Results: ${facts.results}`)
   if (facts.infrastructure)   factLines.push(`Campus: ${facts.infrastructure}`)
   if (facts.timing)           factLines.push(`School hours: ${facts.timing}`)
@@ -496,7 +513,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.hostelFees)        factLines.push(`Hostel Fees: ${facts.hostelFees}`)
   if (facts.hostelInstallments) factLines.push(`Hostel Installments: ${facts.hostelInstallments}`)
   if (facts.hostelVisit)       factLines.push(`Hostel Visit: ${facts.hostelVisit}`)
-  if (facts.feeSimplified)     factLines.push(`Fees (SIMPLE TOTALS for parents):\n${facts.feeSimplified}`)
+  if (facts.feeSimplified)     factLines.push(`Fees (SIMPLE TOTALS for parents — use only if class-wise table is missing):\n${facts.feeSimplified}`)
   if (facts.feeSimplifiedNote) factLines.push(`Fee Note: ${facts.feeSimplifiedNote}`)
   if (facts.vision)            factLines.push(`Vision: ${facts.vision}`)
   if (facts.coreValues)        factLines.push(`Values: ${facts.coreValues}`)
@@ -504,6 +521,7 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.alumni)            factLines.push(`Notable alumni: ${facts.alumni}`)
   if (facts.examSchedule)      factLines.push(`Exams: ${facts.examSchedule}`)
   if (facts.activities)        factLines.push(`Activities: ${facts.activities}`)
+  if (facts.onlinePaymentQR)   factLines.push(`Online payment QR: ${facts.onlinePaymentQR}`)
   if (staffPhone)              factLines.push(`Staff phone: ${staffPhone} (${escapePromptValue(workingHours)})`)
 
   const factsBlock = factLines.length > 0
@@ -542,14 +560,14 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // ── Build MISSING INFO checklist (priority order: relationship → qualification → conversion) ──
   const missingInfo = []
   // Phase 1 — Relationship (first 2-3 messages)
-  if (!collected.parentName)                                   missingInfo.push('Parent\'s name (ask warmly, e.g. "May I know your good name?" / "Aapka shubh naam?")')
+  if (!collected.parentName)                                   missingInfo.push('Parent\'s name (ask warmly, e.g. "May I know your name?" / "Aapka naam bata dijiye?")')
   // Phase 2 — Qualification (after name, weave into answers)
   if (!collected.studentName)                                  missingInfo.push('Child\'s name')
   if (!collected.interestedClass)                              missingInfo.push('Which class/grade they want admission in')
   // Phase 3 — Conversion (after enough info shared)
   if (!goals.visitSuggested)                                   missingInfo.push('Suggest a school visit')
   if (!collected.preferredVisitTime && goals.visitSuggested)   missingInfo.push('When they would like to visit')
-  if (collected.preferredVisitTime && !flowState.visitConfirmed && goals.visitSuggested) missingInfo.push('Confirm their visit (say VISIT_CONFIRMED: YES)')
+  if (collected.preferredVisitTime && !flowState.visitConfirmed && goals.visitSuggested) missingInfo.push('Confirm their visit (resolve to a real date + time and emit VISIT_CONFIRMED: YYYY-MM-DD HH:MM as per Rule 6B)')
 
   const missingBlock = missingInfo.length > 0
     ? missingInfo.map(i => `  - ${i}`).join('\n')
@@ -715,7 +733,7 @@ ${facts.generalFAQ}` : ''}
 
 RULE 1 — ANSWER FIRST, ALWAYS.
 When a parent asks a direct question (fees? address? timing? transport? results? hostel? breakfast? routine?), answer it COMPLETELY and IMMEDIATELY from KNOWN FACTS above. Only AFTER answering, you may ask ONE follow-up.
-- For FEES questions: Give the SIMPLE TOTAL from "Fees (SIMPLE TOTALS)" section. Say it plainly: "Class 5 ki fees ₹1,600 per month hai. Iske alawa ₹2,500 additional fee aur ₹1,000 annual fee ek baar deni hoti hai." Do NOT list 5 separate line items. Parents want ONE monthly number first.
+- For FEES questions: Use the class-wise fee table as primary source. First state tuition fee per month, then separately mention one-time/additional and annual fee. Never add/average/mix these into a fake monthly total. Use "Fees (SIMPLE TOTALS)" only if class-wise table is unavailable.
   Example (match latest language mode): ${feeExample}
 - For HOSTEL questions: Check "Hostel" sections in KNOWN FACTS. Most hostel questions ARE answerable — breakfast, routine, meals, medical, night care, items. Only hostel FEES and INSTALLMENTS require school visit.
 - For SPECIALITY/FEATURE questions (e.g. "school mein kya khaas hai", "what makes your school special"): Lead with the school's most academically distinctive features FIRST — AI & robotics lab, STEM education, Tinkering lab, smart board digital classrooms, science & computer labs. Mention sports, music, art, dance and other extracurricular activities only AFTER academic highlights, or if the parent specifically asks. Never lead with generic facilities.
@@ -790,9 +808,16 @@ ${schedulingConfig.visitHours ? `VISIT HOURS: ${schedulingConfig.visitHours} —
   1. Confirm the visit: "Aapki visit [day] [time] ke liye confirm hai.${schedulingConfig.documentsRequired?.length > 0 ? ` Saath mein yeh documents laana: ${schedulingConfig.documentsRequired.join(', ')}.` : ''}"
   Example (match latest language mode): ${visitExample}
   2. Then provide the staff contact: "${visitContactInstruction}${websiteUrl ? ` Website: *${websiteUrl}*` : ''}"
-  3. On a NEW line write exactly: VISIT_CONFIRMED: YES
+  3. Using the TODAY date/time shown at the top of this prompt, calculate the ACTUAL calendar date
+     for the visit. Then on a NEW line write exactly:
+     VISIT_CONFIRMED: YYYY-MM-DD HH:MM
+     where YYYY-MM-DD is the resolved calendar date and HH:MM is 24-hour time.
+     Example: today is Monday 2026-03-09 and parent says "kal 10 baje" → VISIT_CONFIRMED: 2026-03-10 10:00
+     Example: parent says "this Friday 11 AM" and today is Monday 2026-03-09 → VISIT_CONFIRMED: 2026-03-13 11:00
+     Example: parent says "Tuesday morning" → VISIT_CONFIRMED: 2026-03-10 10:00
+     NEVER write VISIT_CONFIRMED: YES — always resolve to a real date and time.
   4. On ANOTHER new line write exactly: HANDOFF: YES
-- Never output VISIT_CONFIRMED: YES or HANDOFF: YES in any other context.
+- Never output VISIT_CONFIRMED or HANDOFF: YES in any other context.
 - If you do NOT yet have a valid visit day/time, ask for it FIRST.
 - If parent insists on an out-of-hours time, hand off to staff: "Iske liye aap *${staffPhone || 'admissions team'}* se baat kar sakte hain."` : `RULE 6B — VISIT SCHEDULING (DISABLED).
 Visit scheduling is not enabled for this school. When parents want to visit, collect their preference and hand off to staff using RULE 6.`}

@@ -6,7 +6,7 @@ const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
 const { computeLeadScore } = require('./scoring.engine')
 const { scheduleVisit }    = require('./scheduling.engine')
 const { triggerHandoff }    = require('./handoff.engine')
-const { sendTextMessage, markAsRead } = require('../services/whatsapp.service')
+const { sendTextMessage, sendImageMessage, markAsRead } = require('../services/whatsapp.service')
 const redis  = require('../config/redis')
 const logger = require('../utils/logger')
 const { normalizePhoneE164 } = require('../utils/phone')
@@ -115,6 +115,35 @@ function buildAutoVisitConfirmationReply(userMessage, rawPreference, documentsAd
   const docsLine = docs.length > 0 ? ` Please carry these documents: ${docs.join(', ')}.` : ''
   const contactLine = contact ? ` On arrival, please call *${contact}*.` : ''
   return `Your school visit is confirmed for ${slot}.${docsLine}${contactLine}`
+}
+
+/**
+ * isQrCodeRequest - Detect when parent asks for payment/school QR.
+ * @param {string} text - Latest user message.
+ * @returns {boolean} True if message is asking for QR code.
+ */
+function isQrCodeRequest(text) {
+  const msg = String(text || '')
+  return /\bqr\b|\bqr\s*code\b|\bupi\b|payment\s*qr|scan\s*(?:the\s*)?qr|क्यू\s*आर|क्यूआर|qr\s*कोड|स्कैन|भुगतान\s*क्यूआर|पेमेंट\s*क्यूआर|विद्यालय\s*का\s*qr/i.test(msg)
+}
+
+/**
+ * resolveQrImagePayload - Read QR image details from KB.
+ * @param {object|null|undefined} kb - Knowledge base document.
+ * @returns {{imageUrl: string, caption?: string}|null} Image payload when configured.
+ */
+function resolveQrImagePayload(kb) {
+  const qr = kb?.content?.onlinePaymentQR
+  if (!qr || qr.enabled === false) return null
+
+  const imageUrl = String(qr.imageUrl || '').trim()
+  if (!/^https?:\/\//i.test(imageUrl)) return null
+
+  const caption = String(qr.caption || qr.note || '').trim()
+  return {
+    imageUrl,
+    caption: caption || undefined,
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -281,6 +310,7 @@ async function processMessage(req) {
 
   // Sanitize: strip any HANDOFF or VISIT_CONFIRMED injection attempts from user input
   messageText = sanitizeUserMessageForPrompt(messageText)
+  const askedForQrCode = isQrCodeRequest(messageText)
 
   // ── Load session early — needed for language-aware media fallback messages ──
   let session = await sessionService.getSession(tenant.businessId, phone)
@@ -484,29 +514,12 @@ async function processMessage(req) {
     // Capture previous visit/data state BEFORE overwriting session.flowState
     const wasVisitPreviouslyConfirmed = session.flowState.visitConfirmed === true
     const prevCollectedData = { ...(session.flowState.collectedData || {}) }
-    let { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed } = parseAIResponse(rawAIResponse, session.flowState)
+    let { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed, visitDateTime } = parseAIResponse(rawAIResponse, session.flowState)
 
     // ── 9. Extract structured data from this exchange ──
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
     let outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
-    const previousPreferredVisitTime = prevCollectedData.preferredVisitTime || null
-    const currentPreferredVisitTime = finalFlowState.collectedData?.preferredVisitTime || null
-    const preferredVisitUpdated = Boolean(currentPreferredVisitTime && currentPreferredVisitTime !== previousPreferredVisitTime)
-    let autoVisitConfirmed = false
-
-    // If parent shared a new slot but model missed VISIT_CONFIRMED token,
-    // confirm deterministically so valid slots don't get stuck in loops.
-    if (!visitConfirmed && !shouldHandoff && !wasVisitPreviouslyConfirmed && preferredVisitUpdated) {
-      visitConfirmed = true
-      autoVisitConfirmed = true
-      session.flowState.visitConfirmed = true
-      session.flowState.visitConfirmedAt = new Date()
-      logger.info(
-        { phone, businessId: tenant.businessId, preferredVisitTime: currentPreferredVisitTime },
-        'Auto-confirming visit from structured slot extraction'
-      )
-    }
 
     // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
@@ -526,15 +539,12 @@ async function processMessage(req) {
       )
     }
 
-    // ── 11.5. Trigger visit scheduling if LLM confirmed a visit ──
-    // Only schedule when VISIT_CONFIRMED: YES appears for the first time in this
-    // conversation — OR after a reschedule reset (wasVisitPreviouslyConfirmed became
-    // false via flow.engine reschedule detection). Prevents duplicate scheduling
-    // if the bot re-emits the signal on subsequent messages.
+    // ── 11.5. Trigger visit scheduling when LLM confirmed a visit with a resolved datetime ──
+    // Only schedule on the first confirmation in this conversation, or after a reschedule reset.
     if (visitConfirmed && !wasVisitPreviouslyConfirmed) {
       let appointment = null
       try {
-        appointment = await scheduleVisit(session, tenant)
+        appointment = await scheduleVisit(session, tenant, visitDateTime)
       } catch (err) {
         logger.error({ err }, 'Visit scheduling failed — parent still gets response')
       }
@@ -547,17 +557,9 @@ async function processMessage(req) {
         outboundResponse = buildVisitWindowFallbackReply(messageText, session.recentMessages)
         const lastMsg = session.recentMessages[session.recentMessages.length - 1]
         if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
-        logger.warn({ phone, businessId: tenant.businessId }, 'VISIT_CONFIRMED signal ignored because appointment was not created')
-      } else if (autoVisitConfirmed) {
-        outboundResponse = buildAutoVisitConfirmationReply(
-          messageText,
-          appointment.rawPreference || currentPreferredVisitTime,
-          appointment.documentsAdvised || [],
-          tenant.settings?.handoffPhone
-        )
-        const lastMsg = session.recentMessages[session.recentMessages.length - 1]
-        if (lastMsg?.role === 'assistant') lastMsg.content = { text: outboundResponse }
+        logger.warn({ phone, businessId: tenant.businessId }, 'VISIT_CONFIRMED signal ignored because appointment datetime was invalid or scheduling failed')
       }
+      // If appointment was created: outboundResponse stays as the LLM's confirmation message
     }
 
     // ── 11.6. Update confirmed appointment with newly-collected profile data ──
@@ -628,6 +630,21 @@ async function processMessage(req) {
 
     // ── 14. Send response to parent ──
     await sendTextMessage(phone, outboundResponse, tenant.phoneNumberId, tenant.accessToken)
+
+    if (askedForQrCode) {
+      const qrPayload = resolveQrImagePayload(kb)
+      if (qrPayload) {
+        await sendImageMessage(
+          phone,
+          qrPayload.imageUrl,
+          qrPayload.caption,
+          tenant.phoneNumberId,
+          tenant.accessToken
+        ).catch(err => logger.warn({ err, phone }, 'QR image send failed'))
+      } else {
+        logger.info({ phone, businessId: tenant.businessId }, 'QR asked but no valid onlinePaymentQR.imageUrl configured in KB')
+      }
+    }
 
     return outboundResponse
 
