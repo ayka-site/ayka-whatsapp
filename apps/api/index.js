@@ -37,6 +37,7 @@ const app = express()
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3001',
   'https://dashboard.ayka.site',
+  'https://aykabot.ayka.site',
   'https://ayka.site',
   'https://www.ayka.site',
 ]
