@@ -39,7 +39,7 @@ function normalizeModelResponse(text) {
 
 function parseAIResponse(rawResponse, flowState) {
   if (!rawResponse) {
-    return { cleanResponse: '', updatedFlowState: flowState, shouldHandoff: false }
+    return { cleanResponse: '', updatedFlowState: flowState, shouldHandoff: false, visitConfirmed: false, visitDateTime: null }
   }
 
   let cleanResponse    = rawResponse
@@ -54,18 +54,23 @@ function parseAIResponse(rawResponse, flowState) {
     cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF\s*:\s*YES\s*/gi, '').trim()
   }
 
-  // Detect VISIT_CONFIRMED: YES signal — bot confirmed a visit appointment
+  // Detect VISIT_CONFIRMED: YYYY-MM-DD HH:MM signal — LLM resolved the actual visit datetime
   let visitConfirmed = false
-  if (/(^|\n)\s*VISIT_CONFIRMED\s*:\s*YES\s*($|\n)/i.test(cleanResponse)) {
+  let visitDateTime  = null  // e.g. "2026-03-10 10:00"
+  const visitMatch = cleanResponse.match(/(^|\n)\s*VISIT_CONFIRMED\s*:\s*(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})\s*($|\n)/im)
+  if (visitMatch) {
     visitConfirmed = true
+    visitDateTime  = visitMatch[2].trim().replace('T', ' ')  // normalise "T" separator to space
     updatedFlowState.visitConfirmed   = true
     updatedFlowState.visitConfirmedAt = new Date()
-    cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED\s*:\s*YES\s*/gi, '').trim()
+    if (!updatedFlowState.collectedData) updatedFlowState.collectedData = {}
+    updatedFlowState.collectedData.resolvedVisitDateTime = visitDateTime
+    cleanResponse = cleanResponse.replace(/(^|\n)\s*VISIT_CONFIRMED\s*:\s*\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}\s*/gim, '').trim()
   }
 
   cleanResponse = normalizeModelResponse(cleanResponse)
 
-  return { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed }
+  return { cleanResponse, updatedFlowState, shouldHandoff, visitConfirmed, visitDateTime }
 }
 
 // Hindi ordinal words → class number mapping (Latin + Devanagari)
@@ -200,11 +205,13 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   try {
 
   // ── Rescheduling: reset visit state when user explicitly wants a new time ──
-  // This allows the bot to re-collect the time preference and emit VISIT_CONFIRMED: YES again,
+  // This allows the bot to re-collect the time preference and emit VISIT_CONFIRMED: YYYY-MM-DD HH:MM again,
   // triggering scheduleVisit which will cancel the old appointment and create a new one.
   if (updated.visitConfirmed) {
-    const rescheduleKeywords = /\b(reschedule|change.*(?:appointment|visit|time|date)|different\s+(?:time|day|date)|new\s+(?:time|day|date)|dobara\s+schedule|time\s+badal|date\s+badal|appointment\s+badal|visit\s+badal|phir\s+se\s+schedule|koi\s+aur\s+(?:time|din)|alag\s+(?:time|din|date))\b/i
-    if (rescheduleKeywords.test(userLc)) {
+    const rescheduleKeywords = /\b(reschedule|change.*(?:appointment|visit|time|date)|different\s+(?:time|day|date)|new\s+(?:time|day|date)|dobara\s+schedule|time\s+badal|date\s+badal|appointment\s+badal|visit\s+badal|phir\s+se\s+schedule|koi\s+aur\s+(?:time|din)|alag\s+(?:time|din|date)|appointment\s+kar\s+sakte|visit\s+kar\s+sakte|kal\s+\d{1,2}|parso\s+\d{1,2}|tomorrow\s+\d{1,2}|tuesday\s+\d{1,2})\b/i
+    const hasDateOrTimeHint = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|kal|aaj|parso|abhi|right\s*now|now|immediately|turant|isi\s*waqt|morning|afternoon|subah|dopahar|(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:am|pm|baje)|(?:0?[1-9]|1[0-2]):[0-5]\d(?:\s*(?:tk|tak))?)\b/i.test(userMessage)
+    const hasVisitContext = /\b(visit|appointment|time|date|schedule|confirm|book|arrange|milna|aana|aa\s+jau|aa\s+jaunga|aa\s+jaungi|aa\s+sakta|aa\s+sakti|aa\s+sakte)\b/i.test(userLc)
+    if (rescheduleKeywords.test(userLc) || (hasVisitContext && hasDateOrTimeHint)) {
       updated.visitConfirmed = false
       updated.visitConfirmedAt = null
       updated.collectedData.preferredVisitTime = null
@@ -633,7 +640,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     const hasDateOrTimeHint = dateTokenPattern.test(userMessage)
       || immediateNowPattern.test(userMessage)
       || validTimePattern.test(userMessage)
-    const hasVisitIntent = /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)
+    const hasVisitIntent = /\b(visit|come|tour|dekh|milna|campus|schedule|set\s*up|plan|confirm|fix|arrange|book|appointment|aa\s+jaiye|aao|aa\s+sako|aa\s+sakte|aa\s+sakta|aa\s+sakti|aa\s+jaunga|aa\s+jaungi|aa\s+jau|dekhne\s+aa|milne\s+aa)\b/i.test(userLc)
       || (assistantAskedVisit && hasDateOrTimeHint)
 
     // Only extract if the message clearly has visit intent AND is not at an invalid time
