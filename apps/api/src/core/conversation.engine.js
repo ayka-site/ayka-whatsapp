@@ -146,6 +146,51 @@ function resolveQrImagePayload(kb) {
   }
 }
 
+/**
+ * resolveQrImagePayloadWithDbFallback - Resolve QR payload from cache, then fresh DB.
+ * @param {object|null|undefined} kb - Cached KB document.
+ * @param {string} businessId - Tenant business ID.
+ * @returns {Promise<{imageUrl: string, caption?: string}|null>} QR payload when configured.
+ */
+async function resolveQrImagePayloadWithDbFallback(kb, businessId) {
+  const fromCache = resolveQrImagePayload(kb)
+  if (fromCache) return fromCache
+
+  try {
+    const freshKb = await KnowledgeBase.findOne(
+      { businessId },
+      { 'content.onlinePaymentQR': 1 }
+    ).lean()
+    const fromDb = resolveQrImagePayload(freshKb)
+
+    if (fromDb) {
+      try {
+        await redis.del(`kb:${businessId}`)
+      } catch (cacheErr) {
+        logger.warn({ cacheErr, businessId }, 'Could not invalidate stale KB cache after QR DB fallback')
+      }
+    }
+    return fromDb
+  } catch (err) {
+    logger.warn({ err, businessId }, 'QR DB fallback lookup failed')
+    return null
+  }
+}
+
+/**
+ * buildQrIntroReply - Return a short language-mirrored reply before sending QR image.
+ * @param {string} userMessage - Latest parent message.
+ * @returns {string} Intro text matching user language/script.
+ */
+function buildQrIntroReply(userMessage) {
+  const text = String(userMessage || '').trim()
+  if (/[\u0900-\u097F]/.test(text)) return 'जी बिल्कुल, यह स्कूल का ऑफिशियल पेमेंट QR code है।'
+  if (/\b(hai|kya|aap|mujhe|batao|bhejo|de do|dedo|chahiye|ji|haan|kal|aaj)\b/i.test(text)) {
+    return 'Ji bilkul, yeh school ka official payment QR code hai.'
+  }
+  return 'Sure, here is the school’s official payment QR code.'
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Deduplication — two-layer: in-memory (instant) + Redis (durable)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -628,22 +673,27 @@ async function processMessage(req) {
       markAsRead(waMessageId, tenant.phoneNumberId, tenant.accessToken),
     ]).catch(err => logger.error({ err }, 'Non-blocking DB write failed'))
 
-    // ── 14. Send response to parent ──
-    await sendTextMessage(phone, outboundResponse, tenant.phoneNumberId, tenant.accessToken)
-
+    let qrPayload = null
     if (askedForQrCode) {
-      const qrPayload = resolveQrImagePayload(kb)
+      qrPayload = await resolveQrImagePayloadWithDbFallback(kb, tenant.businessId)
       if (qrPayload) {
-        await sendImageMessage(
-          phone,
-          qrPayload.imageUrl,
-          qrPayload.caption,
-          tenant.phoneNumberId,
-          tenant.accessToken
-        ).catch(err => logger.warn({ err, phone }, 'QR image send failed'))
+        outboundResponse = buildQrIntroReply(messageText)
       } else {
         logger.info({ phone, businessId: tenant.businessId }, 'QR asked but no valid onlinePaymentQR.imageUrl configured in KB')
       }
+    }
+
+    // ── 14. Send response to parent ──
+    await sendTextMessage(phone, outboundResponse, tenant.phoneNumberId, tenant.accessToken)
+
+    if (qrPayload) {
+      await sendImageMessage(
+        phone,
+        qrPayload.imageUrl,
+        qrPayload.caption,
+        tenant.phoneNumberId,
+        tenant.accessToken
+      ).catch(err => logger.warn({ err, phone }, 'QR image send failed'))
     }
 
     return outboundResponse
