@@ -17,7 +17,7 @@ const businessSchema = new Schema({
   resellerId: { type: Schema.Types.ObjectId, ref: 'Reseller', default: null },
   name:       { type: String, required: true },
   slug:       { type: String, required: true, unique: true },
-  vertical:   { type: String, enum: ['school','realestate','healthcare','msme'], required: true },
+  vertical:   { type: String, enum: ['school','realestate','healthcare','msme','coaching'], required: true },
   pricing: {
     totalPrice:   { type: Number, default: 0 },   // for direct clients (no reseller)
     note:         { type: String, default: '' },   // custom pricing notes
