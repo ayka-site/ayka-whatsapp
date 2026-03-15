@@ -201,32 +201,32 @@ export default function ClientConversations() {
         {leadProfile && (
           <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Parent Name</p><p className="font-medium">{leadProfile.flowState?.collectedData?.parentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{leadProfile.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Student Name</p><p className="font-medium">{leadProfile.flowState?.collectedData?.studentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Class</p><p className="font-medium">{leadProfile.flowState?.collectedData?.interestedClass || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Alt Phone</p><p className="font-medium">{leadProfile.flowState?.collectedData?.altPhone || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Visit Time</p><p className="font-medium">{leadProfile.flowState?.collectedData?.preferredVisitTime || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{leadProfile.flowState?.collectedData?.parentName || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{leadProfile.phone || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{leadProfile.flowState?.collectedData?.studentName || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{leadProfile.flowState?.collectedData?.interestedClass || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Alt Phone</p><p className="font-medium">{leadProfile.flowState?.collectedData?.altPhone || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Time</p><p className="font-medium">{leadProfile.flowState?.collectedData?.preferredVisitTime || '—'}</p></div>
             </div>
             <hr />
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Score</p><Badge score={leadProfile.leadScore} /></div>
-              <div><p className="text-xs text-gray-500">Reason</p><p>{leadProfile.leadScoreReason}</p></div>
-              <div><p className="text-xs text-gray-500">Visit Confirmed</p><p>{leadProfile.flowState?.visitConfirmed ? 'Yes' : 'No'}</p></div>
-              <div><p className="text-xs text-gray-500">Handoff</p><p>{leadProfile.flowState?.handoffTriggered ? 'Yes' : 'No'}</p></div>
-              <div><p className="text-xs text-gray-500">Messages</p><p>{leadProfile.messageCount}</p></div>
-              <div><p className="text-xs text-gray-500">Source</p><p>{leadProfile.source?.sourceType || 'direct'}</p></div>
-              <div><p className="text-xs text-gray-500">First Contact</p><p>{formatDate(leadProfile.openedAt)}</p></div>
-              <div><p className="text-xs text-gray-500">Duration</p><p>{leadProfile.openedAt ? `Since ${formatDate(leadProfile.openedAt)}` : '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Score</p><Badge score={leadProfile.leadScore} /></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Reason</p><p>{leadProfile.leadScoreReason || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Confirmed</p><p>{leadProfile.flowState?.visitConfirmed ? 'Yes' : 'No'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Handoff</p><p>{leadProfile.flowState?.handoffTriggered ? 'Yes' : 'No'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Messages</p><p>{leadProfile.messageCount ?? 0}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Source</p><p>{leadProfile.source?.sourceType || 'direct'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>First Contact</p><p>{formatDate(leadProfile.openedAt) || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Duration</p><p>{leadProfile.openedAt ? `Since ${formatDate(leadProfile.openedAt)}` : '—'}</p></div>
             </div>
             {leadProfile.appointment && (
               <>
                 <hr />
                 <h3 className="font-semibold">Appointment</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{formatAppointmentPreference(leadProfile.appointment.scheduledAt, leadProfile.appointment.rawPreference)}</p></div>
-                  <div><p className="text-xs text-gray-500">Status</p><Badge score={leadProfile.appointment.status} /></div>
-                  <div><p className="text-xs text-gray-500">Documents</p><p>{leadProfile.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
+                  <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Scheduled</p><p>{formatAppointmentPreference(leadProfile.appointment.scheduledAt, leadProfile.appointment.rawPreference)}</p></div>
+                  <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Status</p><Badge score={leadProfile.appointment.status} /></div>
+                  <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Documents</p><p>{leadProfile.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
                 </div>
               </>
             )}

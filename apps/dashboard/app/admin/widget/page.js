@@ -5,7 +5,7 @@ import { TopBar, FormField, FormInput, FormSelect } from '../../../components/UI
 import { useFetch } from '../../../hooks/useFetch'
 const { apiFetch } = require('../../../lib/api')
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 const DEFAULT_THEME = {
   primaryColor: '#0ea5e9', headerBg: '#0f172a', headerText: '#ffffff',

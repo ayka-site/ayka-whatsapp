@@ -34,7 +34,8 @@ export default function ClientLeads() {
 
   async function exportCSV() {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/client/export/leads${score ? `?score=${score}` : ''}`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || ''
+      const res = await fetch(`${apiBase}/api/client/export/leads${score ? `?score=${score}` : ''}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('ayka_token')}` }
       })
       const blob = await res.blob()
@@ -120,31 +121,31 @@ export default function ClientLeads() {
         {selectedLead && (
            <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Parent Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.parentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedLead.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Student Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.studentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Class</p><p className="font-medium">{selectedLead.flowState?.collectedData?.interestedClass || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Alt Phone</p><p className="font-medium">{selectedLead.flowState?.collectedData?.altPhone || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Visit Time</p><p className="font-medium">{selectedLead.flowState?.collectedData?.preferredVisitTime || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.parentName || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedLead.phone || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.studentName || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{selectedLead.flowState?.collectedData?.interestedClass || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Alt Phone</p><p className="font-medium">{selectedLead.flowState?.collectedData?.altPhone || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Time</p><p className="font-medium">{selectedLead.flowState?.collectedData?.preferredVisitTime || '—'}</p></div>
             </div>
             <hr />
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Score</p><Badge score={selectedLead.leadScore} /></div>
-              <div><p className="text-xs text-gray-500">Reason</p><p>{selectedLead.leadScoreReason}</p></div>
-              <div><p className="text-xs text-gray-500">Visit Confirmed</p><p>{selectedLead.flowState?.visitConfirmed ? `Yes (${formatDate(selectedLead.flowState?.visitConfirmedAt)})` : 'No'}</p></div>
-              <div><p className="text-xs text-gray-500">Handoff</p><p>{selectedLead.flowState?.handoffTriggered ? `Yes (${formatDate(selectedLead.flowState?.handoffAt)})` : 'No'}</p></div>
-              <div><p className="text-xs text-gray-500">Messages</p><p>{selectedLead.messageCount}</p></div>
-              <div><p className="text-xs text-gray-500">Source</p><p>{selectedLead.source?.sourceType || 'direct'}</p></div>
-              <div><p className="text-xs text-gray-500">First Contact</p><p>{formatDate(selectedLead.openedAt)}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Score</p><Badge score={selectedLead.leadScore} /></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Reason</p><p>{selectedLead.leadScoreReason || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Confirmed</p><p>{selectedLead.flowState?.visitConfirmed ? `Yes (${formatDate(selectedLead.flowState?.visitConfirmedAt)})` : 'No'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Handoff</p><p>{selectedLead.flowState?.handoffTriggered ? `Yes (${formatDate(selectedLead.flowState?.handoffAt)})` : 'No'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Messages</p><p>{selectedLead.messageCount ?? 0}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Source</p><p>{selectedLead.source?.sourceType || 'direct'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>First Contact</p><p>{formatDate(selectedLead.openedAt) || '—'}</p></div>
             </div>
             {selectedLead.appointment && (
               <>
                 <hr />
                 <h3 className="font-semibold">Appointment</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{formatAppointmentPreference(selectedLead.appointment.scheduledAt, selectedLead.appointment.rawPreference)}</p></div>
-                  <div><p className="text-xs text-gray-500">Status</p><Badge score={selectedLead.appointment.status} /></div>
-                  <div><p className="text-xs text-gray-500">Documents</p><p>{selectedLead.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
+                    <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Scheduled</p><p>{formatAppointmentPreference(selectedLead.appointment.scheduledAt, selectedLead.appointment.rawPreference)}</p></div>
+                    <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Status</p><Badge score={selectedLead.appointment.status} /></div>
+                    <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Documents</p><p>{selectedLead.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
                 </div>
               </>
             )}

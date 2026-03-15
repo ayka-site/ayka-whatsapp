@@ -167,8 +167,8 @@ export default function ClientAppointments() {
         {selectedAppt && (
           <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedAppt.parentName}</p></div>
-              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedAppt.phone}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedAppt.parentName || '—'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedAppt.phone || '—'}</p></div>
               <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{selectedAppt.studentName || '—'}</p></div>
               <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{selectedAppt.interestedClass || '—'}</p></div>
             </div>
@@ -177,7 +177,7 @@ export default function ClientAppointments() {
               <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Status</p><Badge score={selectedAppt.status} /></div>
               <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Preference</p><p>{formatAppointmentPreference(selectedAppt.scheduledAt, selectedAppt.rawPreference)}</p></div>
               <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Scheduled At</p><p>{selectedAppt.scheduledAt ? formatDate(selectedAppt.scheduledAt) : '—'}</p></div>
-              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Source</p><p>{selectedAppt.source || 'bot'}</p></div>
+              <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Source</p><p>{selectedAppt.source || 'bot'}</p></div>
             </div>
             <hr />
             <div>
