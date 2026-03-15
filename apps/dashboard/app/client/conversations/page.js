@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, SlideOver } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-import { relativeTime, truncate, dateSeparator, formatDate } from '../../../lib/format'
+import { relativeTime, truncate, dateSeparator, formatDate, formatAppointmentPreference } from '../../../lib/format'
 const { apiFetch } = require('../../../lib/api')
 
 export default function ClientConversations() {
@@ -199,7 +199,7 @@ export default function ClientConversations() {
       {/* Lead profile slide-over */}
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Full Lead Profile">
         {leadProfile && (
-          <div className="space-y-4 text-sm text-gray-800">
+          <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-xs text-gray-500">Parent Name</p><p className="font-medium">{leadProfile.flowState?.collectedData?.parentName || '—'}</p></div>
               <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{leadProfile.phone}</p></div>
@@ -224,7 +224,7 @@ export default function ClientConversations() {
                 <hr />
                 <h3 className="font-semibold">Appointment</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{leadProfile.appointment.rawPreference}</p></div>
+                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{formatAppointmentPreference(leadProfile.appointment.scheduledAt, leadProfile.appointment.rawPreference)}</p></div>
                   <div><p className="text-xs text-gray-500">Status</p><Badge score={leadProfile.appointment.status} /></div>
                   <div><p className="text-xs text-gray-500">Documents</p><p>{leadProfile.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
                 </div>

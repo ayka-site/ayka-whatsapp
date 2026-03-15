@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, DataTable, SlideOver } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-import { relativeTime, formatDate } from '../../../lib/format'
+import { relativeTime, formatDate, formatAppointmentPreference } from '../../../lib/format'
 const { apiFetch } = require('../../../lib/api')
 
 export default function ClientLeads() {
@@ -118,7 +118,7 @@ export default function ClientLeads() {
       {/* Lead detail slide-over */}
       <SlideOver open={slideOpen} onClose={() => setSlideOpen(false)} title="Lead Profile">
         {selectedLead && (
-          <div className="space-y-4 text-sm text-gray-800">
+           <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-xs text-gray-500">Parent Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.parentName || '—'}</p></div>
               <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedLead.phone}</p></div>
@@ -142,7 +142,7 @@ export default function ClientLeads() {
                 <hr />
                 <h3 className="font-semibold">Appointment</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{selectedLead.appointment.rawPreference}</p></div>
+                  <div><p className="text-xs text-gray-500">Scheduled</p><p>{formatAppointmentPreference(selectedLead.appointment.scheduledAt, selectedLead.appointment.rawPreference)}</p></div>
                   <div><p className="text-xs text-gray-500">Status</p><Badge score={selectedLead.appointment.status} /></div>
                   <div><p className="text-xs text-gray-500">Documents</p><p>{selectedLead.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
                 </div>

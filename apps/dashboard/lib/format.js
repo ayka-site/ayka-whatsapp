@@ -41,6 +41,22 @@ export function formatDate(dateStr) {
 }
 
 /**
+ * Appointment preference display (day/date/time) with fallback to raw text
+ */
+export function formatAppointmentPreference(scheduledAt, rawPreference) {
+  if (scheduledAt) {
+    const dt = new Date(scheduledAt)
+    if (!Number.isNaN(dt.getTime())) {
+      const day = dt.toLocaleDateString('en-IN', { weekday: 'short' })
+      const datePart = dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      const time = dt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
+      return `${day}, ${datePart} • ${time}`
+    }
+  }
+  return rawPreference || '—'
+}
+
+/**
  * Format date separator for conversation view
  */
 export function dateSeparator(dateStr) {

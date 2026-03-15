@@ -23,6 +23,7 @@ export default function ClientDashboard() {
     { name: 'Warm', value: scoreDist.warm, color: SCORE_COLORS.warm },
     { name: 'Cold', value: scoreDist.cold, color: SCORE_COLORS.cold },
   ] : []
+  const donutChartData = donutData.filter(d => d.value > 0)
   const donutTotal = donutData.reduce((s, d) => s + d.value, 0)
 
   // Prepare funnel data
@@ -88,8 +89,17 @@ export default function ClientDashboard() {
           <ChartWrapper title="Score Distribution" subtitle="This month" loading={sdLoading} empty={donutTotal === 0}>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie data={donutData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                  {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                <Pie
+                  data={donutChartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  dataKey="value"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {donutChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>

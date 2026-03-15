@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, SlideOver } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-import { formatDate } from '../../../lib/format'
+import { formatDate, formatAppointmentPreference } from '../../../lib/format'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -84,11 +84,11 @@ export default function ClientAppointments() {
         /* ─── List View ─── */
         <div className="rounded-xl border border-white/10 overflow-hidden" style={{ background: 'var(--color-surface)' }}>
           {!filtered.length ? (
-            <div className="p-8 text-center text-xs opacity-40">No appointments found</div>
+            <div className="p-8 text-center text-xs opacity-60" style={{ color: 'var(--color-text)' }}>No appointments found</div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" style={{ color: 'var(--color-text)' }}>
               <thead>
-                <tr className="text-xs uppercase tracking-wider opacity-50 border-b border-white/10">
+                <tr className="text-xs uppercase tracking-wider opacity-70 border-b border-white/10">
                   <th className="p-3 text-left">Parent</th>
                   <th className="p-3 text-left">Student</th>
                   <th className="p-3 text-left">Preference</th>
@@ -103,15 +103,15 @@ export default function ClientAppointments() {
                   <tr key={a._id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => openDetail(a)}>
                     <td className="p-3">
                       <p className="font-medium" style={{ color: 'var(--color-text)' }}>{a.parentName}</p>
-                      <p className="text-xs opacity-40">{a.phone}</p>
+                      <p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>{a.phone}</p>
                     </td>
                     <td className="p-3">{a.studentName || '—'}</td>
-                    <td className="p-3 text-xs">{a.rawPreference || '—'}</td>
+                    <td className="p-3 text-xs">{formatAppointmentPreference(a.scheduledAt, a.rawPreference)}</td>
                     <td className="p-3"><Badge score={a.status} /></td>
                     <td className="p-3 text-xs max-w-[200px] truncate">{a.documentsAdvised?.join(', ') || '—'}</td>
-                    <td className="p-3 text-xs opacity-50">{formatDate(a.createdAt)}</td>
+                    <td className="p-3 text-xs opacity-70">{formatDate(a.createdAt)}</td>
                     <td className="p-3 text-center">
-                      <button className="text-xs underline opacity-50 hover:opacity-100" onClick={e => { e.stopPropagation(); openDetail(a) }}>View</button>
+                      <button className="text-xs underline opacity-70 hover:opacity-100" style={{ color: 'var(--color-text)' }} onClick={e => { e.stopPropagation(); openDetail(a) }}>View</button>
                     </td>
                   </tr>
                 ))}
@@ -165,23 +165,23 @@ export default function ClientAppointments() {
       {/* Detail Slide-Over */}
       <SlideOver open={detailOpen} onClose={() => setDetailOpen(false)} title="Appointment Details">
         {selectedAppt && (
-          <div className="space-y-4 text-sm text-gray-800">
+          <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Parent Name</p><p className="font-medium">{selectedAppt.parentName}</p></div>
-              <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium">{selectedAppt.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Student Name</p><p className="font-medium">{selectedAppt.studentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Class</p><p className="font-medium">{selectedAppt.interestedClass || '—'}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedAppt.parentName}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedAppt.phone}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{selectedAppt.studentName || '—'}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{selectedAppt.interestedClass || '—'}</p></div>
             </div>
             <hr />
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Status</p><Badge score={selectedAppt.status} /></div>
-              <div><p className="text-xs text-gray-500">Preference</p><p>{selectedAppt.rawPreference || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Scheduled At</p><p>{selectedAppt.scheduledAt ? formatDate(selectedAppt.scheduledAt) : '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Source</p><p>{selectedAppt.source || 'bot'}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Status</p><Badge score={selectedAppt.status} /></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Preference</p><p>{formatAppointmentPreference(selectedAppt.scheduledAt, selectedAppt.rawPreference)}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Scheduled At</p><p>{selectedAppt.scheduledAt ? formatDate(selectedAppt.scheduledAt) : '—'}</p></div>
+              <div><p className="text-xs opacity-60" style={{ color: 'var(--color-text)' }}>Source</p><p>{selectedAppt.source || 'bot'}</p></div>
             </div>
             <hr />
             <div>
-              <p className="text-xs text-gray-500 mb-1">Documents Advised</p>
+              <p className="text-xs opacity-60 mb-1" style={{ color: 'var(--color-text)' }}>Documents Advised</p>
               {selectedAppt.documentsAdvised?.length ? (
                 <div className="flex flex-wrap gap-1">
                   {selectedAppt.documentsAdvised.map((d, i) => (
@@ -193,12 +193,12 @@ export default function ClientAppointments() {
             {selectedAppt.notes && (
               <>
                 <hr />
-                <div><p className="text-xs text-gray-500 mb-1">Notes</p><p>{selectedAppt.notes}</p></div>
+                <div><p className="text-xs opacity-60 mb-1" style={{ color: 'var(--color-text)' }}>Notes</p><p>{selectedAppt.notes}</p></div>
               </>
             )}
             <div className="pt-2">
-              <p className="text-[10px] text-gray-400">Created: {formatDate(selectedAppt.createdAt)}</p>
-              {selectedAppt.updatedAt && <p className="text-[10px] text-gray-400">Updated: {formatDate(selectedAppt.updatedAt)}</p>}
+              <p className="text-[10px] opacity-60" style={{ color: 'var(--color-text)' }}>Created: {formatDate(selectedAppt.createdAt)}</p>
+              {selectedAppt.updatedAt && <p className="text-[10px] opacity-60" style={{ color: 'var(--color-text)' }}>Updated: {formatDate(selectedAppt.updatedAt)}</p>}
             </div>
           </div>
         )}

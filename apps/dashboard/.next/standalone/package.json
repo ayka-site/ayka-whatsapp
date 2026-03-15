@@ -1,0 +1,12 @@
+{
+  "name": "ayka",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}
