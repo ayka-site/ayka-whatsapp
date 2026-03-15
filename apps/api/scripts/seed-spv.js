@@ -141,14 +141,15 @@ async function main() {
       name:    'Sant Pathik Vidyalaya',
       address: 'Bahraich, Uttar Pradesh',
       phone:   '9198783830',
-      website: 'spvschool.in',
+      website: 'https://www.santpathikvidyalaya.org',
     },
 
     // Staff / contact
     staff: {
       phone:        '9198783830',
       workingHours: '9:00 AM – 7:00 PM, Monday to Saturday',
-      directorName: 'Principal',
+      directorName: 'Mr. Awadhesh Narayan Agarwal',
+      principalName: 'Mrs. Puja Agarwal',
       directorPhone: '9198783830',
     },
 

@@ -83,8 +83,18 @@ function buildKBSummary(kb) {
   // About section — content.about.*
   if (c.about?.name)          facts.name = c.about.name
   if (c.about?.address)       facts.address = c.about.address
+  if (c.about?.website)       facts.website = c.about.website
   if (c.about?.board)         facts.board = c.about.board
   if (c.about?.affiliationNo) facts.affiliationNo = c.about.affiliationNo
+  if (c.about?.manager)       facts.managingDirector = c.about.manager
+  if (c.about?.principalName) facts.principal = c.about.principalName
+
+  // Leadership aliases from multiple KB shapes
+  if (c.management?.managingDirector) facts.managingDirector = c.management.managingDirector
+  if (c.management?.principal)        facts.principal = c.management.principal
+  if (c.staff?.directorName && !facts.managingDirector) facts.managingDirector = c.staff.directorName
+  if (c.staff?.principalName) facts.principal = c.staff.principalName
+  if (c.principal?.name) facts.principal = c.principal.name
 
   // Classes section — content.classes.*
   if (c.classes) {
@@ -124,6 +134,11 @@ function buildKBSummary(kb) {
   // Transport section — content.transport.*
   if (c.transport?.routes)   facts.transport = c.transport.routes
   if (c.transport?.summary)  facts.transport = c.transport.summary
+  if (Array.isArray(c.transport?.stops) && c.transport.stops.length > 0) {
+    facts.transportStops = c.transport.stops
+      .map(s => `${s.station}: ₹${s.amount}`)
+      .join(' | ')
+  }
 
   // Handoff section — content.handoff.*
   if (c.handoff?.staffPhone)   facts.staffPhone = c.handoff.staffPhone
@@ -181,6 +196,13 @@ function buildKBSummary(kb) {
 
   // Academic session start — content.about.academicSession
   if (c.about?.academicSession) facts.academicSession = c.about.academicSession
+
+  // Admission age criteria — content.admissionAgeCriteria.entries[]
+  if (Array.isArray(c.admissionAgeCriteria?.entries) && c.admissionAgeCriteria.entries.length > 0) {
+    facts.admissionAgeCriteria = c.admissionAgeCriteria.entries
+      .map(e => `${e.class}: ${e.age}`)
+      .join(' | ')
+  }
 
   // Student-teacher ratio — content.staff.studentTeacherRatio
   if (c.staff?.studentTeacherRatio) facts.studentTeacherRatio = c.staff.studentTeacherRatio
@@ -263,6 +285,8 @@ function buildKBSummary(kb) {
     'founderTribute', 'nearbyLocations', 'nearbyLandmarks',
     'complaintRedressal', 'laboratories', 'hostelFAQ', 'feeSimplified',
     'generalFAQ', 'computerEducation', 'onlinePaymentQR',
+    'management', 'admissionAgeCriteria', 'hostelBoarderChecklist',
+    'hostelFeeInstallmentPlans',
   ])
   for (const [key, val] of Object.entries(c)) {
     if (!KNOWN_KEYS.has(key) && typeof val === 'string') {
@@ -731,8 +755,11 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   // ── Build KNOWN FACTS section — only include what actually exists ──
   const factLines = []
   if (facts.name)             factLines.push(`Name: ${facts.name}`)
+  if (facts.website)          factLines.push(`Website: ${facts.website}`)
   if (facts.address)          factLines.push(`Address: ${facts.address}`)
   if (facts.board)            factLines.push(`Board: ${facts.board}${facts.affiliationNo ? ` (Affiliation No. ${facts.affiliationNo})` : ''}${facts.udiseCode ? ` | UDISE Code: ${facts.udiseCode}` : ''}`)
+  if (facts.managingDirector) factLines.push(`Managing Director: ${facts.managingDirector}`)
+  if (facts.principal)        factLines.push(`Principal: ${facts.principal}`)
   if (facts.classes)          factLines.push(`Classes offered: ${facts.classes}`)
   if (facts.streams)          factLines.push(`Streams (11-12): ${facts.streams}`)
   if (facts.fees)          factLines.push(`Fees (2026-27, class-wise — FIXED, no negotiation):\n${facts.fees}`)
@@ -743,7 +770,9 @@ function buildSystemPrompt(kb, session, tenantSettings, currentMessage = '') {
   if (facts.admissionStatus)  factLines.push(`Admissions: ${facts.admissionStatus}`)
   if (facts.admissionProcess) factLines.push(`Process: ${facts.admissionProcess}`)
   if (facts.transport)        factLines.push(`Transport: ${facts.transport}`)
+  if (facts.transportStops)   factLines.push(`Transport stoppage fees: ${facts.transportStops}`)
   if (facts.transportBuses)   factLines.push(`Buses: ${facts.transportBuses}`)
+  if (facts.admissionAgeCriteria) factLines.push(`Pre-primary age criteria: ${facts.admissionAgeCriteria}`)
   if (facts.students)         factLines.push(`Students: ${facts.students}`)
   if (facts.studentTeacherRatio) factLines.push(`Student-teacher ratio: ${facts.studentTeacherRatio}`)
   if (facts.vicePrincipal)    factLines.push(`Vice Principal: ${facts.vicePrincipal}`)

@@ -1,7 +1,7 @@
 /**
  * SPV PARENT FAQ KB UPDATE (FINAL)
  *
- * Loads the final parent FAQ set (22 questions), updates supporting fields,
+ * Loads the final parent FAQ set, updates supporting fields,
  * and optionally configures a QR image URL for WhatsApp image sending.
  *
  * Run:
@@ -35,6 +35,22 @@ async function main() {
     : 'School ka official fee payment QR code admissions office se share kiya jaata hai. Kripya +919198783830 par call ya WhatsApp karein; team aapko verified QR turant bhej degi.'
 
   const generalFAQ = [
+    {
+      q: 'Who is the Principal? / विद्यालय की प्रिंसिपल कौन हैं?',
+      a: 'Principal: Mrs. Puja Agarwal.',
+    },
+    {
+      q: 'Who is the Managing Director? / विद्यालय के मैनेजिंग डायरेक्टर कौन हैं?',
+      a: 'Managing Director: Mr. Awadhesh Narayan Agarwal.',
+    },
+    {
+      q: 'What is the school website? / विद्यालय की वेबसाइट क्या है?',
+      a: 'Official website: https://www.santpathikvidyalaya.org',
+    },
+    {
+      q: 'What is the age criterion for nursery / pre-primary admission? / नर्सरी या प्री-प्राइमरी में आयु मानदंड क्या है?',
+      a: 'Pre-Primary age criteria: Playgroup/Playway: 2–3 years, Nursery: 3–4 years, LKG: 4–5 years, UKG: 5–6 years.',
+    },
     {
       q: 'Under which board is the school affiliated? / विद्यालय किस बोर्ड से संबद्ध है?',
       a: 'Sant Pathik Vidyalaya CBSE (Central Board of Secondary Education) se affiliated hai. School Code: 70178. Affiliation Number: 2130176.',
@@ -120,6 +136,18 @@ async function main() {
       a: 'Summer timing: 8:00 AM – 1:30 PM. Winter timing: 9:00 AM – 2:30 PM. Timings government instructions ke hisaab se update ho sakte hain.',
     },
     {
+      q: 'Do you provide bus facility? What are stoppage-wise transport charges? / बस सुविधा और स्टॉपेज अनुसार शुल्क क्या है?',
+      a: 'Haan, school transport available hai. Stoppage-wise conveyance fee effective from 1 April 2026 ke hisaab se liya jaata hai. Main aapko stop-wise amount bata sakti hoon.',
+    },
+    {
+      q: 'Hostel mein admission ke time kaun-kaun se items laane hote hain? / हॉस्टल के लिए क्या-क्या सामान लाना होता है?',
+      a: 'Admission ke time boarders ke liye clothing aur daily-use checklist follow hoti hai (shirts, pants, socks, shoes, toiletries, bedding, winter items, etc.). Full item-wise list school office se verify kar sakte hain.',
+    },
+    {
+      q: 'Hostel fee installment plan kya hai? / हॉस्टल फीस की इंस्टॉलमेंट योजना क्या है?',
+      a: 'Hostel fee plans total amount ke hisaab se 4 installments mein liye jaate hain (1st to 4th installment windows). Aap desired plan ke hisaab se exact breakup le sakte hain.',
+    },
+    {
       q: 'Provide school QR code / विद्यालय का QR code बताएँ',
       a: qrAnswer,
     },
@@ -130,8 +158,139 @@ async function main() {
   // Supporting structured fields (so prompt + API both stay consistent)
   updates['content.about.academicSession'] = 'April'
   updates['content.about.udiseCode'] = '09500707504'
+  updates['content.about.website'] = 'https://www.santpathikvidyalaya.org'
+  updates['content.about.manager'] = 'Mr. Awadhesh Narayan Agarwal'
+  updates['content.about.principalName'] = 'Mrs. Puja Agarwal'
+  updates['content.management'] = {
+    managingDirector: 'Mr. Awadhesh Narayan Agarwal',
+    principal: 'Mrs. Puja Agarwal',
+  }
+  updates['content.admissionAgeCriteria'] = {
+    title: 'Pre-Primary Admission Age Criteria',
+    entries: [
+      { class: 'Playgroup / Playway', age: '2 – 3 years' },
+      { class: 'Nursery', age: '3 – 4 years' },
+      { class: 'LKG (Lower Kindergarten)', age: '4 – 5 years' },
+      { class: 'UKG (Upper Kindergarten)', age: '5 – 6 years' },
+    ],
+  }
   updates['content.staff.studentTeacherRatio'] = 'Balanced via sectioning as per class strength; 64 teachers for 1,410 students'
   updates['content.timing.schoolHours'] = 'Summer: 8:00 AM – 1:30 PM; Winter: 9:00 AM – 2:30 PM (subject to government directives)'
+  updates['content.transport'] = {
+    title: 'Conveyance Fee',
+    effectiveFrom: '1st April 2026',
+    note: 'Stoppage-wise monthly transport fee.',
+    stops: [
+      { station: 'Arasanhapurwa', amount: 1000 },
+      { station: 'Badrauli', amount: 1800 },
+      { station: 'Bahraich', amount: 1800 },
+      { station: 'Baira', amount: 1700 },
+      { station: 'Beldara', amount: 1500 },
+      { station: 'Bhakla', amount: 1800 },
+      { station: 'Bhinga Stand', amount: 2000 },
+      { station: 'Buddhijot', amount: 1000 },
+      { station: 'Fakharpur', amount: 1300 },
+      { station: 'Gajadharpur', amount: 1400 },
+      { station: 'Hardiya Mod', amount: 1300 },
+      { station: 'Harinagar', amount: 1400 },
+      { station: 'Ibrahim Deeha', amount: 1100 },
+      { station: 'J.N.V', amount: 1800 },
+      { station: 'Jaita', amount: 1600 },
+      { station: 'Jaitapur Kasba', amount: 1900 },
+      { station: 'Jarwal Road', amount: 2000 },
+      { station: 'Jihura Maraucha', amount: 1200 },
+      { station: 'Kaiserganj', amount: 1800 },
+      { station: 'Kesavpur', amount: 1000 },
+      { station: 'Khiria', amount: 1100 },
+      { station: 'Kodahi', amount: 1500 },
+      { station: 'Kothwal', amount: 1700 },
+      { station: 'Kundasar', amount: 1700 },
+      { station: 'Lalpurwa', amount: 1400 },
+      { station: 'Madan Kothi', amount: 1000 },
+      { station: 'Mathaura', amount: 1800 },
+      { station: 'Nandpur', amount: 1900 },
+      { station: 'Nawabganj', amount: 1700 },
+      { station: 'Nausahra', amount: 1500 },
+      { station: 'Pakauri', amount: 1400 },
+      { station: 'Pateriya', amount: 1300 },
+      { station: 'Ratesiya', amount: 1600 },
+      { station: 'Risiya', amount: 2100 },
+      { station: 'Roundopur', amount: 1900 },
+      { station: 'Sabhapur', amount: 1800 },
+      { station: 'Shivpura (Dokeri)', amount: 1300 },
+      { station: 'Siddha', amount: 1800 },
+      { station: 'Samda', amount: 1800 },
+      { station: 'Sonari Bangla', amount: 1900 },
+      { station: 'Tikore Mod', amount: 1500 },
+      { station: 'Warganj', amount: 1700 },
+    ],
+  }
+  updates['content.hostelBoarderChecklist'] = {
+    title: 'List of clothing and daily use items for boarders at the time of admission',
+    clothingAndBasics: [
+      { item: 'School Shirt Half Sleeves', quantity: '02' },
+      { item: 'School Shirt Full Sleeves', quantity: '02' },
+      { item: 'School Pant', quantity: '04' },
+      { item: 'School White Lower', quantity: '03' },
+      { item: 'Hostel Uniform', quantity: '02 Set' },
+      { item: 'Single Bedsheet with pillow colour', quantity: '02 Set' },
+      { item: 'Handkerchief', quantity: '04' },
+      { item: 'School House Belt', quantity: '02 Set' },
+      { item: 'Bath Towel (Dark Colour)', quantity: '02' },
+      { item: 'Blue Socks', quantity: '02' },
+      { item: 'White Socks', quantity: '02' },
+      { item: 'Under garments', quantity: '04 Pair' },
+      { item: 'Black Shoes', quantity: '01 Pair' },
+      { item: 'P.T. Shoes', quantity: '01 Pair' },
+      { item: 'Sports Shoes', quantity: '01 Pair' },
+      { item: 'Shoe Brush', quantity: '01' },
+      { item: 'Black & White Polish', quantity: '01 Each' },
+      { item: 'Bathroom Slipper', quantity: '01 Pair' },
+      { item: 'Yonex', quantity: '01' },
+      { item: 'School Bag', quantity: '01' },
+      { item: 'Bucket/Mug', quantity: '01 Each' },
+    ],
+    toiletriesAndDailyUse: [
+      { item: 'Bathing Soap', quantity: '04' },
+      { item: 'Soap Case', quantity: '02' },
+      { item: 'Tooth Paste', quantity: '01' },
+      { item: 'Tooth Brush', quantity: '01' },
+      { item: 'Tongue Cleaner', quantity: '01' },
+      { item: 'Hair Oil Bottle', quantity: '01' },
+      { item: 'Comb', quantity: '01' },
+      { item: 'Talcum Powder', quantity: '01' },
+      { item: 'Vaseline', quantity: '01' },
+      { item: 'Shampoo Bottle', quantity: '01' },
+      { item: 'Body Lotion', quantity: '01' },
+      { item: 'Hangers', quantity: '06' },
+      { item: 'Nail Cutter', quantity: '01' },
+      { item: 'Water Bottle', quantity: '01' },
+      { item: 'Lock', quantity: '01' },
+    ],
+    winterItems: [
+      { item: 'School Blazer', quantity: '01' },
+      { item: 'School Cap', quantity: '01' },
+      { item: 'Sweater/Shirt/Jacket', quantity: '01' },
+      { item: 'Quilt/Blanket', quantity: '01' },
+    ],
+    note: 'Colour house t-shirt is provided/purchased after house allotment and can be purchased later.',
+  }
+  updates['content.hostelFeeInstallmentPlans'] = {
+    note: 'Hostel installment windows as provided by school.',
+    windows: {
+      firstInstallment: 'At the time of admission up to 3rd April',
+      secondInstallment: 'Up to 30th June',
+      thirdInstallment: 'Up to 30th September',
+      fourthInstallment: 'Up to 30th November',
+    },
+    plans: [
+      { total: 105000, first: 35000, second: 30000, third: 20000, fourth: 20000 },
+      { total: 110000, first: 35000, second: 35000, third: 20000, fourth: 20000 },
+      { total: 115000, first: 35000, second: 35000, third: 25000, fourth: 20000 },
+      { total: 130000, first: 40000, second: 35000, third: 30000, fourth: 25000 },
+      { total: 180000, first: 70000, second: 40000, third: 40000, fourth: 30000 },
+    ],
+  }
   updates['content.uniformBookVendor'] = {
     name: 'Agarwal Gift Gallery',
     location: 'Peepal Chauraha',
@@ -160,6 +319,15 @@ async function main() {
   })
 
   const result = await KnowledgeBase.updateOne({ _id: kb._id }, { $set: updates })
+
+  try {
+    const redis = require('../src/config/redis')
+    const cacheKey = `kb:${kb.businessId}`
+    await redis.del(cacheKey)
+    console.log(`\n✅ Cleared Redis KB cache: ${cacheKey}`)
+  } catch (cacheErr) {
+    console.log(`\n⚠️  Could not clear Redis KB cache locally: ${cacheErr.message}`)
+  }
 
   console.log('\n════════════════════════════════════════')
   console.log(`  matched:  ${result.matchedCount}`)
