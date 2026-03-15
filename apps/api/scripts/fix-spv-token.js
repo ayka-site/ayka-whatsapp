@@ -7,9 +7,14 @@ const { Business } = require('@ayka/db');
 const { encrypt, decrypt } = require('../src/utils/encryption');
 const redis = require('../src/config/redis');
 
-const NEW_TOKEN = 'EAARhmw7BM7sBQ9i8rOB4ZCy4zzDMuQYRHx8y1ruXTjlIVpk0ZAezyH1MM5hWNkn3wnLBIONKV4KUQZBUiCecawlOfRAKd28cTFyWPaNL81Oy6a9qqLnE3PxqedwvfGNJc03ZBZC7heWK5qYh7ZArn1WuTgJ3qLFE4zwA8vdZCgVG4ZCwrsZBWC3IyFUaznZAF4TXyengZDZD';
-const SPV_ID = '69a305f398f94563b73c6ef3';
-const PHONE_NUMBER_ID = '921089374430357';
+const NEW_TOKEN = process.env.WA_ACCESS_TOKEN;
+const SPV_ID = process.env.SPV_BUSINESS_ID;
+const PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID || '1021773934354033';
+
+if (!NEW_TOKEN || !SPV_ID) {
+  console.error('Usage: WA_ACCESS_TOKEN=<token> SPV_BUSINESS_ID=<businessId> [WA_PHONE_NUMBER_ID=<id>] node scripts/fix-spv-token.js');
+  process.exit(1);
+}
 
 async function main() {
   await mongoose.connect(process.env.MONGODB_URI);

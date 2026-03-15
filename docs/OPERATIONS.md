@@ -233,8 +233,8 @@ az containerapp update \
     LLM_MAX_CONCURRENCY=5 \
     JWT_SECRET="a4f9e2c17d3b8a6e5f0c1d9b2e7a4f6c8d3b1e5a9f2c7d4b6e8a1c3f5d7b9e2a4c6f8d1b3e5a7c9f2d4b6e8a1c3f5" \
     ENCRYPTION_KEY="c7ff000224dc186ad77ae46b24f96e897a8b8e6312f82a03c1c6f220877ee564" \
-    META_APP_SECRET="6946848ce306e12cd9637be2c2ca7080" \
-    META_WEBHOOK_VERIFY_TOKEN="ayka_webhook_secret_2026"
+    META_APP_SECRET="b2b942f4ee5c5726bf0ccbb2741288c7" \
+    META_WEBHOOK_VERIFY_TOKEN="spv_webhook_secret_2026"
 ```
 
 ### Scale Configuration
@@ -322,7 +322,7 @@ az containerapp hostname bind \
 
 ### Current Configuration
 - **Meta App Secret:** 6946848ce306e12cd9637be2c2ca7080
-- **Webhook Verify Token:** ayka_webhook_secret_2026
+- **Webhook Verify Token:** spv_webhook_secret_2026
 - **Webhook URL:** https://api.ayka.site/webhook/whatsapp
 
 ### Setup New WhatsApp Business Account for a Client
@@ -338,7 +338,7 @@ az containerapp hostname bind \
    - Generate a **permanent access token** (System User → Generate Token → whatsapp_business_messaging, whatsapp_business_management)
 7. **Set Webhook URL:**
    - Callback URL: `https://api.ayka.site/webhook/whatsapp`
-   - Verify Token: `ayka_webhook_secret_2026`
+  - Verify Token: `spv_webhook_secret_2026`
    - Subscribe to: `messages`, `message_status`
 
 ### ⚠️ Important Notes
@@ -373,7 +373,7 @@ az containerapp hostname bind \
      - Phone Number ID: `<from Meta>`
      - Access Token: `<from Meta>` (auto-encrypted on save)
      - WABA ID: `<from Meta>`
-     - Verify Token: `ayka_webhook_secret_2026`
+    - Verify Token: `spv_webhook_secret_2026`
 4. Click **Create**
 
 **OR via API (curl):**
@@ -392,7 +392,7 @@ curl -X POST https://api.ayka.site/api/superadmin/clients \
       "phoneNumberId": "123456789012345",
       "accessToken": "EAARhmw7BM...",
       "wabaId": "987654321098765",
-      "verifyToken": "ayka_webhook_secret_2026"
+      "verifyToken": "spv_webhook_secret_2026"
     },
     "settings": {
       "handoffPhone": "+919876543210",
@@ -542,7 +542,7 @@ Add this code before `</body>` on the client's website:
 
 1. Go to Meta Developer Dashboard → Your App → WhatsApp → Configuration
 2. Set Callback URL: `https://api.ayka.site/webhook/whatsapp`
-3. Set Verify Token: `ayka_webhook_secret_2026`
+3. Set Verify Token: `spv_webhook_secret_2026`
 4. Subscribe to fields: `messages`, `message_status`
 5. Send a test message to the WhatsApp number — should get AI response
 

@@ -78,16 +78,20 @@ async function seed() {
   }
   if (!spvBusiness) {
     console.log('⚠️  No SPV business found. Creating a placeholder...')
+    const spvPhoneNumberId = process.env.WA_PHONE_NUMBER_ID || '1021773934354033'
+    const spvWabaId = process.env.WA_WABA_ID || '918233131133295'
+    const spvAccessToken = process.env.WA_ACCESS_TOKEN || 'placeholder'
+    const spvVerifyToken = process.env.WA_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'spv_webhook_secret_2026'
     spvBusiness = await Business.create({
       resellerId: reseller._id,
       name: 'Sant Pathik Vidyalaya',
       slug: 'sant-pathik-vidyalaya',
       vertical: 'school',
       whatsapp: {
-        phoneNumberId: 'PLACEHOLDER_SPV',
-        accessToken: 'placeholder',
-        wabaId: 'placeholder',
-        verifyToken: 'placeholder',
+        phoneNumberId: spvPhoneNumberId,
+        accessToken: spvAccessToken,
+        wabaId: spvWabaId,
+        verifyToken: spvVerifyToken,
       },
       settings: {
         displayName: 'Sant Pathik Vidyalaya',
