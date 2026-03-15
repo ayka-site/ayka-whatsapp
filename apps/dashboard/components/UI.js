@@ -64,17 +64,17 @@ export function SlideOver({ open, onClose, title, children }) {
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-gray-900 h-full overflow-y-auto shadow-2xl"
-        style={{ animation: 'slideIn 150ms ease forwards' }}
+        className="relative w-full max-w-lg h-full overflow-y-auto shadow-2xl border-l border-white/10"
+        style={{ animation: 'slideIn 150ms ease forwards', background: 'var(--color-sidebar)', color: 'var(--color-text)' }}
       >
         <style jsx>{`
           @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         `}</style>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>{title}</h2>
+          <button onClick={onClose} className="text-xl opacity-70 hover:opacity-100" style={{ color: 'var(--color-text)' }}>✕</button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="p-4" style={{ color: 'var(--color-text)' }}>{children}</div>
       </div>
     </div>
   )
@@ -85,14 +85,14 @@ export function ChartWrapper({ title, subtitle, loading, empty, emptyMessage, ch
     <div className="rounded-xl p-5 border border-white/10" style={{ background: 'var(--color-sidebar)' }}>
       <div className="mb-4">
         <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{title}</h3>
-        {subtitle && <p className="text-xs opacity-50 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs opacity-70 mt-0.5" style={{ color: 'var(--color-text)' }}>{subtitle}</p>}
       </div>
       {loading ? (
         <div className="space-y-3">
           <div className="skeleton h-48 w-full" />
         </div>
       ) : empty ? (
-        <div className="flex flex-col items-center justify-center h-48 text-sm opacity-40">
+        <div className="flex flex-col items-center justify-center h-48 text-sm opacity-70" style={{ color: 'var(--color-text)' }}>
           <span className="text-3xl mb-2">📭</span>
           <p>{emptyMessage || 'No data available'}</p>
         </div>

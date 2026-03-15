@@ -100,7 +100,7 @@ export default function ClientSettings() {
 function Field({ label, value }) {
   return (
     <div className="flex items-start gap-4">
-      <span className="text-xs opacity-40 w-28 shrink-0">{label}</span>
+      <span className="text-xs opacity-80 w-28 shrink-0" style={{ color: 'var(--color-text)' }}>{label}</span>
       <span style={{ color: 'var(--color-text)' }}>{value}</span>
     </div>
   )
@@ -109,7 +109,7 @@ function Field({ label, value }) {
 function PwdField({ label, value, onChange }) {
   return (
     <div>
-      <label className="block text-xs mb-1 opacity-50">{label}</label>
+      <label className="block text-xs mb-1 opacity-80" style={{ color: 'var(--color-text)' }}>{label}</label>
       <input type="password" value={value} onChange={e => onChange(e.target.value)} required
         className="w-full px-3 py-2 text-sm rounded-lg border border-white/10 bg-transparent outline-none focus:border-white/30"
         style={{ color: 'var(--color-text)' }}
