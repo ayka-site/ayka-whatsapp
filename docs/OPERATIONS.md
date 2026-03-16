@@ -65,8 +65,8 @@
            │                           │
            ▼                           ▼
 ┌──────────────────┐    ┌──────────────────────┐
-│ MongoDB Atlas     │    │ Upstash Redis         │
-│ ayka-cluster      │    │ Session cache, KB cache│
+│ MongoDB (Azure VM)│    │ Redis (Azure VM)      │
+│ 20.235.104.28     │    │ Session cache, KB cache│
 │ 8 collections     │    │ Rate limit state       │
 └──────────────────┘    └──────────────────────┘
 ```
@@ -96,7 +96,7 @@
 
 ### Prerequisites
 - Node.js 20+ (via nvm)
-- Access to MongoDB Atlas cluster
+- Access to MongoDB on Azure VM (`20.235.104.28:27017`)
 - Groq API key(s)
 
 ### Start API Server
@@ -224,9 +224,9 @@ az containerapp update \
   --set-env-vars \
     NODE_ENV=production \
     PORT=3000 \
-    MONGODB_URI="mongodb+srv://ayka-api:1xqVoOCuIZp1cKqs@ayka-cluster.mxiy84i.mongodb.net/ayka?appName=ayka-cluster" \
-    UPSTASH_REDIS_REST_URL="https://strong-possum-45704.upstash.io" \
-    UPSTASH_REDIS_REST_TOKEN="AbKIAAIncDJlOGE1MWFhYTkzMWQ0ODVkYTJmMTY2ZjI2OTk1ZjMzNHAyNDU3MDQ" \
+    MONGODB_URI="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" \
+    REDIS_URL="redis://20.235.104.28:6379" \
+    REDIS_PASSWORD="AykaRedis@2026!" \
     GROQ_API_KEYS="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" \
     GROQ_MODEL_FAST="llama-3.1-8b-instant" \
     GROQ_MODEL_DEFAULT="llama-3.3-70b-versatile" \
@@ -1063,26 +1063,26 @@ Returns:
 - [x] No plaintext secrets in code (all in env vars)
 - [ ] **TODO:** Rotate JWT_SECRET periodically
 - [ ] **TODO:** Set up IP allowlist for dashboard (optional)
-- [ ] **TODO:** Enable MongoDB Atlas audit logging
+- [ ] **TODO:** Enable MongoDB audit logging on Azure VM
 - [ ] **TODO:** Add HTTPS-only cookie flag for dashboard sessions
 
 ---
 
 ## 17. Backup & Recovery
 
-### MongoDB Atlas Backup
-MongoDB Atlas has automatic daily backups (included in free tier). To restore:
-1. Go to Atlas Console → Clusters → Backup → Restores
-2. Select point-in-time or snapshot
-3. Restore to same or different cluster
+### MongoDB Backup (Azure VM)
+Data lives on the Azure VM. Run regular `mongodump` backups and store off-VM. To restore:
+1. Copy a backup directory to the VM
+2. Run `mongorestore --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" ./backup-dir`
+3. Verify collections are intact via MongoDB Compass
 
 ### Manual Data Export
 ```bash
 # Export all collections
-mongodump --uri="mongodb+srv://ayka-api:1xqVoOCuIZp1cKqs@ayka-cluster.mxiy84i.mongodb.net/ayka" --out ./backup-$(date +%Y%m%d)
+mongodump --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" --out ./backup-$(date +%Y%m%d)
 
 # Export specific collection
-mongoexport --uri="mongodb+srv://ayka-api:1xqVoOCuIZp1cKqs@ayka-cluster.mxiy84i.mongodb.net/ayka" --collection=businesses --out=businesses.json
+mongoexport --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" --collection=businesses --out=businesses.json
 ```
 
 ### Environment Recovery
