@@ -3,9 +3,7 @@ import { useState, useRef } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, FormField, FormInput, FormSelect } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-const { apiFetch } = require('../../../lib/api')
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const { apiFetch, API_URL } = require('../../../lib/api')
 
 const DEFAULT_THEME = {
   primaryColor: '#0ea5e9', headerBg: '#0f172a', headerText: '#ffffff',

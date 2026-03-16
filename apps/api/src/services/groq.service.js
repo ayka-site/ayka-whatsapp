@@ -2,14 +2,13 @@ const Groq   = require('groq-sdk')
 const logger = require('../utils/logger')
 
 /**
- * groq.service.js v5.0 — Production-grade LLM with concurrency, multi-key, model tiering, Azure fallback
+ * groq.service.js v5.1 — Production-grade Groq service with concurrency, multi-key, model tiering
  *
  * Features over v4.0:
  *   1. Concurrency limiter (semaphore) — prevents overwhelming the API
  *   2. Multi-key rotation (GROQ_API_KEYS comma-separated)
  *   3. Model tiering: fast model for short convos, default model for longer
- *   4. Azure OpenAI fallback when all Groq keys exhausted
- *   5. Enhanced stats (model usage, fallback metrics, concurrency tracking)
+ *   4. Enhanced stats (model usage, concurrency tracking)
  */
 
 // ─── MULTI-KEY ROTATION WITH HEALTH TRACKING ────────────────────
@@ -90,27 +89,6 @@ function releaseSemaphore() {
   }
 }
 
-// ─── AZURE OPENAI FALLBACK ──────────────────────────────────────
-let azureClient = null
-function getAzureClient() {
-  if (azureClient) return azureClient
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT
-  const apiKey   = process.env.AZURE_OPENAI_API_KEY
-  if (!endpoint || !apiKey) return null
-  try {
-    const { AzureOpenAI } = require('openai')
-    azureClient = new AzureOpenAI({
-      endpoint,
-      apiKey,
-      apiVersion: '2024-08-01-preview',
-    })
-    return azureClient
-  } catch (err) {
-    logger.warn({ err }, 'Azure OpenAI client init failed — fallback disabled')
-    return null
-  }
-}
-
 const MAX_RETRIES   = 3
 const BASE_DELAY_MS = 2000
 const MAX_DELAY_MS  = 30000
@@ -127,10 +105,8 @@ const groqStats = {
   lastRateLimitAt: null,
   _latencySum: 0,
   resetAt: new Date(),
-  // v5.0 additions
+  // v5.1 additions
   modelUsage: {},           // { 'llama-3.3-70b-versatile': 42, ... }
-  fallbackCalls: 0,
-  fallbackSuccesses: 0,
   peakConcurrency: 0,
   queuedCalls: 0,
 }
@@ -145,10 +121,8 @@ function getGroqStats() {
     lastRateLimitAt:  groqStats.lastRateLimitAt,
     avgLatencyMs:     groqStats.successfulCalls > 0 ? Math.round(groqStats._latencySum / groqStats.successfulCalls) : 0,
     trackingSince:    groqStats.resetAt,
-    // v5.0
+    // v5.1
     modelUsage:       groqStats.modelUsage,
-    fallbackCalls:    groqStats.fallbackCalls,
-    fallbackSuccesses: groqStats.fallbackSuccesses,
     concurrency:      { current: activeCalls, max: MAX_CONCURRENT, peak: groqStats.peakConcurrency, queued: waitQueue.length },
     keyCount:         groqClients.length,
     keyHealth:        keyHealth.map((k, i) => ({ key: i + 1, healthy: k.healthy, rateLimitHits: k.rateLimitHits })),
@@ -158,7 +132,7 @@ function getGroqStats() {
 /**
  * callGroq — send chat completion request
  *
- * v5.0: concurrency-limited, multi-key, model-tiered, with Azure fallback
+ * v5.1: concurrency-limited, multi-key, model-tiered
  */
 async function callGroq(systemPrompt, recentMessages) {
   const messages = [
@@ -232,34 +206,8 @@ async function callGroq(systemPrompt, recentMessages) {
       }
     }
 
-    // ── Azure Fallback ──
-    const azure = getAzureClient()
-    if (azure) {
-      groqStats.fallbackCalls++
-      logger.info('Falling back to Azure OpenAI')
-      try {
-        const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1-mini'
-        const response = await azure.chat.completions.create({
-          model: deployment,
-          messages,
-          max_tokens: 400,
-          temperature: 0.7,
-        })
-
-        const content = response.choices?.[0]?.message?.content
-        if (content) {
-          groqStats.fallbackSuccesses++
-          groqStats.successfulCalls++
-          groqStats._latencySum += (Date.now() - callStart)
-          return content
-        }
-      } catch (azureErr) {
-        logger.error({ err: azureErr }, 'Azure OpenAI fallback also failed')
-      }
-    }
-
     groqStats.failedCalls++
-    throw lastError || new Error('All LLM providers failed')
+    throw lastError || new Error('Groq request failed after retries')
   }
 }
 

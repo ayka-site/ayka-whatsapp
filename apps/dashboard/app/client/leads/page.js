@@ -4,7 +4,7 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, DataTable, SlideOver } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
 import { relativeTime, formatDate, formatAppointmentPreference } from '../../../lib/format'
-const { apiFetch } = require('../../../lib/api')
+const { apiFetch, API_URL } = require('../../../lib/api')
 
 export default function ClientLeads() {
   const [page, setPage] = useState(1)
@@ -34,8 +34,7 @@ export default function ClientLeads() {
 
   async function exportCSV() {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || ''
-      const res = await fetch(`${apiBase}/api/client/export/leads${score ? `?score=${score}` : ''}`, {
+      const res = await fetch(`${API_URL}/api/client/export/leads${score ? `?score=${score}` : ''}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('ayka_token')}` }
       })
       const blob = await res.blob()

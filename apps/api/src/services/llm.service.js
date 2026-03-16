@@ -1,12 +1,12 @@
 const OpenAI  = require('openai')
 const logger  = require('../utils/logger')
+const { callGroq } = require('./groq.service')
 
 /**
  * llm.service.js v4.0 — Azure OpenAI gateway (gpt-4.1-mini)
  *
- * Single provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
- * On failure: retries with capped backoff, then throws (caller sends natural msg).
- * No Groq, no Gemini, no fallback chain.
+ * Primary provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
+ * Fallback provider: Groq when Azure retries are exhausted.
  */
 
 // ─── AZURE OPENAI CLIENT ────────────────────────────────────────
@@ -71,6 +71,8 @@ const llmStats = {
   successes: 0,
   failures: 0,
   retries: 0,
+  fallbackAttempts: 0,
+  fallbackSuccesses: 0,
   peakConcurrency: 0,
   resetAt: new Date(),
 }
@@ -79,6 +81,7 @@ function getLLMStats() {
   return {
     ...llmStats,
     provider: 'azure-openai',
+    fallbackProvider: 'groq',
     deployment: DEPLOYMENT,
     concurrency: { current: activeCalls, max: MAX_CONCURRENT, peak: llmStats.peakConcurrency, queued: waitQueue.length },
   }
@@ -137,7 +140,7 @@ async function _callAzure(systemPrompt, recentMessages) {
  * callLLM(systemPrompt, recentMessages) → string
  *
  * Primary: Azure OpenAI gpt-4.1-mini
- * On failure: retries up to 3 attempts (1s/2s/4s backoff for 429), then throws.
+ * Fallback: Groq after Azure retries are exhausted.
  */
 async function callLLM(systemPrompt, recentMessages) {
   llmStats.totalCalls++
@@ -167,9 +170,19 @@ async function callLLM(systemPrompt, recentMessages) {
           logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI call failed — retrying once')
           continue
         }
-        logger.error({ err: err.message, status }, 'Azure OpenAI retries exhausted')
-        llmStats.failures++
-        throw err
+        logger.error({ err: err.message, status }, 'Azure OpenAI retries exhausted — trying Groq fallback')
+
+        llmStats.fallbackAttempts++
+        try {
+          const fallbackResult = await callGroq(systemPrompt, recentMessages)
+          llmStats.fallbackSuccesses++
+          llmStats.successes++
+          return fallbackResult
+        } catch (fallbackErr) {
+          logger.error({ err: fallbackErr?.message || fallbackErr }, 'Groq fallback failed')
+          llmStats.failures++
+          throw err
+        }
       }
     }
   } finally {

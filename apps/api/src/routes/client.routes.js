@@ -11,6 +11,21 @@ router.use(authenticateJWT, requireRole('client'), enforceBusinessScope)
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
 
+function parseMongoTarget(uri) {
+  if (!uri) return { host: null, dbName: null }
+  try {
+    const normalized = uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://') ? uri : `mongodb://${uri}`
+    const parsed = new URL(normalized)
+    const dbName = parsed.pathname ? parsed.pathname.replace(/^\//, '') : null
+    return {
+      host: parsed.host || null,
+      dbName: dbName || null,
+    }
+  } catch (_) {
+    return { host: null, dbName: null }
+  }
+}
+
 /**
  * flushKbCacheForBusiness - Remove Redis KB cache for a business.
  * @param {string} businessId - Business identifier string.
@@ -90,6 +105,43 @@ router.get('/stats', asyncHandler(async (req, res) => {
     hotLeads: { value: c.hotLeads, delta: delta(c.hotLeads, p.hotLeads) },
     visitsConfirmed: { value: c.visitsConfirmed, delta: delta(c.visitsConfirmed, p.visitsConfirmed) },
     handoffs: { value: c.handoffs, delta: delta(c.handoffs, p.handoffs) },
+  })
+}))
+
+// GET /api/client/system/runtime-source
+router.get('/system/runtime-source', asyncHandler(async (req, res) => {
+  const envMongoUri = process.env.MONGODB_URI || ''
+  const parsedMongo = parseMongoTarget(envMongoUri)
+  const mongoConnection = mongoose.connection || {}
+
+  const targetBusinessId = toObjectId(req.user.businessId)
+  const [conversationCount, contactCount] = await Promise.all([
+    Conversation.countDocuments({ businessId: targetBusinessId }),
+    Contact.countDocuments({ businessId: targetBusinessId }),
+  ])
+
+  res.json({
+    api: {
+      nodeEnv: process.env.NODE_ENV || null,
+      host: req.hostname,
+      uptimeSec: Math.round(process.uptime()),
+    },
+    mongodb: {
+      envTarget: parsedMongo,
+      activeConnection: {
+        host: mongoConnection.host || null,
+        port: mongoConnection.port || null,
+        dbName: mongoConnection.name || mongoConnection.db?.databaseName || null,
+      },
+      yourBusinessCounts: {
+        conversations: conversationCount,
+        contacts: contactCount,
+      },
+    },
+    redis: {
+      envUrl: process.env.REDIS_URL || null,
+      hasPassword: Boolean(process.env.REDIS_PASSWORD),
+    },
   })
 }))
 

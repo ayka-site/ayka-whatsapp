@@ -11,6 +11,7 @@ const VERTICALS = [
   { value: 'realestate', label: 'Real Estate' },
   { value: 'healthcare', label: 'Healthcare' },
   { value: 'msme', label: 'MSME' },
+  { value: 'coaching', label: 'Coaching' },
 ]
 
 const EMPTY_CLIENT = {
