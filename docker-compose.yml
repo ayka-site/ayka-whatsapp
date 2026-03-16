@@ -33,7 +33,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NEXT_PUBLIC_API_URL=https://api.ayka.site
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
       - PORT=3001
     depends_on:
       api:

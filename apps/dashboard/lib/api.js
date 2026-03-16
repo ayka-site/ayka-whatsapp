@@ -1,7 +1,9 @@
 function resolveApiUrl() {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL
-  if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-    return 'http://localhost:3000'
+  if (typeof window !== 'undefined') {
+    const { hostname, port, protocol } = window.location
+    if (['localhost', '127.0.0.1'].includes(hostname)) return 'http://localhost:3000'
+    if (port === '3001') return `${protocol}//${hostname}:3000`
   }
   return ''
 }
