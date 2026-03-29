@@ -112,9 +112,9 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {theme.showPlatformCredit && !collapsed && (
-          <div className="px-4 pb-3 text-[10px] opacity-30" style={{ color: 'var(--color-text)' }}>
-            Platform by AyKa
+        {!collapsed && (
+          <div className="px-4 pb-3 text-[10px] opacity-40" style={{ color: 'var(--color-text)' }}>
+            Powered by Welltechup x Ayka
           </div>
         )}
       </aside>

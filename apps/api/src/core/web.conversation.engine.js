@@ -108,9 +108,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
 
   try {
     // ── 3. Get or create Contact ──
-    const contactQuery = visitorInfo.email
-      ? { businessId, $or: [{ email: visitorInfo.email }, { webVisitorId: visitorId }] }
-      : { businessId, webVisitorId: visitorId }
+    const contactQuery = { businessId, webVisitorId: visitorId }
 
     let contact = await Contact.findOne(contactQuery).lean()
 
@@ -140,13 +138,17 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
     let conversation = null
 
     if (session.conversationId) {
-      conversation = await Conversation.findById(session.conversationId).lean()
+      conversation = await Conversation.findOne({
+        _id: session.conversationId,
+        businessId,
+      }).lean()
     }
 
     if (!conversation) {
       conversation = await Conversation.findOne({
         businessId,
         contactId: contact._id,
+        phone: sessionKey,
         status:    { $in: ['active', 'handed_off'] },
       }).sort({ _id: -1 }).lean()
     }
@@ -285,7 +287,7 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
 
   } catch (err) {
     logger.error({ err, visitorId, businessId }, 'processWebMessage failed')
-    return { response: FALLBACK_MSG, error: true }
+    return { response: FALLBACK_MSG, error: true, conversationId: null }
   }
 }
 

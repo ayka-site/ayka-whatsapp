@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const crypto = require('crypto')
+const jwt = require('jsonwebtoken')
 const { Business } = require('@ayka/db')
 const { processWebMessage } = require('../core/web.conversation.engine')
 const logger = require('../utils/logger')
@@ -22,10 +23,16 @@ const logger = require('../utils/logger')
 
 // ── CORS middleware for widget (allow cross-origin embedding) ──
 router.use((req, res, next) => {
-  const origin = req.headers.origin || '*'
-  res.header('Access-Control-Allow-Origin', origin)
+  const origin = req.headers.origin || ''
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin)
+    res.header('Access-Control-Allow-Credentials', 'true')
+    res.header('Vary', 'Origin')
+  } else {
+    res.header('Access-Control-Allow-Origin', '*')
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.header('Access-Control-Allow-Headers', 'Content-Type')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With')
   res.header('Access-Control-Max-Age', '86400')
   if (req.method === 'OPTIONS') return res.sendStatus(204)
   next()
@@ -35,6 +42,78 @@ router.use((req, res, next) => {
 const rateLimitMap = new Map()
 const RATE_LIMIT   = 20
 const RATE_WINDOW  = 60 * 1000 // 1 minute
+const WIDGET_SESSION_TTL_SECONDS = 180 * 24 * 60 * 60
+
+function parseCookies(req) {
+  const raw = req.headers?.cookie || ''
+  const out = {}
+  if (!raw) return out
+  raw.split(';').forEach(part => {
+    const [k, ...rest] = part.split('=')
+    const key = (k || '').trim()
+    if (!key) return
+    out[key] = decodeURIComponent((rest.join('=') || '').trim())
+  })
+  return out
+}
+
+function getWidgetSessionCookieName(businessId) {
+  return `ayka_ws_${String(businessId)}`
+}
+
+function getWidgetSessionSecret() {
+  return process.env.WIDGET_SESSION_SECRET || process.env.JWT_SECRET || process.env.ENCRYPTION_KEY || 'ayka-widget-dev-secret'
+}
+
+function getCookieSecurityMode(req) {
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || '').toLowerCase()
+  return proto.includes('https')
+}
+
+function issueWidgetSessionCookie(req, res, businessId, visitorId) {
+  const token = jwt.sign({ businessId: String(businessId), visitorId }, getWidgetSessionSecret(), {
+    expiresIn: WIDGET_SESSION_TTL_SECONDS,
+  })
+
+  const secure = getCookieSecurityMode(req)
+  const sameSite = secure ? 'None' : 'Lax'
+  const parts = [
+    `${getWidgetSessionCookieName(businessId)}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    `Max-Age=${WIDGET_SESSION_TTL_SECONDS}`,
+    `SameSite=${sameSite}`,
+  ]
+  if (secure) parts.push('Secure')
+  res.append('Set-Cookie', parts.join('; '))
+}
+
+function readWidgetSessionVisitorId(req, businessId) {
+  const cookies = parseCookies(req)
+  const token = cookies[getWidgetSessionCookieName(businessId)]
+  if (!token) return null
+
+  try {
+    const decoded = jwt.verify(token, getWidgetSessionSecret())
+    if (decoded?.businessId !== String(businessId)) return null
+    if (!decoded?.visitorId || typeof decoded.visitorId !== 'string') return null
+    return decoded.visitorId
+  } catch (_) {
+    return null
+  }
+}
+
+function resolveVisitorId(req, businessId) {
+  const fromCookie = readWidgetSessionVisitorId(req, businessId)
+  if (fromCookie) return { visitorId: fromCookie, mode: 'cookie' }
+
+  const fromBody = String(req.body?.visitorId || '').trim()
+  if (/^v_[a-f0-9]{32}$/i.test(fromBody)) {
+    return { visitorId: fromBody, mode: 'body_fallback' }
+  }
+
+  return { visitorId: null, mode: 'missing' }
+}
 
 /**
  * normalizeOrigin - Canonicalize an origin string for secure comparison.
@@ -126,7 +205,7 @@ router.get('/config/:businessId', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 router.post('/init', async (req, res) => {
   try {
-    const { businessId } = req.body
+    const businessId = String(req.body?.businessId || '').trim()
     if (!businessId) return res.status(400).json({ error: 'businessId required' })
 
     const business = await Business.findById(businessId, { widget: 1, isActive: 1 }).lean()
@@ -136,7 +215,8 @@ router.post('/init', async (req, res) => {
     if (!isWidgetOriginAllowed(business, requestOrigin)) return res.status(403).json({ error: 'Origin not allowed' })
 
     const visitorId = `v_${crypto.randomBytes(16).toString('hex')}`
-    res.json({ visitorId })
+    issueWidgetSessionCookie(req, res, businessId, visitorId)
+    res.json({ visitorId, sessionMode: 'cookie' })
   } catch (err) {
     logger.error({ err }, 'Widget init error')
     res.status(500).json({ error: 'Internal server error' })
@@ -148,14 +228,28 @@ router.post('/init', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 router.post('/message', async (req, res) => {
   try {
-    const { businessId, visitorId, message, visitorInfo } = req.body
+    const businessId = String(req.body?.businessId || '').trim()
+    const message = String(req.body?.message || '')
+    const visitorInfo = req.body?.visitorInfo || {}
 
-    if (!businessId || !visitorId || !message) {
-      return res.status(400).json({ error: 'businessId, visitorId, and message are required' })
+    if (!businessId || !message) {
+      return res.status(400).json({ error: 'businessId and message are required' })
     }
 
-    if (typeof message !== 'string' || message.length > 2000) {
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage) {
+      return res.status(400).json({ error: 'message cannot be empty' })
+    }
+    if (trimmedMessage.length > 2000) {
       return res.status(400).json({ error: 'Message must be a string under 2000 characters' })
+    }
+
+    const { visitorId, mode: visitorIdMode } = resolveVisitorId(req, businessId)
+    if (!visitorId) {
+      return res.status(401).json({
+        error: 'Widget session missing. Reinitialize widget and retry.',
+        code: 'WIDGET_SESSION_MISSING',
+      })
     }
 
     // Rate limit check
@@ -172,11 +266,25 @@ router.post('/message', async (req, res) => {
     const requestOrigin = req.headers.origin || req.headers.referer || ''
     if (!isWidgetOriginAllowed(business, requestOrigin)) return res.status(403).json({ error: 'Origin not allowed' })
 
-    const result = await processWebMessage(businessId, visitorId, message.trim(), visitorInfo || {})
+    if (visitorIdMode === 'body_fallback') {
+      logger.warn({ businessId, visitorId }, 'Widget message accepted via body visitorId fallback')
+      issueWidgetSessionCookie(req, res, businessId, visitorId)
+    }
+
+    const result = await processWebMessage(businessId, visitorId, trimmedMessage, visitorInfo)
+
+    if (result?.error) {
+      return res.status(502).json({
+        error: 'Unable to process message right now. Please retry.',
+        code: 'WIDGET_PROCESSING_FAILED',
+      })
+    }
 
     res.json({
       response:       result.response,
       conversationId: result.conversationId,
+      source:         'web_widget',
+      sessionMode:    visitorIdMode === 'cookie' ? 'cookie' : 'cookie_rehydrated',
       timestamp:      new Date().toISOString(),
     })
   } catch (err) {

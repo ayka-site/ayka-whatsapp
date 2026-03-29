@@ -11,6 +11,26 @@ router.use(authenticateJWT, requireRole('superadmin'))
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
 
+function maskMongoUri(uri) {
+  if (!uri) return null
+  return String(uri).replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@')
+}
+
+function parseMongoTarget(uri) {
+  if (!uri) return { host: null, dbName: null }
+  try {
+    const normalized = uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://') ? uri : `mongodb://${uri}`
+    const parsed = new URL(normalized)
+    const dbName = parsed.pathname ? parsed.pathname.replace(/^\//, '') : null
+    return {
+      host: parsed.host || null,
+      dbName: dbName || null,
+    }
+  } catch (_) {
+    return { host: null, dbName: null }
+  }
+}
+
 // GET /api/superadmin/stats
 router.get('/stats', asyncHandler(async (req, res) => {
   const now = new Date()
@@ -313,6 +333,46 @@ router.get('/system/health', asyncHandler(async (req, res) => {
     mongodb: { status: 'connected', collections: { conversations: totalConversations, messages: totalMessages, contacts: totalContacts, appointments: totalAppointments } },
     redis: { status: 'connected' },
     uptime: process.uptime(),
+  })
+}))
+
+// GET /api/superadmin/system/runtime-source
+router.get('/system/runtime-source', asyncHandler(async (req, res) => {
+  const envMongoUri = process.env.MONGODB_URI || ''
+  const envRedisUrl = process.env.REDIS_URL || ''
+  const parsedMongo = parseMongoTarget(envMongoUri)
+
+  const mongoConnection = mongoose.connection || {}
+  const activeDbName = mongoConnection.name || mongoConnection.db?.databaseName || null
+  const activeHost = mongoConnection.host || null
+  const activePort = mongoConnection.port || null
+  const readyState = mongoConnection.readyState
+  const readyStateLabel = ({ 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' })[readyState] || 'unknown'
+
+  res.json({
+    nodeEnv: process.env.NODE_ENV || null,
+    apiUrl: process.env.API_URL || null,
+    mongodb: {
+      envUriMasked: maskMongoUri(envMongoUri),
+      envTarget: parsedMongo,
+      activeConnection: {
+        state: readyStateLabel,
+        host: activeHost,
+        port: activePort,
+        dbName: activeDbName,
+      },
+    },
+    redis: {
+      envUrl: envRedisUrl || null,
+      hasPassword: Boolean(process.env.REDIS_PASSWORD),
+    },
+    llm: {
+      primary: 'azure-openai',
+      fallback: 'groq',
+      azureEndpoint: process.env.AZURE_OPENAI_ENDPOINT || 'https://aykachatbot-resource.cognitiveservices.azure.com',
+      hasAzureKey: Boolean(process.env.AZURE_OPENAI_KEY || process.env.AZURE_OPENAI_API_KEY),
+      hasGroqKey: Boolean(process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY),
+    },
   })
 }))
 

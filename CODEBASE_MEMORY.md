@@ -1,0 +1,4866 @@
+# Ayka Codebase Memory
+
+- Generated: 2026-03-26T15:16:00.000000+00:00
+- Scope: exhaustive non-documentation repository memory for `ayka`
+- Review mode: strict filesystem order, per-file detailed notes, dependency/risk tracking
+
+## Coverage Baseline
+- Non-doc tracked code/config files in scope: **131**
+- Excluded generated/binary/vendor artifacts cataloged: **3898**
+- Exclusion classes: `node_modules/`, `apps/api/node_modules/`, `apps/dashboard/.next/`, `SPV/`, binary assets, documentation markdown files
+
+## Coverage Checklist
+| File | Lines | Status | Notes |
+|---|---:|---|---|
+| .dockerignore | 15 | Reviewed | Detailed analysis captured below |
+| .env.example | 4 | Reviewed | Detailed analysis captured below |
+| .github/workflows/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+| .github/workflows/deploy-dashboard.yml | 83 | Reviewed | Detailed analysis captured below |
+| .github/workflows/deploy.yml | 58 | Reviewed | Detailed analysis captured below |
+| .gitignore | 1 | Reviewed | Detailed analysis captured below |
+| apps/api/.env | 16 | Reviewed | Detailed analysis captured below |
+| apps/api/.env.example | 9 | Reviewed | Detailed analysis captured below |
+| apps/api/.env.production | 38 | Reviewed | Detailed analysis captured below |
+| apps/api/index.js | 175 | Reviewed | Detailed analysis captured below |
+| apps/api/package-lock.json | 2199 | Reviewed | Detailed analysis captured below |
+| apps/api/package.json | 28 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/_encrypt-token-once.js | 68 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/backfill-lead-scores.js | 134 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/clear-redis.js | 21 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/clear-sessions.js | 45 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/create-spv-kb.js | 178 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/dump-existing-kb.js | 16 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/dump-kb.js | 16 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/e2e-check.js | 74 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/e2e-full.js | 118 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/fix-spv-token.js | 60 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/inspect-db.js | 46 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/redteam.js | 261 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/reset-session.js | 103 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/seed-dashboard.js | 262 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/seed-iap.js | 394 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/seed-spv.js | 257 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/simulate-bahraich-quick.js | 63 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/simulate-bahraich.js | 96 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/test-mongo.js | 6 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/test-scheduling.js | 181 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/test-scoring.js | 118 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/update-kb-comprehensive.js | 429 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/update-kb-parent-faqs.js | 355 | Reviewed | Detailed analysis captured below |
+| apps/api/scripts/update-kb.js | 231 | Reviewed | Detailed analysis captured below |
+| apps/api/src/config/db.js | 17 | Reviewed | Detailed analysis captured below |
+| apps/api/src/config/env.js | 28 | Reviewed | Detailed analysis captured below |
+| apps/api/src/config/logger.js | 14 | Reviewed | Detailed analysis captured below |
+| apps/api/src/config/redis.js | 75 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/conversation.engine.js | 772 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/flow.engine.js | 675 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/handoff.engine.js | 57 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/prompt.builder.js | 1149 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/scheduling.engine.js | 246 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/scoring.engine.js | 120 | Reviewed | Detailed analysis captured below |
+| apps/api/src/core/web.conversation.engine.js | 292 | Reviewed | Detailed analysis captured below |
+| apps/api/src/middleware/auth.js | 88 | Reviewed | Detailed analysis captured below |
+| apps/api/src/middleware/rateLimiter.js | 40 | Reviewed | Detailed analysis captured below |
+| apps/api/src/middleware/resolveTenant.js | 52 | Reviewed | Detailed analysis captured below |
+| apps/api/src/middleware/verifyWebhook.js | 23 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/admin.routes.js | 674 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/auth.routes.js | 126 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/client.routes.js | 609 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/health.routes.js | 16 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/superadmin.routes.js | 622 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/webhook.routes.js | 28 | Reviewed | Detailed analysis captured below |
+| apps/api/src/routes/widget.routes.js | 188 | Reviewed | Detailed analysis captured below |
+| apps/api/src/services/groq.service.js | 214 | Reviewed | Detailed analysis captured below |
+| apps/api/src/services/llm.service.js | 193 | Reviewed | Detailed analysis captured below |
+| apps/api/src/services/session.service.js | 144 | Reviewed | Detailed analysis captured below |
+| apps/api/src/services/transcription.service.js | 105 | Reviewed | Detailed analysis captured below |
+| apps/api/src/services/whatsapp.service.js | 122 | Reviewed | Detailed analysis captured below |
+| apps/api/src/utils/asyncHandler.js | 12 | Reviewed | Detailed analysis captured below |
+| apps/api/src/utils/encryption.js | 34 | Reviewed | Detailed analysis captured below |
+| apps/api/src/utils/logger.js | 31 | Reviewed | Detailed analysis captured below |
+| apps/api/src/utils/phone.js | 31 | Reviewed | Detailed analysis captured below |
+| apps/api/src/verticals/coaching/config.js | 73 | Reviewed | Detailed analysis captured below |
+| apps/api/src/verticals/realestate/config.js | 135 | Reviewed | Detailed analysis captured below |
+| apps/api/src/verticals/school/config.js | 125 | Reviewed | Detailed analysis captured below |
+| apps/api/src/webhooks/whatsapp.handler.js | 105 | Reviewed | Detailed analysis captured below |
+| apps/api/tmp/update.token.js | 0 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/analytics/page.js | 142 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/appointments/page.js | 103 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/clients/page.js | 183 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/conversations/page.js | 152 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/dashboard/page.js | 211 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/leads/page.js | 100 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/settings/page.js | 220 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/admin/widget/page.js | 330 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/client/appointments/page.js | 208 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/client/conversations/page.js | 238 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/client/dashboard/page.js | 211 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/client/leads/page.js | 156 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/client/settings/page.js | 119 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/globals.css | 62 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/layout.js | 14 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/login/page.js | 92 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/page.js | 9 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/clients/page.js | 272 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/dashboard/page.js | 169 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/leads/page.js | 83 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/resellers/page.js | 263 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/settings/page.js | 65 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/system/page.js | 172 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/app/superadmin/users/page.js | 228 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/components/DashboardLayout.js | 60 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/components/Sidebar.js | 141 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/components/UI.js | 262 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/hooks/useFetch.js | 27 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/lib/api.js | 65 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/lib/format.js | 84 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/next.config.js | 10 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/package.json | 25 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/postcss.config.js | 6 | Reviewed | Detailed analysis captured below |
+| apps/dashboard/tailwind.config.js | 22 | Reviewed | Detailed analysis captured below |
+| apps/widget/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+| apps/widget/demo.html | 144 | Reviewed | Detailed analysis captured below |
+| apps/widget/dist/ayka-widget.js | 390 | Reviewed | Detailed analysis captured below |
+| apps/widget/package.json | 5 | Reviewed | Detailed analysis captured below |
+| docker-compose.yml | 45 | Reviewed | Detailed analysis captured below |
+| infra/docker/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+| infra/docker/Dockerfile | 35 | Reviewed | Detailed analysis captured below |
+| infra/docker/Dockerfile.dashboard | 52 | Reviewed | Detailed analysis captured below |
+| package-lock.json | 4069 | Reviewed | Detailed analysis captured below |
+| package.json | 12 | Reviewed | Detailed analysis captured below |
+| packages/db/index.js | 10 | Reviewed | Detailed analysis captured below |
+| packages/db/models/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Appointment.js | 58 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Business.js | 76 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Contact.js | 44 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Conversation.js | 83 | Reviewed | Detailed analysis captured below |
+| packages/db/models/KnowledgeBase.js | 25 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Message.js | 36 | Reviewed | Detailed analysis captured below |
+| packages/db/models/Reseller.js | 42 | Reviewed | Detailed analysis captured below |
+| packages/db/models/User.js | 52 | Reviewed | Detailed analysis captured below |
+| packages/db/package.json | 5 | Reviewed | Detailed analysis captured below |
+| packages/shared/index.js | 0 | Reviewed | Detailed analysis captured below |
+| packages/shared/package.json | 5 | Reviewed | Detailed analysis captured below |
+| services/zoho-csdirect/src/.gitkeep | 0 | Reviewed | Detailed analysis captured below |
+
+## Detailed Analysis (Completed So Far)
+
+### .dockerignore
+- L1-10: Broad ignore set excludes node modules, Next build cache, env files, git metadata, logs, `services/`, `SPV/`, `docs/`, and all markdown files from Docker context.
+- L12-13: Explicitly ignores `apps/widget` with exception for `apps/widget/package.json`, meaning widget source/build artifacts are intentionally absent from image context.
+- Build implication: markdown exclusion may hide operational non-doc context if future image build scripts depend on text assets.
+
+### .env.example
+- L1-2: Contains commented secret-like values and encrypted-looking payload in template file; this is not a safe example pattern.
+- L4: Includes commented tenant descriptor pseudo-record; appears to be operational note rather than reusable env template.
+- Risk: root env example does not provide clean variable contract and may leak sensitive historical metadata into source control.
+
+### .github/workflows/.gitkeep
+- Empty placeholder preserving workflow directory in git when no workflow files existed initially.
+
+### .github/workflows/deploy-dashboard.yml
+- L1-8: Workflow triggers on `master` pushes that touch dashboard/shared/docker dashboard files; manual trigger enabled.
+- L10-12: Registry/image env constants fixed to Azure ACR and `ayka-dashboard` image name.
+- L14-39: Checks out code, logs into ACR, builds/pushes dashboard image with build arg `NEXT_PUBLIC_API_URL=https://api.ayka.site`.
+- L41-82: Azure CLI step conditionally creates container app if missing; otherwise sets registry and updates image.
+- Operational detail: resource group/app names are hardcoded (`ayka-rg`, `ayka-dashboard`), reducing multi-environment portability without workflow duplication.
+
+### .github/workflows/deploy.yml
+- L1-8: API deploy workflow triggers on `master` changes affecting API/db/dockerfile; manual dispatch available.
+- L10-12: Uses ACR registry constants for API image deployment.
+- L14-37: Performs checkout, ACR login, Docker build/push for API image, then Azure login via federated secret JSON.
+- L39-57: Updates existing container app registry credentials and image; unlike dashboard workflow, no conditional app creation path.
+- Reliability note: assumes target container app already exists and is correctly provisioned.
+
+### .gitignore
+- L1: Ignores top-level `node_modules` only; does not ignore package-local build artifacts (`apps/dashboard/.next`) or env files at repo root by itself.
+
+### apps/api/.env
+- L1-13: Development env contains live credentials and production-like endpoints (Mongo/Redis host, LLM/API keys, JWT, webhook secret, encryption key).
+- L14-16: Commented operational endpoints and passwords are kept inline in source-controlled env file.
+- Critical risk: plaintext secrets are committed; immediate rotation and repository secret purge are required.
+
+### apps/api/.env.example
+- L1-6: Clean template for Azure OpenAI deployment/endpoint/key placeholders.
+- L8-9: Defines `PROCESS_LOCK_TTL_SECONDS` guidance for LLM lock duration tuning.
+- Gap: template does not include mandatory variables from `validateEnv` (`MONGODB_URI`, `JWT_SECRET`, webhook credentials, `ENCRYPTION_KEY`).
+
+### apps/api/.env.production
+- L1-5: Production header/commenting for API domain and environment baseline.
+- L7-38: Includes complete live production credentials for MongoDB, Redis, Groq, Azure OpenAI, JWT, encryption key, Meta webhook secret, and CORS domains.
+- Critical risk: high-impact credentials are version-controlled; breaches should be assumed and full rotation/audit is necessary.
+
+### apps/api/index.js
+- L1-14: Bootstraps process-level `unhandledRejection`/`uncaughtException` logging, validates environment, then triggers DB connection before route mounting.
+- L16-85: Implements explicit CORS policy with default allowlist + env-extended origins + wildcard support (`https://*.domain`). `CORS_ALLOW_ALL=true` bypass is supported.
+- L87-108: Path-sensitive CORS behavior marks `/widget`, `/health`, `/webhook/whatsapp`, `/assets` as public and allows no-origin server requests.
+- L110: JSON parser captures raw request body (`req.rawBody`) for webhook signature verification compatibility.
+- L113-118: Static mounts for widget bundle (`/widget/embed`) and public assets (`/assets`) with 7-day cache headers.
+- L120-131: Route surface includes health/webhook roots, widget public API, and JWT-protected dashboard APIs (`/api/auth|client|admin|superadmin`).
+- L133-140: Centralized error middleware maps CORS rejection to 403 and all other failures to generic 500; server listens on env `PORT` default `3000`.
+
+### apps/api/package-lock.json
+- L1-6: NPM lockfile v3 for `@ayka/api` with deterministic dependency tree metadata.
+- L7-22: Root package dependency snapshot contains stale entries (`@upstash/redis`, older `groq-sdk`) that diverge from `apps/api/package.json`.
+- Remaining lock sections: fully generated transitive package graph with integrity hashes; no hand-authored business logic expected.
+- Maintenance risk: dependency drift between lockfile and declared package deps can produce inconsistent installs across environments.
+
+### apps/api/package.json
+- L1-7: Express API package metadata and start/dev commands (`node index.js`, `nodemon index.js`).
+- L8-24: Direct file dependency on `@ayka/db` package and core runtime stack (`express`, `mongoose`, `jsonwebtoken`, `ioredis`, `openai`, `groq-sdk`).
+- L25-27: Only `nodemon` in devDependencies; lint/test scripts absent (operational scripts live under `apps/api/scripts`).
+
+### apps/api/scripts/_encrypt-token-once.js
+- L1-14: One-off operational script requiring env credentials and optional business id; defaults to a hardcoded `SPV` business ObjectId.
+- L16-24: AES-256-GCM encryption helper emits `iv:tag:ciphertext` hex payload.
+- L26-32: Decryption helper validates roundtrip correctness before any DB writes.
+- L34-66: Connects to Mongo, updates `businesses.whatsapp.accessToken`, verifies encrypted storage format, then decrypt-checks stored value.
+- Security note: script handles plaintext WA token at runtime and logs verification booleans; should only run in controlled admin environment.
+
+### apps/api/scripts/backfill-lead-scores.js
+- L1-14: CLI backfill utility with idempotent intent and explicit dependency on `computeLeadScore` from scoring engine.
+- L16-24: Loads env opportunistically and hard-fails if `MONGODB_URI` is missing.
+- L26-49: Connects DB and builds in-memory businessId→vertical lookup for fallback scoring context.
+- L51-106: Batches conversations via `_id` cursor pagination; computes score/reason and schedules bulk updates scoped by `{_id, businessId}`.
+- L108-127: Prints final processing metrics and exits non-zero if scoring errors occurred.
+- Tenancy note: write filters include `businessId`, preserving tenant isolation during mass update.
+
+### apps/api/scripts/clear-redis.js
+- L1-3: Loads `.env` manually and initializes Upstash Redis client from env credentials.
+- L5-20: Scans/deletes keys matching `session:*`, `tenant:*`, `kb:*` using cursor loop and per-key deletes.
+- Operational risk: destructive cache wipe has no confirmation prompt or environment guard; accidental production use can evict active session state.
+
+### apps/api/scripts/clear-sessions.js
+- L1-6: Purpose-specific session reset script with same env/bootstrap pattern as `clear-redis.js`.
+- L8-37: Runs three separate scans (`session:*`, `tenant:*`, `kb:*`) and aggregates all keys before deletion.
+- L39-44: Deletes every matched key with verbose logging and completion message.
+- Redundancy note: functionality substantially overlaps `clear-redis.js`, indicating duplicate maintenance surface.
+
+### apps/api/scripts/create-spv-kb.js
+- L1-12: Tenant-specific KB bootstrap script for SPV; clones content from test school business into SPV business.
+- L14-124: Injects extensive hostel details, routines, meal plan, supervision/medical info, and fee simplification structures in Hindi-English mixed content.
+- L126-185: Appends structured hostel FAQ list and updates handoff phone number to a fixed mobile value.
+- L187-205: Upserts KB document for SPV with hardcoded resellerId/vertical values.
+- L207-218: Clears Redis KB cache key and verifies resulting content shape/counts.
+- Multi-tenant risk: script is heavily hardcoded to specific business IDs and reseller IDs; safe only as one-off migration tooling.
+
+### apps/api/scripts/dump-existing-kb.js
+- L1-15: Minimal DB script that fetches knowledge base for fixed business id `699c2d8d78317f50e82efa62` and prints full JSON content.
+- Security concern: stdout dump may expose sensitive internal business content if logs are persisted.
+
+### apps/api/scripts/dump-kb.js
+- L1-15: Same pattern as `dump-existing-kb.js` but targets SPV business id `69a305f398f94563b73c6ef3`.
+- Operational note: pure read script; useful for migration verification and prompt debugging.
+
+### apps/api/scripts/e2e-check.js
+- L1-10: Fast API sanity script with credential-driven logins for superadmin/reseller/client personas.
+- L12-70: Executes a curated endpoint list across role APIs and widget public config/init endpoints, printing response-shape snapshots.
+- L72-84: Performs widget init with generated visitor id and prints brief payload sample.
+- Test gap: assertions are shape-based and non-failing for semantic regressions; mostly observational diagnostics.
+
+### apps/api/scripts/e2e-full.js
+- L1-11: Full-stack smoke test script covering API health, role logins, many admin/client/superadmin endpoints, widget routes, and dashboard pages.
+- L13-16: Utility parser returns HTML sentinel object for non-JSON responses.
+- L18-123: Executes role endpoint checks and chart endpoint probes with pass/fail markers.
+- L124-134: Validates public widget config/init endpoints.
+- L136-141: Pings dashboard routes for HTTP 200 checks.
+- L143-156: Emits consolidated pass/fail report and pass-rate percentage.
+- Reliability note: script depends on seeded identities and local services on ports 3000/3001; no setup/bootstrap orchestration embedded.
+
+### apps/api/scripts/fix-spv-token.js
+- L1-14: One-time token rotation utility requiring `WA_ACCESS_TOKEN` and `SPV_BUSINESS_ID`; defaults WhatsApp phone number id if absent.
+- L16-32: Encrypts token via shared encryption util and validates decrypt round-trip before persistence.
+- L34-43: Updates `Business.whatsapp.accessToken` and clears tenant cache key `tenant:<phoneNumberId>` in Redis.
+- L45-53: Re-reads stored token to verify encrypted format and equality after decrypt.
+- Security note: operational script handles fresh secrets in plaintext process env; execution should be tightly controlled and audited.
+
+### apps/api/scripts/inspect-db.js
+- L1-4: DB inspection helper loading all businesses and KB documents for quick operational diagnostics.
+- L8-18: Prints core business identity/active/phone metadata for every business.
+- L20-24: Prints all knowledge base document ids and associated business ids.
+- L26-43: Attempts SPV business discovery by name match, then dumps full KB JSON content if found (with object/string fallback match).
+- Risk: full KB dump to stdout can expose sensitive tenant knowledge content in shell history/log systems.
+
+### apps/api/scripts/redteam.js
+- L1-27: Comprehensive adversarial test harness around `flow.extractDataFromMessages`, with expectation-based checks for extracted fields.
+- L29-275+: Defines large matrix of attack/edge/locale scenarios: false positives, true positives, correction logic, injection payloads, Hindi/Hinglish variants, unicode edge cases, and multi-field stress messages.
+- Output model: increments pass/fail counters and prints case-by-case diff when extraction mismatches expected values.
+- Engineering value: codifies real WhatsApp conversational noise patterns; acts as regression suite for parser improvements.
+- Gap: script is not wired into package test scripts/CI; currently manual execution only.
+
+### apps/api/scripts/reset-session.js
+- L1-16: CLI tool to reset all conversation/session state for a phone number, optionally scoped to businessId.
+- L18-34: Uses inline strict-false Mongoose schemas (`Conversation`, `Contact`, `Message`) to avoid workspace dependency resolution issues.
+- L36-67: Deletes messages by conversation ids, then conversations and contacts by filter.
+- L69-91: Clears Redis session keys either for one specific business key or via scan across all businesses for that phone.
+- Operational risk: destructive delete path has no confirmation guard; incorrect phone input can irreversibly remove data.
+
+### apps/api/scripts/seed-dashboard.js
+- L1-19: Seed utility for dashboard identities and tenancy linkage; generates random passwords unless `SEED_*` env vars are provided.
+- L21-65: Ensures reseller `WellTechUp` exists with plan and theme config; creates if missing.
+- L67-109: Locates/creates SPV business and ensures reseller linkage; optionally seeds WhatsApp settings from env fallbacks.
+- L111-208: Upserts three users (`superadmin`, `reseller`, `client`) with role-specific theme configs and password hashes.
+- L239-248: Prints plaintext credentials to console for operator copy, including auto-generated passwords.
+- Security/ops note: convenient bootstrap script but emits secrets to stdout; should be restricted to secure setup channels.
+
+### apps/api/scripts/seed-iap.js
+- L1-22: Onboarding seed script for coaching tenant `IAP Professional`; supports optional env-provided admin credentials else random password generation.
+- L24-43: Requires existing reseller `welltechup`; exits if not found (dependency on `seed-dashboard.js`).
+- L45-92: Creates or updates business with coaching vertical and optional WhatsApp placeholders/real creds from env.
+- L94-301: Builds large coaching KB payload with institute profile, courses, fees, admissions, differentiators, escalation, and bilingual FAQ corpus.
+- L303-319: Creates or version-increments `KnowledgeBase` document for business.
+- L321-363: Upserts client dashboard user with theme config and feature toggles.
+- L365-381: Prints onboarding summary including dashboard password and WhatsApp placeholder warning.
+- Security note: script may emit plaintext generated/admin passwords to stdout.
+
+### apps/api/scripts/seed-spv.js
+- L1-23: Production-oriented SPV onboarding script that loads `.env.production` first, then `.env`, then default env.
+- L25-42: Validates `MONGODB_URI` and provides explicit remediation hints if missing.
+- L44-70: Resolves reseller and SPV business via slug/name search; requires `WA_ACCESS_TOKEN` for initial creation path.
+- L72-96: Detects conflicting `whatsapp.phoneNumberId` on another business and archives conflicting tenant by mutating name/isActive/phoneId.
+- L98-145: Creates or forcibly updates SPV business identity/settings/WhatsApp fields with deterministic values.
+- L147-190: Creates or updates simplified school KB content and increments KB version on update.
+- L192-222: Creates/updates client dashboard user and ensures tenant linkage.
+- Multi-tenant caution: archival conflict resolution mutates another tenant record directly; powerful but potentially risky without audit trail.
+
+### apps/api/scripts/simulate-bahraich-quick.js
+- L1-8: Quick LLM smoke script for two specific school questions previously timing out in full simulation.
+- L10-18: Loads first available KB from DB and uses hardcoded SPV-like assistant settings.
+- L20-50: For each test message, builds prompt + single user message, calls Groq, strips control markers, prints final assistant text.
+- L52-53: Adds 3-second delay between calls to reduce rate-limit pressure.
+
+### apps/api/scripts/simulate-bahraich.js
+- L1-9: Full simulation utility for SPV conversation quality checks against prompt builder and Groq response path.
+- L11-41: Prints entire generated system prompt for manual inspection/debugging.
+- L43-90: Runs five test prompts (including Hindi/Devanagari and greeting variants), sanitizes control markers, and prints responses.
+- L92: Uses 1-second inter-call delay to balance runtime and API throttling risk.
+- Debug risk: full prompt dump can expose sensitive KB internals in terminal logs.
+
+### apps/api/scripts/test-mongo.js
+- L1-7: Minimal connectivity probe that loads API `.env`, attempts mongoose connect with timeout, and exits with success/failure status code.
+- Purpose: quick infra check for DB reachability before running heavier scripts.
+
+### apps/api/scripts/test-scheduling.js
+- L1-12: Feature-focused test suite validating visit scheduling behavior across parsing, scoring, prompt generation, and vertical toggles.
+- L14-30: Lightweight assertion harness accumulates pass/fail totals with explicit mismatch output.
+- L32-71: Verifies `VISIT_CONFIRMED: YES` detection rules and signal stripping from model text.
+- L73-93: Tests signal-injection resistance and coexistence with `HANDOFF: YES` markers.
+- L95-117: Confirms scoring outcomes for visit confirmation/time and baseline cold flow.
+- L119-168: Validates scheduling enablement by vertical and presence/absence of RULE 6B prompt content.
+- L170-192: Ensures visit-confirm missing-info logic transitions correctly after confirmation.
+- L194-209: Guards separation between handoff logic and visit-intent logic in prompts.
+
+### apps/api/scripts/test-scoring.js
+- L1-4: Unit-style scoring harness for `computeLeadScore` across school, real-estate, and generic fallback verticals.
+- L6-18: Test helper reports score+reason per case and tallies failures.
+- L20-55: Covers school cold/warm/hot pathways using combinations of parent/student/class/visit/handoff fields.
+- L57-89: Covers real-estate logic around budget/timeline thresholds and handoff override.
+- L91-104: Validates generic fallback behavior for unknown verticals.
+- L106-117: Adds parsing edge cases for budget/time string variants (lakhs, numeric, immediately, year).
+- Exit behavior: process exits non-zero on any failed assertion to support CI/automation hooks.
+
+### apps/api/scripts/update-kb-comprehensive.js
+- L1-12: Large targeted KB migration script with explicit per-field provenance comments tied to source PDFs.
+- L14-25: Loads KB by optional `businessId` argument/env and fails safely when missing.
+- L27-46: Defines helper to build granular `$set` updates and maintain human-readable change log.
+- L48-397: Applies extensive structured updates across about/infrastructure/hostel/transport/fees/staff/students/alumni/activities/rules/subjects/exam/labs/highlights and leadership metadata.
+- L399-417: Logs every field update then executes one `updateOne` with accumulated `$set` payload.
+- L419-446: Re-reads KB and prints key verification values/counts to validate migration impact.
+- Data-governance note: script is highly authoritative and mutates many canonical fields; requires careful tenant targeting before execution.
+
+### apps/api/scripts/update-kb-parent-faqs.js
+- L1-14: Final FAQ updater focused on parent-facing Q&A and optional QR payment image support via env URLs.
+- L16-28: Loads target KB by optional `businessId` and computes QR response text based on URL validity.
+- L30-212: Defines large bilingual FAQ array for admissions, management, academics, transport, hostel, and payment queries.
+- L214-355: Builds structured supporting fields (`management`, `admissionAgeCriteria`, transport stops, hostel checklist/installments, vendor, onlinePaymentQR).
+- L357-369: Applies updates and logs compact previews per updated path.
+- L371-379: Attempts Redis cache invalidation (`kb:<businessId>`) with warning-only fallback on failure.
+- L381-394: Prints post-update verification summary including FAQ count and QR status.
+
+### apps/api/scripts/update-kb.js
+- L1-4: Earlier targeted KB update script that conditionally fills/repairs missing fields instead of full overwrite.
+- L6-19: Loads KB by optional businessId and prepares incremental `$set` updates with change log entries.
+- L21-203: Applies broad but partially conditional enrichment across about, principal message, infrastructure, transport/hostel, highlights, subjects, alumni, admissions, activities, rules.
+- L205-221: Executes update and logs matched/modified counts.
+- L223-244: Performs verification readback with key field snippets/counts.
+- Evolution note: overlaps with `update-kb-comprehensive.js`; likely an older migration stage retained for fallback/manual use.
+
+### apps/api/src/config/db.js
+- L1-4: Loads env + mongoose + logger; central DB connection utility.
+- L6-15: Connects using `mongoose.connect(MONGODB_URI)` with `serverSelectionTimeoutMS=15000`; on failure logs and retries after 5 seconds recursively.
+- Reliability note: retry loop has no maximum cap/circuit breaker and continues until process termination.
+
+### apps/api/src/config/env.js
+- L1-8: Defines mandatory env set including DB URI, webhook secrets, encryption key, environment marker, and JWT secret.
+- L10-15: `validateEnv` throws hard failure for missing required keys (startup-blocking).
+- L17-20: Requires Azure OpenAI credential via either `AZURE_OPENAI_KEY` or `AZURE_OPENAI_API_KEY`.
+- L22-27: Enforces `ENCRYPTION_KEY` as 64-hex chars (32 bytes) for AES-256 compatibility; includes generation command hint in thrown error text.
+
+### apps/api/src/config/logger.js
+- L1-12: Defines pino logger with explicit level from `LOG_LEVEL` and redact paths covering phone/name/token-style fields.
+- L9-11: Uses `pino-pretty` transport only in non-production; production emits structured JSON logs.
+- Architecture note: logger logic duplicates functionality in `src/utils/logger.js`, introducing drift risk.
+
+### apps/api/src/config/redis.js
+- L1-18: Creates ioredis client from `REDIS_URL`/`REDIS_PASSWORD` with bounded retry strategy and connection logging hooks.
+- L20-47: Exposes Upstash-compatible wrapper (`get`, `set`, `del`) to preserve existing consumer contract; values deserialize from JSON with raw-string fallback.
+- L49-68: Provides pipeline adapter returning Upstash-like result array by unwrapping ioredis `[err, value]` tuples and throwing on pipeline errors.
+- L70: Exposes raw ioredis client as `_client` for advanced/direct usage.
+
+### apps/api/src/core/conversation.engine.js
+- L1-13: Imports full processing stack (session/cache, KB/models, prompt builder, LLM, extraction/scoring/scheduling/handoff, WhatsApp senders, utilities).
+- L15-34: Defines dedupe/process lock TTLs with env guard (`PROCESS_LOCK_TTL_SECONDS` >= 15), plus in-memory race guard map.
+- L36-153: Utility layer for regex escaping, student-name honorific normalization, language-aware fallback responses, QR/talent-hunt request detection, and QR payload DB fallback.
+- L154-261: Two-layer dedup (in-memory + Redis NX key) and Redis mutex acquisition/release using Lua compare-delete for safe unlock.
+- L262-319: Message-type resolver supports text/interactive/audio transcription/image/document/location; produces synthetic markers for non-text media.
+- L321-749: Main `processMessage` pipeline: payload parse → dedup → session/contact/conversation load/create → KB cache fetch → prompt build → LLM call (content-filter fallback) → parse+extract+score → handoff/scheduling actions → session persist → async DB writes → outbound send.
+- Scheduling behavior: visit confirmation only trusted when backend appointment is successfully created; otherwise resets visitConfirmed and returns valid-window correction reply.
+- Post-processing: updates appointment profile when student/parent names are collected after initial confirmation.
+- Reliability pattern: non-critical writes are fire-and-forget with logging; critical path wrapped in try/catch with language-aware fallback message and guaranteed lock release in `finally`.
+- Security/quality signals: aggressive prompt-injection sanitization for user input, plus explicit control marker stripping before prompt insertion.
+
+### apps/api/src/core/flow.engine.js
+- L1-35: Response normalization helpers remove formatting noise and duplicate paragraphs before persistence/send.
+- L37-78: `parseAIResponse` extracts control markers (`HANDOFF`, `VISIT_CONFIRMED: YYYY-MM-DD HH:MM`) only when marker appears on its own line, updates flow state accordingly, and strips markers from user-visible text.
+- L80-111: Includes Hindi ordinal and Devanagari number maps for class extraction localization.
+- L113-149: IST time-window helpers enforce visit-hour logic and same-day feasibility checks.
+- L151-180: Explicit child-name extraction helper for Latin/Devanagari patterns to reduce false positives.
+- L182-219: Detects whether assistant recently asked for visit time and blocks out-of-hours markers.
+- L221-674: `extractDataFromMessages` mutates cloned flow state with robust heuristics: rescheduling reset, inquiry/info goals, parent/student name extraction, class extraction priority tiers, phone capture, visit-time capture with invalid-time guard, and cleanup.
+- Name safety: profanity blocklist + semantic non-name blocklists reduce abusive/role-word capture as names.
+- Data quality: class correction path requires explicit correction signal + new class mention before overwriting.
+- Risk/complexity: extraction logic is highly regex-driven and large; behavior drift likely without automated regression wiring (though redteam/test scripts exist).
+
+### apps/api/src/core/handoff.engine.js
+- L1-4: Minimal handoff module depending on WhatsApp sender, KB lookup, and logger.
+- L6-25: Resolves staff phone from tenant settings, then KB fallback (`content.handoff.staffPhone`) if absent.
+- L27-36: Language-mode inference from recent user text determines Hindi vs English notification phrasing.
+- L38-47: Builds contact line with optional alternate phone for staff context.
+- L49-57: Sends structured lead summary to staff WhatsApp and logs failures; returns success boolean regardless of notification outcome.
+
+### apps/api/src/core/prompt.builder.js
+- L1-299: `buildKBSummary` transforms heterogeneous KB schema into flattened facts map with many defensive fallbacks (fees/results/infrastructure/hostel/FAQ/transport/subjects/alumni/etc.).
+- L300-427: Script/language detection stack (`detectScript`, `detectLanguageMode`) plus sanitization/escaping utilities and talent-hunt knowledge resolver.
+- L429-484: Emotion detector classifies latest user intent state using keyword buckets (curious/engaged/hesitant/ready/urgent/frustrated).
+- L486-760: Dedicated `buildCoachingSystemPrompt` generates coaching-vertical persona/rules/known-facts/memory blocks with strict answer-first and handoff conventions.
+- L762-1239: Master `buildSystemPrompt` for school/default vertical creates very detailed system prompt with localization, script-locked response mode, memory invariants, rules, handoff/visit scheduling instructions, and conversation approach blocks.
+- Prompt safety controls: sanitizes current/recent user text for injection markers and enforces explicit no-hallucination rule text to model.
+- Knowledge injection gating: large hostel FAQ block included only when hostel intent detected, reducing prompt token load on non-hostel conversations.
+- Complexity risk: prompt content is extremely large and policy-heavy; instruction conflicts/latency/token-pressure may occur as rules continue expanding.
+
+### apps/api/src/core/scheduling.engine.js
+- L1-18: Scheduling module creates appointment rows and staff notifications only for verticals with `scheduling.enabled` config.
+- L20-38: Lazy vertical config cache loader with warning fallback on missing config files.
+- L40-85: `_validateVisitDateTime` enforces strict format, weekday (Mon-Sat), visit-hour window (09:00-14:00), and non-past date checks using IST baseline.
+- L87-165: `scheduleVisit` gate/validate flow, cancels prior confirmed appointments for same conversation (reschedule), creates new appointment with normalized date/time and raw preference, then triggers staff notification.
+- L167-246: `_notifyStaff` resolves staff phone, language-detects recent user text, composes detailed booking message (including raw parent phrase), sends WhatsApp alert, and marks appointment as notified.
+- Operational strength: appointment creation and notification are decoupled so booking persists even when staff notification fails.
+
+### apps/api/src/core/scoring.engine.js
+- L1-15: Pure deterministic scoring module with no external I/O dependencies; designed for isolation and testability.
+- L17-32: Lazy loads/caches vertical configs to fetch `scoringRules` per vertical.
+- L34-71: `computeLeadScore` executes hot→warm→cold priority using vertical rule functions; falls back to generic scorer when config missing.
+- L73-118: Generic scoring fallback marks hot on handoff/visit-time, warm on >=2 collected fields, else cold with reason granularity.
+- Architecture strength: side-effect free logic suitable for unit and backfill scripts.
+
+### apps/api/src/core/web.conversation.engine.js
+- L1-10: Web-widget conversation pipeline mirrors WhatsApp engine but returns response payload directly instead of sending messages.
+- L12-47: Includes normalization helper shared with WA path and fallback error message.
+- L49-95: Loads tenant/business context and initializes session keyed by `web:<visitorId>` with optional prefilled visitor info.
+- L97-165: Contact/conversation creation logic scoped to web visitor identity and source type `web_widget`.
+- L167-190: KB cache lookup via Redis then Mongo fallback, then prompt construction using sanitized user message.
+- L192-213: LLM call + control parsing + data extraction + deterministic lead scoring.
+- L215-237: Conditional handoff notification path decrypts WhatsApp credentials only when handoff signal is emitted.
+- L239-284: Persists session and async DB message/contact/conversation updates; returns structured response object.
+- Error path returns generic fallback message with `error: true` while logging context.
+
+### apps/api/src/middleware/auth.js
+- L1-7: JWT middleware setup with startup hard-fail if `JWT_SECRET` missing.
+- L9-26: `authenticateJWT` extracts Bearer token, verifies signature, and populates `req.user` payload.
+- L28-39: `requireRole(...roles)` factory enforces role-based access control.
+- L41-62: Scope guards enforce presence of business/reseller scope for client/reseller roles.
+- L64-77: `signToken` embeds role, scopes, and `themeConfig` in 7-day JWT payload.
+
+### apps/api/src/middleware/rateLimiter.js
+- L1-8: Redis-backed per-business+phone rate limiter constants (20 messages per 60s sliding window).
+- L10-33: Extracts normalized phone from webhook payload, maintains sorted-set window (`zremrangebyscore`, `zcard`, `zadd`, `expire`), and annotates request with limit flags/counters.
+- L34-39: Fail-open strategy on Redis errors to avoid webhook 5xx retries from Meta.
+- Behavior note: middleware only marks `req.isRateLimited`; downstream logic must enforce throttling response/action.
+
+### apps/api/src/middleware/resolveTenant.js
+- L1-5: Tenant resolver depends on Redis cache, Business model, token decryptor, and logger.
+- L7-18: Reads `phone_number_id` from WhatsApp webhook payload; exits with 200 when absent to avoid unnecessary retries.
+- L20-24: Attempts cache hit on `tenant:<phoneNumberId>` and short-circuits on success.
+- L26-39: Queries active business by WhatsApp phone number id and projects only required tenant fields.
+- L41-49: Builds tenant context including decrypted WhatsApp access token and caches for 10 minutes.
+- L50-54: Error path logs and returns HTTP 500 (unlike rateLimiter fail-open), potentially triggering provider retries on resolver failures.
+
+### apps/api/src/middleware/verifyWebhook.js
+- L1-21: Meta webhook signature validator using `x-hub-signature-256` HMAC check against raw body bytes.
+- Uses timing-safe comparison (`crypto.timingSafeEqual`) and rejects missing/invalid signatures with HTTP 401.
+- Depends on `req.rawBody` being set by JSON parser verify hook in API bootstrap.
+
+### apps/api/src/routes/admin.routes.js
+- L1-14: Reseller-admin route surface guarded by JWT + `reseller` role + reseller scope middleware.
+- L16-33: Shared helpers for ObjectId conversion, KB cache flush, and period range calculations.
+- L35-276: Metrics/chart endpoints aggregate lead volumes/scores/funnels/activity across reseller portfolio and per-client slices.
+- L278-421: Client/lead/conversation listing endpoints with pagination, filters, search, business-name joins, and message-derived enrichments.
+- L423-488: Appointment/activity/analytics endpoints for operational monitoring (score trends, avg messages to hot).
+- L490-598: Reseller settings and client management mutations (settings patch, bot pause/resume, KB cache flush).
+- L600-633: Widget configuration read/update per client business.
+- L635-651: Self-settings patch for reseller profile/theme.
+- Security note: routes consistently scope by `resellerId`, reducing cross-tenant data exposure risk in reseller context.
+
+### apps/api/src/routes/auth.routes.js
+- L1-7: Auth router with bcrypt password verification, JWT issuance, and async error wrapper.
+- L9-33: In-memory IP login rate limiter (10 attempts / 15 min) with periodic cleanup interval.
+- L35-70: `POST /login` validates credentials, enforces active user, updates `lastLoginAt`, returns token + user profile payload.
+- L72-90: `GET /me` resolves authenticated user and returns account metadata.
+- L92-124: `POST /change-password` verifies current password, enforces min length, and stores new bcrypt hash.
+- Limitation: rate limiter is process-local (not Redis/distributed) so multi-instance environments bypass global attempt limits.
+
+### apps/api/src/routes/client.routes.js
+- L1-10: Client route layer requires JWT + role `client` + business-scope enforcement.
+- L12-36: Utility helpers for ObjectId conversion, Mongo URI parsing, and per-business KB cache flush.
+- L38-132: Stats and runtime-source diagnostics endpoints expose business-scoped KPI and runtime infra context.
+- L134-248: Chart endpoints for lead volume, score distribution, funnel, score-over-time, and message heatmap.
+- L250-279: Activity feed endpoint synthesizes business events from conversation state transitions.
+- L281-398: Leads endpoints with rich filtering/pagination/search and auxiliary filter-option discovery.
+- L400-457: Conversation list and paginated message history endpoints scoped to business.
+- L459-472: Appointments listing for business.
+- L474-507: Settings endpoint combines Business + KnowledgeBase into dashboard-consumable school/bot config payload.
+- L509-540: KB cache flush and CSV export endpoints (streaming cursor for lead export).
+
+### apps/api/src/routes/health.routes.js
+- L1-4: Simple express router definition with single service health endpoint.
+- L6-12: `GET /health` returns `{status, timestamp, service}` JSON and implicit HTTP 200.
+- Operational role: used by Docker healthcheck and external uptime probes.
+
+### apps/api/src/routes/superadmin.routes.js
+- L1-10: Superadmin route surface with JWT + strict `superadmin` role guard.
+- L12-32: Runtime helper utilities include URI masking and Mongo target parser for diagnostics.
+- L34-94: Platform-level stats and chart endpoints (volume, revenue, reseller performance, vertical distribution, simulated system health).
+- L96-214: Reseller/client/lead aggregation endpoints with enrichment joins and activity metrics.
+- L216-290: Conversation message inspection and system health/runtime source/api usage diagnostics.
+- L292-343: Reseller CRUD + activation lifecycle endpoints (soft deactivate/reactivate).
+- L345-415: Client CRUD endpoints with bot-slot guard, WhatsApp token encryption, and soft deactivate/reactivate.
+- L417-502: User management endpoints (list/create/update/password reset/deactivate/reactivate) across all tenants.
+- Operational risk: includes simulated health metrics endpoint and broad mutation powers; requires strong RBAC/token hygiene to protect platform-wide controls.
+
+### apps/api/src/routes/webhook.routes.js
+- L1-6: Lightweight webhook router wiring verify, tenant resolve, and rate-limit middleware before WhatsApp handler execution.
+- L8-18: `GET /webhook/whatsapp` implements Meta challenge handshake, comparing verify token against env value and returning 403 on mismatch.
+- L20-26: `POST /webhook/whatsapp` enforces middleware chain order (`verifyWebhook` → `resolveTenant` → `rateLimiter` → handler), preserving signature validation before tenant/business lookup.
+- Reliability detail: route intentionally has no JWT guard because provider callbacks must be publicly reachable.
+
+### apps/api/src/routes/widget.routes.js
+- L1-9: Public widget API route imports business model, web conversation engine, and logger with no JWT dependency by design.
+- L25-32: Permissive CORS middleware reflects request origin and handles preflight for embeddable cross-site widget deployment.
+- L34-91: In-memory per-visitor limiter (20/min) with origin normalization + allowlist matching from `business.widget.allowedOrigins`; includes periodic stale-entry cleanup.
+- L96-136: `GET /config/:businessId` returns safe widget presentation config (branding/theme/welcome/input toggles) only for active widget-enabled businesses and allowed origins.
+- L141-159: `POST /init` validates business/widget status and issues cryptographically random visitor IDs (`v_<hex>`).
+- L164-186: `POST /message` validates payload and length, applies rate-limit and origin checks, then delegates to `processWebMessage` and returns response envelope.
+- Limitation: rate limiting and cleanup are process-local, so horizontal scale requires Redis/shared limiter to enforce true global thresholds.
+
+### apps/api/src/services/groq.service.js
+- L1-19: Initializes Groq clients from `GROQ_API_KEYS` (comma list fallback to single key) and logs missing-key misconfiguration at startup.
+- L21-60: Implements key health tracking with cooldown-based rotation, round-robin healthy key selection, and per-key rate-limit hit counters.
+- L62-69: Model tier selector chooses fast model for short contexts and default larger model for longer threads.
+- L71-91: Custom semaphore caps concurrent LLM calls; queued requests wait until slots free.
+- L96-132: Exposes detailed runtime stats including success/failure/retry/latency, model usage, concurrency, and key health metadata.
+- L138-213: `callGroq` composes system+recent messages, performs retry loop on retryable statuses, applies exponential backoff/jitter, marks keys unhealthy on 429, and fails after bounded retries.
+- Reliability note: service combines backpressure + multi-key failover, reducing single-key outage blast radius under throttling.
+
+### apps/api/src/services/llm.service.js
+- L1-39: Azure OpenAI primary provider wrapper initializes SDK with deployment-specific base URL and preview API version headers; logs deployment selection.
+- L41-57: Reads and clamps configurable temperature and context-token budget from env to guard invalid values.
+- L59-73: Semaphore mirrors Groq path to constrain concurrent requests and track queue pressure.
+- L76-88: Stats object tracks retries and fallback outcomes, exposing provider/deployment/concurrency diagnostics.
+- L90-113: Message trimming uses rough token estimation (chars/4 heuristic) to keep recent context within configurable budget.
+- L116-132: `_callAzure` constructs system+trimmed history and enforces non-empty completion content.
+- L142-191: `callLLM` retries Azure failures with backoff, treats 429 specially, then falls back to Groq on exhaustion while preserving success/failure accounting.
+- Architecture intent: unified gateway centralizes provider routing so core engines stay model-provider agnostic.
+
+### apps/api/src/services/session.service.js
+- L1-21: Redis-first session cache keyed by business+phone with 24h TTL and bounded recent-message history size.
+- L28-71: `getSession` reads cached JSON and validates conversation existence/status in Mongo (`active|handed_off`) to purge stale/deleted cache entries.
+- L58-66: Adds max-session-age invalidation (180-day guard) to avoid reviving long-expired conversational state.
+- L76-115: Mongo fallback reconstructs session from latest eligible conversation + recent messages, then performs best-effort Redis write-back.
+- L121-132: `saveSession` updates cache with refreshed `lastUpdatedAt` and fail-open logging on Redis write errors.
+- L138-143: `clearSession` best-effort deletes cache key without throwing hard failures.
+- Resilience pattern: Redis outages degrade gracefully to Mongo reads instead of interrupting bot processing.
+
+### apps/api/src/services/transcription.service.js
+- L1-17: Groq Whisper transcription service downloads Meta media then submits audio for speech-to-text with guarded failure markers.
+- L19-24: Declares download timeout (15s) and hard file-size ceiling (25MB) aligned with provider limits.
+- L32-55: Step 1 fetches media metadata from Graph API (`/v21.0/{mediaId}`) and rejects missing URL/oversized assets.
+- L57-75: Step 2 downloads binary media via authorized CDN request and infers extension from MIME map.
+- L78-92: Step 3 constructs file payload and calls `groq.audio.transcriptions.create` with `whisper-large-v3-turbo`, defaulting language to Hindi.
+- L94-104: Returns text or marker constants (`__VOICE_TRANSCRIPTION_EMPTY__` / `__VOICE_TRANSCRIPTION_FAILED__`) and never throws.
+- Runtime risk: `new File(...)` depends on Node runtime support for global `File`; older Node versions may fail without polyfill or Blob/File shim.
+
+### apps/api/src/services/whatsapp.service.js
+- L1-20: Service module wraps WhatsApp Cloud API send/read operations with shared recipient normalization and structured error logging.
+- L22-47: `sendTextMessage` posts text payload to `/{phoneNumberId}/messages` with bearer token auth and returns provider response.
+- L49-76: `sendImageMessage` sends link-based image payload with optional caption.
+- L78-101: `sendInteractiveButtons` posts interactive button structure directly; assumes caller passes schema-valid button array.
+- L103-122: `markAsRead` marks inbound message id as read using same endpoint.
+- Operational caveat: top-of-file generator-style comments are stale/misaligned with actual implementation (mentions only 3 funcs while module exports 4 incl. image).
+
+### apps/api/src/utils/asyncHandler.js
+- L1-12: Minimal Express async wrapper converts thrown/rejected async route errors into `next(err)` flow.
+- Pattern consistency: keeps route files concise and centralizes promise rejection propagation without repetitive try/catch blocks.
+
+### apps/api/src/utils/encryption.js
+- L1-5: AES-256-GCM utility initializes crypto parameters and derives encryption key from hex `ENCRYPTION_KEY` env value.
+- L7-19: `encrypt` generates random IV, encrypts UTF-8 plaintext, captures auth tag, and serializes as `iv:tag:ciphertext` hex tuple.
+- L21-31: `decrypt` reverses tuple parsing and authenticated decryption, returning UTF-8 plaintext.
+- Safety note: module assumes key validity/length at load time; malformed env key can trigger runtime crypto errors during first use.
+
+### apps/api/src/utils/phone.js
+- L1-18: Phone normalizer converts mixed-format inputs to E.164-like output with India-specific heuristics for local 10/11/12-digit forms.
+- L20-27: Recipient converter strips non-digits to satisfy WhatsApp Cloud API requirements.
+- Behavior note: non-Indian and unusual digit lengths fall through to best-effort `+<digits>` normalization, which may still require upstream validation for strict compliance.
+
+### apps/api/src/verticals/coaching/config.js
+- L1-8: Coaching vertical definition sets counsellor persona and goal ladder tailored to inquiry→course→qualification→demo flow.
+- L19-30: Handoff triggers include English/Hindi escalation/negotiation/complaint phrases, biasing early human intervention for fee disputes.
+- L32-36: Quick replies optimize common coaching intents (course info, fees, demo).
+- L38-41: Scheduling explicitly disabled, signaling demo handling outside appointment subsystem.
+- L44-64: Scoring rules mark hot on demo/handoff signals, warm on complete profile triad, cold on partial/no data.
+
+### apps/api/src/verticals/realestate/config.js
+- L1-7: Placeholder-but-functional real estate config introduces property-consultant persona and non-live vertical positioning.
+- L13-29: Goals and quick replies model buyer-journey capture (budget/timeline/location/site visit/contact).
+- L34-37: Scheduling disabled, implying field agents manage visits manually.
+- L42-90: Scoring rules use parsed budget/timeline thresholds: hot when `>50L` + `<=3 months` (or handoff), warm for mixed-signal near-intent, cold for partial data.
+- L94-136: Helper parsers normalize Indian budget expressions (`L`, `crore`, raw numerics) and timeline phrases (`months/years/immediate/next month`).
+- Maintainability note: helper parsers are embedded in config file, increasing config-code coupling but keeping scoring logic self-contained.
+
+### apps/api/src/verticals/school/config.js
+- L1-18: School vertical sets admissions counsellor persona with parent/student/visit-centric goals.
+- L20-25: Handoff phrase bank covers bilingual escalation intents for human transfer.
+- L26-30: Quick replies are bilingual (English + Hindi labels) tuned for admissions FAQs.
+- L34-43: Scheduling enabled with explicit visit window and required document checklist.
+- L49-72: Scoring marks hot for visit/handoff signals, warm for full parent-student-class triad, cold for partial data with missing-field count.
+- L75-122: Includes `specialKnowledge.talentHunt2026` structured pack (participation, process, judging, awards/titles) for admissions-side event queries.
+
+### apps/api/src/webhooks/whatsapp.handler.js
+- L1-18: Webhook handler delegates core conversation processing and supports broad inbound message types including media/interactive.
+- L24-28: Responds HTTP 200 immediately to prevent Meta retry storms, then processes asynchronously.
+- L35-42: Status callbacks (`delivered/read/failed`) are persisted best-effort to message records.
+- L49-63: Normalizes sender phone once and deduplicates provider retries with Redis `SET NX` key (`processed:<waMessageId>`, 5m TTL).
+- L65-74: Logs non-text/unsupported types and skips unsupported payloads safely.
+- L77-96: Uses middleware rate-limit flags to send one-time wait message at threshold boundary (`count===21`), then drops excess traffic silently.
+- L100-104: Main path invokes `processMessage(req)`; errors are logged without breaking webhook ACK behavior.
+
+### apps/api/tmp/update.token.js
+- Empty placeholder file under `apps/api/tmp`; currently no executable logic.
+- Operational implication: likely reserved for local one-off token update utility but not yet implemented.
+
+### apps/dashboard/.gitkeep
+- Empty placeholder used to preserve dashboard directory in git history.
+
+### apps/dashboard/app/admin/analytics/page.js
+- L1-14: Client-side reseller analytics page composes multiple API queries (`score-trend`, `avg-score-time`, funnel, growth, message/day, top clients).
+- L16-46: Extensive client-side data shaping normalizes heterogeneous backend response formats into chart-ready arrays.
+- L59-204: Renders six chart panels (quality trend, avg time, funnel, weekday messaging, growth, top clients) using shared `ChartWrapper` and `recharts` primitives.
+- UI dependency: uses hard-coded color palette constants alongside CSS vars, creating mixed theming sources.
+
+### apps/dashboard/app/admin/appointments/page.js
+- L1-16: Appointments list with status/client filters and slide-over detail view; data fetched from `/api/admin/appointments` and `/api/admin/clients`.
+- L18-24: Memoized local filtering on client/status over fetched appointment array.
+- L29-85: Table rendering includes parent/contact, client, student, preference, status badge, docs advised, and created timestamp.
+- L90-103: Read-only detail panel surfaces richer appointment metadata and advised document chips.
+
+### apps/dashboard/app/admin/clients/page.js
+- L1-20: Clients module supports list mode and scoped single-client mode with stats subfetch when selected.
+- L24-46: Edit workflow patches client settings/subscription via `/api/admin/clients/:id`.
+- L48-56: Bot toggle action calls `/api/admin/clients/:id/bot` and refreshes list.
+- L58-107: Scoped detail view shows KPI cards + management controls (edit, pause/resume).
+- L116-181: Main list view presents portfolio table with actions and recency indicators.
+- L184-263: Slide-over form edits business/settings/subscription; confirm dialog handles pause/resume risk acknowledgment.
+
+### apps/dashboard/app/admin/conversations/page.js
+- L1-22: Conversation explorer implements pageable/filterable list and right-pane transcript reader.
+- L24-46: Selecting a conversation fetches recent messages; `loadEarlier` prepends older messages with cursor (`before` timestamp).
+- L48-50: Auto-scroll to message end on updates for chat-like UX.
+- L60-108: Left panel combines search, client filter, score chips, and compact thread previews.
+- L110-170: Right panel renders date separators and inbound/outbound bubble styles in read-only mode.
+- Responsiveness: mobile behavior conditionally hides one pane based on `window.innerWidth`, introducing client-only layout branch logic.
+
+### apps/dashboard/app/admin/dashboard/page.js
+- L1-19: Admin dashboard aggregates many endpoints (`stats`, chart feeds, activity, clients) into one high-density overview.
+- L23-52: Local transformers reconcile inconsistent backend shapes (object vs array payloads, nested `data` wrappers).
+- L82-257: Multi-row analytics UI with cards/charts/funnel/activity and portfolio health table using shared UI primitives.
+- Data caveat: several fields use placeholders or derived approximations (e.g., client `visitsConfirmed: 0`, `avgScore: null`) pending richer API payloads.
+
+### apps/dashboard/app/admin/leads/page.js
+- L1-18: Leads page adds server-driven filtering/pagination through query params for score/search/client.
+- L20-25: `openLead` fallback performs search by conversation id and opens first matched lead in slide-over.
+- L27-38: Declarative column schema drives `DataTable` rendering, including badges and relative timestamps.
+- L50-88: Filter controls keep page reset behavior when query inputs change.
+- L98-117: Slide-over profile summarizes lead attributes, score reason, and handoff/visit flags.
+
+### apps/dashboard/app/admin/settings/page.js
+- L1-15: Settings page manages reseller profile + theme config + password update in one screen.
+- L17-37: On fetch completion, builds editable form state with deep theme defaults.
+- L39-48: Generic dotted-path setter mutates nested form object via deep clone.
+- L50-72: Save action patches `/api/admin/settings`, then updates local stored user theme and applies CSS vars immediately for live branding.
+- L74-87: Password change flow calls `/api/auth/change-password` with client-side match/min-length checks.
+- L100-265: Dual-column profile/theme editor with read-only vs edit modes and reusable field helpers.
+- UX note: combines account/security/theming concerns into one route, increasing form complexity but minimizing navigation overhead.
+
+### apps/dashboard/app/admin/widget/page.js
+- L1-14: Widget admin page defines default theme tokens and loads reseller clients for per-client widget configuration.
+- L20-50: `loadWidget` fetches `/api/admin/clients/:id/widget`, hydrates full form state (enable flags, copy, capture toggles, origins, theme).
+- L60-68: Generic dotted-path setter reused for deeply nested `theme.*` updates.
+- L70-83: Save action PATCHes widget payload with newline-parsed allowed origins list.
+- L85-99: Generates/copies embeddable script tag referencing `API_URL` and selected business id.
+- L107-307: Main UI covers status controls, behavior toggles, theme editors, security origins, embed snippet, and save feedback.
+- L309-386: Live preview column simulates widget shell/messages/floating button using current form theme values.
+- Security note: preview and controls are rich, but origin-policy correctness still depends on backend enforcement in `widget.routes.js`.
+
+### apps/dashboard/app/client/appointments/page.js
+- L1-19: Client appointments screen supports dual modes (table list + calendar) with status filtering and reusable detail slide-over.
+- L21-47: Local memoization builds filtered rows and month-day calendar matrix/event map from appointment payloads.
+- L58-123: List view table exposes parent/student/preference/status/docs metadata and click-through detail actions.
+- L125-168: Calendar view paints day cells with lightweight status-color badges and month navigation.
+- L171-207: Slide-over consolidates lead/appointment metadata, advised docs, optional notes, and audit timestamps.
+
+### apps/dashboard/app/client/conversations/page.js
+- L1-21: Conversation UI mirrors admin split-pane pattern with score/search filters and paged thread loading.
+- L23-45: Message fetch supports lazy backfill (`before=<oldestTimestamp>`) and read-only transcript browsing.
+- L47-55: Profile side action fetches enriched lead detail from `/api/client/leads/:conversationId`.
+- L66-143: Left pane renders lead previews with score badges, recency, and active indicators.
+- L146-217: Right pane renders chat bubbles with date separators and mobile back-navigation.
+- L220-235: Slide-over displays deep lead profile + appointment summary for current conversation.
+
+### apps/dashboard/app/client/dashboard/page.js
+- L1-17: Client dashboard composes KPI cards and six analytics feeds (`stats`, volume, score dist, funnel, score-over-time, heatmap, activity, hot leads).
+- L19-59: Multiple data normalization stages transform backend aggregates into chart/donut/funnel/heatmap structures.
+- L71-194: Visual sections include trend line, score donut, funnel drop-off, stacked score history, and hourly-weekday heatmap grid.
+- L196-224: Activity feed and recent-hot-leads strip provide operational at-a-glance actions.
+- Implementation quirk: first line-chart overlays previous/current series by rendering separate `<Line data=...>` sources rather than single unified dataset.
+
+### apps/dashboard/app/client/leads/page.js
+- L1-16: Leads page includes score chips, debounced search, server-side pagination, and CSV export.
+- L18-22: Debounce uses `window.__searchTimer` global sentinel (300ms), which works client-side but is a shared mutable global.
+- L24-32: Row click fetches detailed lead payload from `/api/client/leads/:id` and opens slide-over profile.
+- L34-46: CSV export calls authenticated backend endpoint and triggers browser download via blob URL.
+- L52-75: DataTable column schema renders score/reason tooltips and visit/handoff flags.
+- L124-155: Detail panel shows full flow-state, scoring rationale, lifecycle timestamps, and optional appointment block.
+
+### apps/dashboard/app/client/settings/page.js
+- L1-14: Client settings page merges read-only business/bot configuration with password change action.
+- L16-30: Password form enforces match + minimum length before calling shared `/api/auth/change-password` endpoint.
+- L32-89: Two cards present school knowledge data and bot metadata from `/api/client/settings` payload.
+- L91-105: Password card provides status feedback and loading state handling.
+- UX boundary: business/bot config are informative only; mutation capabilities are intentionally omitted for client role.
+
+### apps/dashboard/app/globals.css
+- L1-3: Tailwind base/components/utilities import order is standard for Next + Tailwind pipeline.
+- L5-11: Root CSS variables define dark-theme defaults for primary/accent/background/sidebar/text.
+- L13-16: Global body applies variable-driven background/text colors.
+- L18-44: Utility animations/styles include skeleton shimmer, slide-over transitions, and custom scrollbar skinning.
+- L46-62: Chat transcript visual tokens (`bubble-user`, `bubble-assistant`, `system-pill`) establish consistent conversation styling.
+
+### apps/dashboard/app/layout.js
+- L1-5: Root layout imports global CSS and static metadata (`Dashboard`, `Management Dashboard`).
+- L7-13: Minimal HTML scaffold renders children inside `body.min-h-screen`; no providers/theme wrappers defined here.
+
+### apps/dashboard/app/login/page.js
+- L1-11: Client login page manages credentials + loading/error state and uses shared API helpers for auth persistence.
+- L13-35: Submit handler posts to `/api/auth/login`, stores token/user, then routes by role (`superadmin`, `reseller`, `client`).
+- L39-86: Standalone light-theme login form with inline error box and disabled submit during request.
+- Security concern: footer comments embed real credential examples in source file; should be removed for production hygiene.
+
+### apps/dashboard/app/page.js
+- L1-8: Root route is a thin client redirect component that immediately `replace('/login')`.
+- Simplifies unauthenticated entry behavior without rendering interim UI.
+
+### apps/dashboard/app/superadmin/clients/page.js
+- L1-24: Superadmin client-management screen supports reseller filtering, CRUD form state, and activation toggles.
+- L39-82: `openEdit` normalizes incoming client record into editable nested form (WhatsApp, settings, pricing, widget, direct-client mode).
+- L84-91: Generic dotted-path deep setter pattern reused throughout complex admin forms.
+- L93-112: Save path handles create vs patch and direct-client `resellerId` null semantics.
+- L137-190: Portfolio table surfaces reseller/direct ownership, lead stats, widget status, and lifecycle controls.
+- L204-271: Large slide-over form configures business identity, WhatsApp credentials, settings, pricing/subscription, and widget flag.
+- Risk surface: form exposes raw WhatsApp access tokens in UI, requiring strict RBAC/session security and audit logging.
+
+### apps/dashboard/app/superadmin/dashboard/page.js
+- L1-20: Platform dashboard aggregates superadmin KPI/stat/chart endpoints plus reseller health list.
+- L22-35: Normalizes mixed API shapes into chart series (including merged conversations/messages daily volume).
+- L52-171: Renders platform volume, revenue, reseller performance, vertical distribution, and system-health trend charts.
+- L193-229: Reseller health table provides quick pivot into reseller management with fee/status indicators.
+
+### apps/dashboard/app/superadmin/leads/page.js
+- L1-15: Cross-tenant leads explorer with score/search/reseller filtering and paginated table.
+- L17-30: DataTable columns include client + reseller context and key lead progression markers.
+- L40-76: Filter toolbar controls query-driven reloads.
+- L78-104: Slide-over displays concise lead detail summary from row data.
+
+### apps/dashboard/app/superadmin/resellers/page.js
+- L1-15: Reseller admin module with create/edit/detail/deactivate flows and default white-label theme scaffold.
+- L36-50: `openEdit` maps reseller + pricing + themeConfig into deep editable form state.
+- L52-59: Dotted-path deep setter mirrors other admin forms.
+- L61-72: Save logic dispatches create vs patch mutations then refreshes listing.
+- L101-138: Reseller table exposes pricing, capacity usage, revenue, fee status, and lifecycle actions.
+- L152-263: Slide-over editor configures identity, custom pricing, and full white-label color/support settings.
+- L266-306: Detail view shows financial/usage metrics and theme preview chips.
+
+### apps/dashboard/app/superadmin/settings/page.js
+- L1-11: Lightweight superadmin settings page with only platform info card + password change form.
+- L13-23: Password change follows same validation pattern as other roles and calls `/api/auth/change-password`.
+- L28-55: Minimal layout without additional platform mutation controls.
+
+### apps/dashboard/app/superadmin/system/page.js
+- L1-15: System tabbed console fetches health, error log, and API usage statistics.
+- L24-84: Health tab renders service status cards, Mongo collection counts, and runtime metadata.
+- L86-111: Errors tab displays recent log events with level badges and preformatted messages.
+- L113-170: API usage tab emphasizes LLM operational metrics (provider, success/failure/retry, concurrency, fallback rates, estimated token/cost summaries).
+- Monitoring value: exposes runtime diagnostics directly in dashboard, reducing need for external observability tooling for first-level ops triage.
+
+### apps/dashboard/app/superadmin/users/page.js
+- L1-25: User admin page supports role/search filtering and loads reseller/client lists to contextualize assignments.
+- L27-45: Create/edit modal state handles role-specific associations and field constraints.
+- L47-59: Save path creates users with optional scope IDs or patches existing users with nullable scope handling.
+- L71-79: Password reset action updates target user via patch with `newPassword`.
+- L86-136: User table includes role pills, organization linkage, activity, and lifecycle actions.
+- L150-203: Slide-over form adapts fields for superadmin/reseller/client role assignment flows.
+- L206-216: Separate reset-password slide-over enforces min-length before submit.
+
+### apps/dashboard/components/DashboardLayout.js
+- L1-15: Layout enforces auth + role gating using token/user in local storage and redirects unauthorized access.
+- L17-36: Applies user theme variables (colors/brand/favicon) to DOM at runtime.
+- L47-55: Wraps all dashboard pages with shared sidebar and responsive main content container.
+
+### apps/dashboard/components/Sidebar.js
+- L6-35: Defines role-specific navigation sets for client/reseller/superadmin personas.
+- L47-57: Loads persisted user, redirects missing user to login, and prepares themed brand panel.
+- L68-137: Desktop sidebar renders nav state, user chip, logout action, and optional platform credit.
+- L139-156: Mobile bottom tab bar exposes first five role routes.
+
+### apps/dashboard/components/UI.js
+- Consolidated UI primitives power most dashboard screens: cards, badges, slide-overs, tables, charts wrapper, modal/confirm, and form controls.
+- Components are theme-variable aware, with hard-coded semantic status colors for lead/health badges.
+- `DataTable` implements reusable loading/empty/pagination behaviors and row click interactions.
+
+### apps/dashboard/hooks/useFetch.js
+- Thin fetch hook around `apiFetch` with memoized loader and dependency-triggered refresh.
+- Returns `refetch` for manual reloads and gracefully no-ops when URL is null.
+
+### apps/dashboard/lib/api.js
+- Central API client handles base URL resolution, auth header injection, 401 auto-logout redirect, and JSON/CSV response branching.
+- Shared token/user helpers make localStorage the dashboard auth source of truth.
+
+### apps/dashboard/lib/format.js
+- Formatting utilities standardize Indian locale numbers/dates, relative time text, appointment preference display, truncation, and delta indicators.
+
+### apps/dashboard/next.config.js
+- Next standalone deployment config with strict mode and explicit public API URL env passthrough.
+
+### apps/dashboard/postcss.config.js
+- Minimal PostCSS plugin chain: Tailwind + Autoprefixer.
+
+### apps/dashboard/tailwind.config.js
+- Tailwind content scan targets app/components and maps design colors to CSS variables.
+
+### apps/widget/.gitkeep
+- Empty placeholder preserving widget package folder.
+
+### apps/widget/demo.html
+- Static demo landing page showcasing widget capabilities and one-script embed integration flow.
+- Includes local embed snippet (`localhost:3000`) and a hardcoded business id for manual validation.
+
+### apps/widget/dist/ayka-widget.js
+- Browser bundle auto-initializes from script attributes, caches visitor/messages in localStorage, injects full widget CSS, and mounts floating chat UI.
+- Supports info collection, message rendering, widget open/close lifecycle, and backend message dispatch.
+- Checked-in artifact appears built/minimally bundled; no source counterpart in package currently tracked.
+
+### infra/docker/.gitkeep
+- Empty placeholder maintaining infra/docker path in repo.
+
+### infra/docker/Dockerfile
+- API multi-stage Dockerfile installs workspace deps, copies API + shared packages, and runs API on Node 20 Alpine.
+- Uses `npm install --omit=dev` to tolerate workspace drift.
+
+### infra/docker/Dockerfile.dashboard
+- Dashboard multi-stage Dockerfile builds Next standalone app with optional `NEXT_PUBLIC_API_URL` build arg.
+- Runtime stage serves standalone `server.js` on port `3001`.
+
+### package-lock.json
+- Root lockfile v3 defines full workspace dependency graph and links for `@ayka/*` packages.
+- Generated file with notable package version drift hints relative to some package manifests.
+
+### packages/db/index.js
+- Barrel export exposing all Mongo models to consuming packages.
+
+### packages/db/models/.gitkeep
+- Empty placeholder in models directory.
+
+### packages/db/models/Appointment.js
+- Appointment schema captures visit booking snapshots, status lifecycle, notification state, and per-conversation uniqueness.
+
+### packages/db/models/Business.js
+- Business schema includes tenant identity, WhatsApp credentials, subscription/pricing, settings, and widget config.
+- Unique `whatsapp.phoneNumberId` index supports deterministic tenant resolution.
+
+### packages/db/models/Contact.js
+- Contact schema supports WhatsApp + web widget identities and profile enrichment metadata.
+- Uses partial unique index for `(businessId, phone)` and sparse visitor index.
+
+### packages/db/models/Conversation.js
+- Core lead/conversation schema tracks flow state, source attribution, lifecycle, and persisted lead score rationale.
+- Indexed heavily for dashboard filtering by business/status/contact/score/time.
+
+### packages/db/models/KnowledgeBase.js
+- Per-business KB document with flexible mixed content, versioning, activation flag, and unique business binding.
+
+### packages/db/models/Message.js
+- Message schema stores direction/role/content payloads with delivery status and optional unique WA message id.
+
+### packages/db/models/Reseller.js
+- Reseller schema models pricing plan, platform fee state, and white-label theme/feature settings.
+
+### packages/db/models/User.js
+- User schema handles role-scoped identity, hidden password hash, theme config, and active/login tracking.
+
+### packages/db/package.json
+- Minimal package manifest for `@ayka/db`.
+
+### packages/shared/index.js
+- Empty shared package entrypoint (scaffold only).
+
+### packages/shared/package.json
+- Minimal package manifest for `@ayka/shared`.
+
+### services/zoho-csdirect/src/.gitkeep
+- Empty placeholder indicating Zoho connector source path exists but implementation is pending.
+
+### apps/api/src/utils/logger.js
+- L1-24: Defines second pino logger instance with redact policy and dev-only pretty transport.
+- Difference from `config/logger.js`: no explicit log level field and includes wildcard path `*.*.phone`.
+- Risk: dual logger definitions can cause inconsistent redaction/verbosity depending on import path.
+
+### apps/dashboard/package.json
+- L1-9: Next.js dashboard package scripts hard-pin port `3001` in both dev and start commands.
+- L10-17: UI/runtime deps include Next 14 + React 18 + charting/date/cookie helpers.
+- L18-24: Tailwind/PostCSS toolchain and type packages; no dedicated test/lint scripts visible in this package file.
+
+### apps/widget/package.json
+- L1-4: Minimal private package declaration; no scripts/deps, implying built artifact is maintained manually or via external pipeline.
+
+### docker-compose.yml
+- L1-2: Production-oriented compose descriptor with explicit `docker compose up -d` usage comment.
+- L4-25 (`api`): Builds from `infra/docker/Dockerfile`, publishes `3000`, loads `apps/api/.env.production`, includes HTTP healthcheck on `/health`, and log rotation settings.
+- L27-44 (`dashboard`): Builds from `infra/docker/Dockerfile.dashboard`, exposes `3001`, injects `NEXT_PUBLIC_API_URL` and fixed `PORT=3001`, and waits for healthy API service before startup.
+- Tenant/security implication: environment comes directly from repo-mounted env file path; secrets hygiene depends on deployment pipeline controls.
+
+### package.json
+- L1-4: Monorepo root metadata (`name`, `version`, `private`) identifies workspace root and prevents accidental publish.
+- L5-8: NPM workspaces scoped to `apps/*` and `packages/*`; no `services/*` workspace binding yet.
+- L9-11: Root runtime dependency only `dotenv`; app-specific deps are package-local.
+
+## Excluded Artifacts Catalog
+- The following paths are cataloged but not line-analyzed because they are generated/vendor/binary artifacts outside source-code reasoning scope for feature work.
+
+- SPV/Achivements 1.pdf
+- SPV/Achivements 2..pdf
+- SPV/Achivements 3.pdf
+- SPV/Activities.pdf
+- SPV/Alumni.pdf
+- SPV/DOC-20260225-WA0012..pdf
+- SPV/Deatils Sant Pathik Talent Hunt 2026-1 (1).pdf
+- SPV/FACULTY DETAILS.pdf
+- SPV/FEE STRUCTURE 2026-27.pdf
+- SPV/General Information.pdf
+- SPV/LIST OF SUBJECT OFFERED AT VARIOUS LEVELS 2026-27.pdf
+- SPV/MD & Principal.pdf
+- SPV/SCHOOL DIRECTORY.pdf
+- SPV/Society Update Certificate 2024.pdf
+- SPV/Society Update Member List 2024.pdf
+- SPV/Students Strength (2025-26).pdf
+- SPV/Test.pdf
+- SPV/VIDYALAYA AN INTRODUCTION.pdf
+- SPV/office staff.pdf
+- apps/api/node_modules/dotenv/CHANGELOG.md
+- apps/api/node_modules/dotenv/LICENSE
+- apps/api/node_modules/dotenv/README-es.md
+- apps/api/node_modules/dotenv/README.md
+- apps/api/node_modules/dotenv/SECURITY.md
+- apps/api/node_modules/dotenv/config.d.ts
+- apps/api/node_modules/dotenv/config.js
+- apps/api/node_modules/dotenv/lib/cli-options.js
+- apps/api/node_modules/dotenv/lib/env-options.js
+- apps/api/node_modules/dotenv/lib/main.d.ts
+- apps/api/node_modules/dotenv/lib/main.js
+- apps/api/node_modules/dotenv/package.json
+- apps/api/public/spv-qr.jpeg
+- apps/dashboard/.next/BUILD_ID
+- apps/dashboard/.next/app-build-manifest.json
+- apps/dashboard/.next/app-path-routes-manifest.json
+- apps/dashboard/.next/build-manifest.json
+- apps/dashboard/.next/cache/webpack/client-development/0.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/1.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/2.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/3.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/4.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/5.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/6.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/7.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/8.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/9.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/index.pack.gz
+- apps/dashboard/.next/cache/webpack/client-development/index.pack.gz.old
+- apps/dashboard/.next/cache/webpack/client-production/0.pack
+- apps/dashboard/.next/cache/webpack/client-production/1.pack
+- apps/dashboard/.next/cache/webpack/client-production/2.pack
+- apps/dashboard/.next/cache/webpack/client-production/3.pack
+- apps/dashboard/.next/cache/webpack/client-production/4.pack
+- apps/dashboard/.next/cache/webpack/client-production/5.pack
+- apps/dashboard/.next/cache/webpack/client-production/6.pack
+- apps/dashboard/.next/cache/webpack/client-production/index.pack
+- apps/dashboard/.next/cache/webpack/client-production/index.pack.old
+- apps/dashboard/.next/cache/webpack/edge-server-production/0.pack
+- apps/dashboard/.next/cache/webpack/edge-server-production/index.pack
+- apps/dashboard/.next/cache/webpack/server-development/0.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/1.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/10.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/11.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/12.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/13.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/2.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/3.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/4.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/5.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/6.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/7.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/8.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/9.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/index.pack.gz
+- apps/dashboard/.next/cache/webpack/server-development/index.pack.gz.old
+- apps/dashboard/.next/cache/webpack/server-production/0.pack
+- apps/dashboard/.next/cache/webpack/server-production/1.pack
+- apps/dashboard/.next/cache/webpack/server-production/2.pack
+- apps/dashboard/.next/cache/webpack/server-production/3.pack
+- apps/dashboard/.next/cache/webpack/server-production/4.pack
+- apps/dashboard/.next/cache/webpack/server-production/index.pack
+- apps/dashboard/.next/cache/webpack/server-production/index.pack.old
+- apps/dashboard/.next/export-marker.json
+- apps/dashboard/.next/images-manifest.json
+- apps/dashboard/.next/next-minimal-server.js.nft.json
+- apps/dashboard/.next/next-server.js.nft.json
+- apps/dashboard/.next/package.json
+- apps/dashboard/.next/prerender-manifest.json
+- apps/dashboard/.next/react-loadable-manifest.json
+- apps/dashboard/.next/required-server-files.json
+- apps/dashboard/.next/routes-manifest.json
+- apps/dashboard/.next/server/app-paths-manifest.json
+- apps/dashboard/.next/server/app/_not-found.html
+- apps/dashboard/.next/server/app/_not-found.meta
+- apps/dashboard/.next/server/app/_not-found.rsc
+- apps/dashboard/.next/server/app/_not-found/page.js
+- apps/dashboard/.next/server/app/_not-found/page.js.nft.json
+- apps/dashboard/.next/server/app/_not-found/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/analytics.html
+- apps/dashboard/.next/server/app/admin/analytics.meta
+- apps/dashboard/.next/server/app/admin/analytics.rsc
+- apps/dashboard/.next/server/app/admin/analytics/page.js
+- apps/dashboard/.next/server/app/admin/analytics/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/analytics/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/appointments.html
+- apps/dashboard/.next/server/app/admin/appointments.meta
+- apps/dashboard/.next/server/app/admin/appointments.rsc
+- apps/dashboard/.next/server/app/admin/appointments/page.js
+- apps/dashboard/.next/server/app/admin/appointments/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/appointments/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/clients.html
+- apps/dashboard/.next/server/app/admin/clients.meta
+- apps/dashboard/.next/server/app/admin/clients.rsc
+- apps/dashboard/.next/server/app/admin/clients/page.js
+- apps/dashboard/.next/server/app/admin/clients/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/clients/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/conversations.html
+- apps/dashboard/.next/server/app/admin/conversations.meta
+- apps/dashboard/.next/server/app/admin/conversations.rsc
+- apps/dashboard/.next/server/app/admin/conversations/page.js
+- apps/dashboard/.next/server/app/admin/conversations/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/conversations/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/dashboard.html
+- apps/dashboard/.next/server/app/admin/dashboard.meta
+- apps/dashboard/.next/server/app/admin/dashboard.rsc
+- apps/dashboard/.next/server/app/admin/dashboard/page.js
+- apps/dashboard/.next/server/app/admin/dashboard/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/leads.html
+- apps/dashboard/.next/server/app/admin/leads.meta
+- apps/dashboard/.next/server/app/admin/leads.rsc
+- apps/dashboard/.next/server/app/admin/leads/page.js
+- apps/dashboard/.next/server/app/admin/leads/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/settings.html
+- apps/dashboard/.next/server/app/admin/settings.meta
+- apps/dashboard/.next/server/app/admin/settings.rsc
+- apps/dashboard/.next/server/app/admin/settings/page.js
+- apps/dashboard/.next/server/app/admin/settings/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/admin/widget.html
+- apps/dashboard/.next/server/app/admin/widget.meta
+- apps/dashboard/.next/server/app/admin/widget.rsc
+- apps/dashboard/.next/server/app/admin/widget/page.js
+- apps/dashboard/.next/server/app/admin/widget/page.js.nft.json
+- apps/dashboard/.next/server/app/admin/widget/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/client/appointments.html
+- apps/dashboard/.next/server/app/client/appointments.meta
+- apps/dashboard/.next/server/app/client/appointments.rsc
+- apps/dashboard/.next/server/app/client/appointments/page.js
+- apps/dashboard/.next/server/app/client/appointments/page.js.nft.json
+- apps/dashboard/.next/server/app/client/appointments/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/client/conversations.html
+- apps/dashboard/.next/server/app/client/conversations.meta
+- apps/dashboard/.next/server/app/client/conversations.rsc
+- apps/dashboard/.next/server/app/client/conversations/page.js
+- apps/dashboard/.next/server/app/client/conversations/page.js.nft.json
+- apps/dashboard/.next/server/app/client/conversations/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/client/dashboard.html
+- apps/dashboard/.next/server/app/client/dashboard.meta
+- apps/dashboard/.next/server/app/client/dashboard.rsc
+- apps/dashboard/.next/server/app/client/dashboard/page.js
+- apps/dashboard/.next/server/app/client/dashboard/page.js.nft.json
+- apps/dashboard/.next/server/app/client/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/client/leads.html
+- apps/dashboard/.next/server/app/client/leads.meta
+- apps/dashboard/.next/server/app/client/leads.rsc
+- apps/dashboard/.next/server/app/client/leads/page.js
+- apps/dashboard/.next/server/app/client/leads/page.js.nft.json
+- apps/dashboard/.next/server/app/client/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/client/settings.html
+- apps/dashboard/.next/server/app/client/settings.meta
+- apps/dashboard/.next/server/app/client/settings.rsc
+- apps/dashboard/.next/server/app/client/settings/page.js
+- apps/dashboard/.next/server/app/client/settings/page.js.nft.json
+- apps/dashboard/.next/server/app/client/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/index.html
+- apps/dashboard/.next/server/app/index.meta
+- apps/dashboard/.next/server/app/index.rsc
+- apps/dashboard/.next/server/app/login.html
+- apps/dashboard/.next/server/app/login.meta
+- apps/dashboard/.next/server/app/login.rsc
+- apps/dashboard/.next/server/app/login/page.js
+- apps/dashboard/.next/server/app/login/page.js.nft.json
+- apps/dashboard/.next/server/app/login/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/page.js
+- apps/dashboard/.next/server/app/page.js.nft.json
+- apps/dashboard/.next/server/app/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/clients.html
+- apps/dashboard/.next/server/app/superadmin/clients.meta
+- apps/dashboard/.next/server/app/superadmin/clients.rsc
+- apps/dashboard/.next/server/app/superadmin/clients/page.js
+- apps/dashboard/.next/server/app/superadmin/clients/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/clients/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/dashboard.html
+- apps/dashboard/.next/server/app/superadmin/dashboard.meta
+- apps/dashboard/.next/server/app/superadmin/dashboard.rsc
+- apps/dashboard/.next/server/app/superadmin/dashboard/page.js
+- apps/dashboard/.next/server/app/superadmin/dashboard/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/leads.html
+- apps/dashboard/.next/server/app/superadmin/leads.meta
+- apps/dashboard/.next/server/app/superadmin/leads.rsc
+- apps/dashboard/.next/server/app/superadmin/leads/page.js
+- apps/dashboard/.next/server/app/superadmin/leads/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/resellers.html
+- apps/dashboard/.next/server/app/superadmin/resellers.meta
+- apps/dashboard/.next/server/app/superadmin/resellers.rsc
+- apps/dashboard/.next/server/app/superadmin/resellers/page.js
+- apps/dashboard/.next/server/app/superadmin/resellers/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/resellers/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/settings.html
+- apps/dashboard/.next/server/app/superadmin/settings.meta
+- apps/dashboard/.next/server/app/superadmin/settings.rsc
+- apps/dashboard/.next/server/app/superadmin/settings/page.js
+- apps/dashboard/.next/server/app/superadmin/settings/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/system.html
+- apps/dashboard/.next/server/app/superadmin/system.meta
+- apps/dashboard/.next/server/app/superadmin/system.rsc
+- apps/dashboard/.next/server/app/superadmin/system/page.js
+- apps/dashboard/.next/server/app/superadmin/system/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/system/page_client-reference-manifest.js
+- apps/dashboard/.next/server/app/superadmin/users.html
+- apps/dashboard/.next/server/app/superadmin/users.meta
+- apps/dashboard/.next/server/app/superadmin/users.rsc
+- apps/dashboard/.next/server/app/superadmin/users/page.js
+- apps/dashboard/.next/server/app/superadmin/users/page.js.nft.json
+- apps/dashboard/.next/server/app/superadmin/users/page_client-reference-manifest.js
+- apps/dashboard/.next/server/chunks/135.js
+- apps/dashboard/.next/server/chunks/271.js
+- apps/dashboard/.next/server/chunks/379.js
+- apps/dashboard/.next/server/chunks/592.js
+- apps/dashboard/.next/server/chunks/715.js
+- apps/dashboard/.next/server/chunks/879.js
+- apps/dashboard/.next/server/chunks/font-manifest.json
+- apps/dashboard/.next/server/font-manifest.json
+- apps/dashboard/.next/server/functions-config-manifest.json
+- apps/dashboard/.next/server/interception-route-rewrite-manifest.js
+- apps/dashboard/.next/server/middleware-build-manifest.js
+- apps/dashboard/.next/server/middleware-manifest.json
+- apps/dashboard/.next/server/middleware-react-loadable-manifest.js
+- apps/dashboard/.next/server/next-font-manifest.js
+- apps/dashboard/.next/server/next-font-manifest.json
+- apps/dashboard/.next/server/pages-manifest.json
+- apps/dashboard/.next/server/pages/404.html
+- apps/dashboard/.next/server/pages/500.html
+- apps/dashboard/.next/server/pages/_app.js
+- apps/dashboard/.next/server/pages/_app.js.nft.json
+- apps/dashboard/.next/server/pages/_document.js
+- apps/dashboard/.next/server/pages/_document.js.nft.json
+- apps/dashboard/.next/server/pages/_error.js
+- apps/dashboard/.next/server/pages/_error.js.nft.json
+- apps/dashboard/.next/server/server-reference-manifest.js
+- apps/dashboard/.next/server/server-reference-manifest.json
+- apps/dashboard/.next/server/webpack-runtime.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/BUILD_ID
+- apps/dashboard/.next/standalone/apps/dashboard/.next/app-build-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/app-path-routes-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/build-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/package.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/prerender-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/react-loadable-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/required-server-files.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/routes-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app-paths-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/_not-found/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/analytics/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/appointments/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/clients/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/conversations/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/admin/widget/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/appointments/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/conversations/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/client/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/index.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/index.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/index.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/login/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/clients/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/dashboard/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/leads/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/resellers/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/settings/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/system/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users.meta
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users.rsc
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users/page.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users/page.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/app/superadmin/users/page_client-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/135.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/271.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/379.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/592.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/715.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/chunks/879.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/font-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/middleware-build-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/middleware-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/middleware-react-loadable-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/next-font-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/next-font-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/404.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/500.html
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_app.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_app.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_document.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_document.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_error.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/pages/_error.js.nft.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/server-reference-manifest.js
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/server-reference-manifest.json
+- apps/dashboard/.next/standalone/apps/dashboard/.next/server/webpack-runtime.js
+- apps/dashboard/.next/standalone/apps/dashboard/package.json
+- apps/dashboard/.next/standalone/apps/dashboard/server.js
+- apps/dashboard/.next/standalone/package.json
+- apps/dashboard/.next/static/FSb8DrND9R78G2d6MhIo4/_buildManifest.js
+- apps/dashboard/.next/static/FSb8DrND9R78G2d6MhIo4/_ssgManifest.js
+- apps/dashboard/.next/static/chunks/1dd3208c-9071e594eb36d919.js
+- apps/dashboard/.next/static/chunks/210-1fd5d852567863ea.js
+- apps/dashboard/.next/static/chunks/292-25d56d58db4e8b0b.js
+- apps/dashboard/.next/static/chunks/440-7f04e4c1c637af52.js
+- apps/dashboard/.next/static/chunks/528-c734f8c51f534414.js
+- apps/dashboard/.next/static/chunks/98-57c84839e1072055.js
+- apps/dashboard/.next/static/chunks/app/_not-found/page-15feaf1eaa56a06c.js
+- apps/dashboard/.next/static/chunks/app/admin/analytics/page-fd6c3178075cc474.js
+- apps/dashboard/.next/static/chunks/app/admin/appointments/page-b6157cf637d9fe9d.js
+- apps/dashboard/.next/static/chunks/app/admin/clients/page-409d8a918fca158f.js
+- apps/dashboard/.next/static/chunks/app/admin/conversations/page-b83733f78626e635.js
+- apps/dashboard/.next/static/chunks/app/admin/dashboard/page-4cd1d2bc2ad76880.js
+- apps/dashboard/.next/static/chunks/app/admin/leads/page-9069ec0be7758c62.js
+- apps/dashboard/.next/static/chunks/app/admin/settings/page-e20872f67b58404d.js
+- apps/dashboard/.next/static/chunks/app/admin/widget/page-104214d9c4dc548a.js
+- apps/dashboard/.next/static/chunks/app/client/appointments/page-799a7b4142f524c8.js
+- apps/dashboard/.next/static/chunks/app/client/conversations/page-12f74ff5e3e9b0c6.js
+- apps/dashboard/.next/static/chunks/app/client/dashboard/page-8b80b19451967170.js
+- apps/dashboard/.next/static/chunks/app/client/leads/page-86a450a7ec674392.js
+- apps/dashboard/.next/static/chunks/app/client/settings/page-42fda45cca100d6d.js
+- apps/dashboard/.next/static/chunks/app/layout-e14f6e5eec8c8d5b.js
+- apps/dashboard/.next/static/chunks/app/login/page-62c91e57c8ef8385.js
+- apps/dashboard/.next/static/chunks/app/page-da4522fa7ea21694.js
+- apps/dashboard/.next/static/chunks/app/superadmin/clients/page-41c3496ddcd830eb.js
+- apps/dashboard/.next/static/chunks/app/superadmin/dashboard/page-3a95789d0343709c.js
+- apps/dashboard/.next/static/chunks/app/superadmin/leads/page-7fba7f8f110ca5ed.js
+- apps/dashboard/.next/static/chunks/app/superadmin/resellers/page-e0b6faa8216290e5.js
+- apps/dashboard/.next/static/chunks/app/superadmin/settings/page-8fe2bd328bdc3edc.js
+- apps/dashboard/.next/static/chunks/app/superadmin/system/page-59c21ab321c2a4d7.js
+- apps/dashboard/.next/static/chunks/app/superadmin/users/page-4297b122ab376876.js
+- apps/dashboard/.next/static/chunks/framework-58c3457e28c4602f.js
+- apps/dashboard/.next/static/chunks/main-app-28c0f8f144b03317.js
+- apps/dashboard/.next/static/chunks/main-b94cca2d636191fa.js
+- apps/dashboard/.next/static/chunks/pages/_app-58c3f1a8a070bd35.js
+- apps/dashboard/.next/static/chunks/pages/_error-312a564ec7e2663f.js
+- apps/dashboard/.next/static/chunks/polyfills-42372ed130431b0a.js
+- apps/dashboard/.next/static/chunks/webpack-c3cc2b2a6cec4e8c.js
+- apps/dashboard/.next/static/css/f3ae182e320cefa1.css
+- apps/dashboard/.next/trace
+- apps/dashboard/.next/types/app/admin/analytics/page.ts
+- apps/dashboard/.next/types/app/admin/appointments/page.ts
+- apps/dashboard/.next/types/app/admin/clients/page.ts
+- apps/dashboard/.next/types/app/admin/conversations/page.ts
+- apps/dashboard/.next/types/app/admin/dashboard/page.ts
+- apps/dashboard/.next/types/app/admin/leads/page.ts
+- apps/dashboard/.next/types/app/admin/settings/page.ts
+- apps/dashboard/.next/types/app/admin/widget/page.ts
+- apps/dashboard/.next/types/app/client/appointments/page.ts
+- apps/dashboard/.next/types/app/client/conversations/page.ts
+- apps/dashboard/.next/types/app/client/dashboard/page.ts
+- apps/dashboard/.next/types/app/client/leads/page.ts
+- apps/dashboard/.next/types/app/client/settings/page.ts
+- apps/dashboard/.next/types/app/layout.ts
+- apps/dashboard/.next/types/app/login/page.ts
+- apps/dashboard/.next/types/app/page.ts
+- apps/dashboard/.next/types/app/superadmin/clients/page.ts
+- apps/dashboard/.next/types/app/superadmin/dashboard/page.ts
+- apps/dashboard/.next/types/app/superadmin/leads/page.ts
+- apps/dashboard/.next/types/app/superadmin/resellers/page.ts
+- apps/dashboard/.next/types/app/superadmin/settings/page.ts
+- apps/dashboard/.next/types/app/superadmin/system/page.ts
+- apps/dashboard/.next/types/app/superadmin/users/page.ts
+- apps/dashboard/.next/types/package.json
+- node_modules/.bin/mime
+- node_modules/.bin/nodemon
+- node_modules/.bin/nodetouch
+- node_modules/.bin/pino
+- node_modules/.bin/pino-pretty
+- node_modules/.bin/semver
+- node_modules/.package-lock.json
+- node_modules/@ayka/api
+- node_modules/@ayka/db
+- node_modules/@mongodb-js/saslprep/LICENSE
+- node_modules/@mongodb-js/saslprep/dist/.esm-wrapper.mjs
+- node_modules/@mongodb-js/saslprep/dist/browser.d.ts
+- node_modules/@mongodb-js/saslprep/dist/browser.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/browser.js
+- node_modules/@mongodb-js/saslprep/dist/browser.js.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-data-browser.d.ts
+- node_modules/@mongodb-js/saslprep/dist/code-points-data-browser.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-data-browser.js
+- node_modules/@mongodb-js/saslprep/dist/code-points-data-browser.js.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-data.d.ts
+- node_modules/@mongodb-js/saslprep/dist/code-points-data.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-data.js
+- node_modules/@mongodb-js/saslprep/dist/code-points-data.js.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-src.d.ts
+- node_modules/@mongodb-js/saslprep/dist/code-points-src.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/code-points-src.js
+- node_modules/@mongodb-js/saslprep/dist/code-points-src.js.map
+- node_modules/@mongodb-js/saslprep/dist/generate-code-points.d.ts
+- node_modules/@mongodb-js/saslprep/dist/generate-code-points.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/generate-code-points.js
+- node_modules/@mongodb-js/saslprep/dist/generate-code-points.js.map
+- node_modules/@mongodb-js/saslprep/dist/index.d.ts
+- node_modules/@mongodb-js/saslprep/dist/index.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/index.js
+- node_modules/@mongodb-js/saslprep/dist/index.js.map
+- node_modules/@mongodb-js/saslprep/dist/memory-code-points.d.ts
+- node_modules/@mongodb-js/saslprep/dist/memory-code-points.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/memory-code-points.js
+- node_modules/@mongodb-js/saslprep/dist/memory-code-points.js.map
+- node_modules/@mongodb-js/saslprep/dist/node.d.ts
+- node_modules/@mongodb-js/saslprep/dist/node.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/node.js
+- node_modules/@mongodb-js/saslprep/dist/node.js.map
+- node_modules/@mongodb-js/saslprep/dist/util.d.ts
+- node_modules/@mongodb-js/saslprep/dist/util.d.ts.map
+- node_modules/@mongodb-js/saslprep/dist/util.js
+- node_modules/@mongodb-js/saslprep/dist/util.js.map
+- node_modules/@mongodb-js/saslprep/package.json
+- node_modules/@mongodb-js/saslprep/readme.md
+- node_modules/@types/node-fetch/LICENSE
+- node_modules/@types/node-fetch/README.md
+- node_modules/@types/node-fetch/externals.d.ts
+- node_modules/@types/node-fetch/index.d.ts
+- node_modules/@types/node-fetch/package.json
+- node_modules/@types/node/LICENSE
+- node_modules/@types/node/README.md
+- node_modules/@types/node/assert.d.ts
+- node_modules/@types/node/assert/strict.d.ts
+- node_modules/@types/node/async_hooks.d.ts
+- node_modules/@types/node/buffer.buffer.d.ts
+- node_modules/@types/node/buffer.d.ts
+- node_modules/@types/node/child_process.d.ts
+- node_modules/@types/node/cluster.d.ts
+- node_modules/@types/node/compatibility/disposable.d.ts
+- node_modules/@types/node/compatibility/index.d.ts
+- node_modules/@types/node/compatibility/indexable.d.ts
+- node_modules/@types/node/compatibility/iterators.d.ts
+- node_modules/@types/node/console.d.ts
+- node_modules/@types/node/constants.d.ts
+- node_modules/@types/node/crypto.d.ts
+- node_modules/@types/node/dgram.d.ts
+- node_modules/@types/node/diagnostics_channel.d.ts
+- node_modules/@types/node/dns.d.ts
+- node_modules/@types/node/dns/promises.d.ts
+- node_modules/@types/node/domain.d.ts
+- node_modules/@types/node/events.d.ts
+- node_modules/@types/node/fs.d.ts
+- node_modules/@types/node/fs/promises.d.ts
+- node_modules/@types/node/globals.d.ts
+- node_modules/@types/node/globals.typedarray.d.ts
+- node_modules/@types/node/http.d.ts
+- node_modules/@types/node/http2.d.ts
+- node_modules/@types/node/https.d.ts
+- node_modules/@types/node/index.d.ts
+- node_modules/@types/node/inspector.generated.d.ts
+- node_modules/@types/node/module.d.ts
+- node_modules/@types/node/net.d.ts
+- node_modules/@types/node/os.d.ts
+- node_modules/@types/node/package.json
+- node_modules/@types/node/path.d.ts
+- node_modules/@types/node/perf_hooks.d.ts
+- node_modules/@types/node/process.d.ts
+- node_modules/@types/node/punycode.d.ts
+- node_modules/@types/node/querystring.d.ts
+- node_modules/@types/node/readline.d.ts
+- node_modules/@types/node/readline/promises.d.ts
+- node_modules/@types/node/repl.d.ts
+- node_modules/@types/node/stream.d.ts
+- node_modules/@types/node/stream/consumers.d.ts
+- node_modules/@types/node/stream/promises.d.ts
+- node_modules/@types/node/stream/web.d.ts
+- node_modules/@types/node/string_decoder.d.ts
+- node_modules/@types/node/test.d.ts
+- node_modules/@types/node/timers.d.ts
+- node_modules/@types/node/timers/promises.d.ts
+- node_modules/@types/node/tls.d.ts
+- node_modules/@types/node/trace_events.d.ts
+- node_modules/@types/node/ts5.6/buffer.buffer.d.ts
+- node_modules/@types/node/ts5.6/globals.typedarray.d.ts
+- node_modules/@types/node/ts5.6/index.d.ts
+- node_modules/@types/node/tty.d.ts
+- node_modules/@types/node/url.d.ts
+- node_modules/@types/node/util.d.ts
+- node_modules/@types/node/v8.d.ts
+- node_modules/@types/node/vm.d.ts
+- node_modules/@types/node/wasi.d.ts
+- node_modules/@types/node/web-globals/abortcontroller.d.ts
+- node_modules/@types/node/web-globals/domexception.d.ts
+- node_modules/@types/node/web-globals/events.d.ts
+- node_modules/@types/node/web-globals/fetch.d.ts
+- node_modules/@types/node/worker_threads.d.ts
+- node_modules/@types/node/zlib.d.ts
+- node_modules/@types/webidl-conversions/LICENSE
+- node_modules/@types/webidl-conversions/README.md
+- node_modules/@types/webidl-conversions/index.d.ts
+- node_modules/@types/webidl-conversions/package.json
+- node_modules/@types/whatwg-url/LICENSE
+- node_modules/@types/whatwg-url/README.md
+- node_modules/@types/whatwg-url/index.d.ts
+- node_modules/@types/whatwg-url/lib/URL-impl.d.ts
+- node_modules/@types/whatwg-url/lib/URL.d.ts
+- node_modules/@types/whatwg-url/lib/URLSearchParams-impl.d.ts
+- node_modules/@types/whatwg-url/lib/URLSearchParams.d.ts
+- node_modules/@types/whatwg-url/package.json
+- node_modules/@types/whatwg-url/webidl2js-wrapper.d.ts
+- node_modules/@upstash/redis/LICENSE
+- node_modules/@upstash/redis/README.md
+- node_modules/@upstash/redis/chunk-Q3SWX4BB.mjs
+- node_modules/@upstash/redis/cloudflare.d.mts
+- node_modules/@upstash/redis/cloudflare.d.ts
+- node_modules/@upstash/redis/cloudflare.js
+- node_modules/@upstash/redis/cloudflare.mjs
+- node_modules/@upstash/redis/fastly.d.mts
+- node_modules/@upstash/redis/fastly.d.ts
+- node_modules/@upstash/redis/fastly.js
+- node_modules/@upstash/redis/fastly.mjs
+- node_modules/@upstash/redis/nodejs.d.mts
+- node_modules/@upstash/redis/nodejs.d.ts
+- node_modules/@upstash/redis/nodejs.js
+- node_modules/@upstash/redis/nodejs.mjs
+- node_modules/@upstash/redis/package.json
+- node_modules/@upstash/redis/zmscore-BjNXmrug.d.mts
+- node_modules/@upstash/redis/zmscore-BjNXmrug.d.ts
+- node_modules/abort-controller/LICENSE
+- node_modules/abort-controller/README.md
+- node_modules/abort-controller/browser.js
+- node_modules/abort-controller/browser.mjs
+- node_modules/abort-controller/dist/abort-controller.d.ts
+- node_modules/abort-controller/dist/abort-controller.js
+- node_modules/abort-controller/dist/abort-controller.js.map
+- node_modules/abort-controller/dist/abort-controller.mjs
+- node_modules/abort-controller/dist/abort-controller.mjs.map
+- node_modules/abort-controller/dist/abort-controller.umd.js
+- node_modules/abort-controller/dist/abort-controller.umd.js.map
+- node_modules/abort-controller/package.json
+- node_modules/abort-controller/polyfill.js
+- node_modules/abort-controller/polyfill.mjs
+- node_modules/accepts/HISTORY.md
+- node_modules/accepts/LICENSE
+- node_modules/accepts/README.md
+- node_modules/accepts/index.js
+- node_modules/accepts/package.json
+- node_modules/agentkeepalive/LICENSE
+- node_modules/agentkeepalive/README.md
+- node_modules/agentkeepalive/browser.js
+- node_modules/agentkeepalive/index.d.ts
+- node_modules/agentkeepalive/index.js
+- node_modules/agentkeepalive/lib/agent.js
+- node_modules/agentkeepalive/lib/constants.js
+- node_modules/agentkeepalive/lib/https_agent.js
+- node_modules/agentkeepalive/package.json
+- node_modules/anymatch/LICENSE
+- node_modules/anymatch/README.md
+- node_modules/anymatch/index.d.ts
+- node_modules/anymatch/index.js
+- node_modules/anymatch/package.json
+- node_modules/array-flatten/LICENSE
+- node_modules/array-flatten/README.md
+- node_modules/array-flatten/array-flatten.js
+- node_modules/array-flatten/package.json
+- node_modules/asynckit/LICENSE
+- node_modules/asynckit/README.md
+- node_modules/asynckit/bench.js
+- node_modules/asynckit/index.js
+- node_modules/asynckit/lib/abort.js
+- node_modules/asynckit/lib/async.js
+- node_modules/asynckit/lib/defer.js
+- node_modules/asynckit/lib/iterate.js
+- node_modules/asynckit/lib/readable_asynckit.js
+- node_modules/asynckit/lib/readable_parallel.js
+- node_modules/asynckit/lib/readable_serial.js
+- node_modules/asynckit/lib/readable_serial_ordered.js
+- node_modules/asynckit/lib/state.js
+- node_modules/asynckit/lib/streamify.js
+- node_modules/asynckit/lib/terminator.js
+- node_modules/asynckit/package.json
+- node_modules/asynckit/parallel.js
+- node_modules/asynckit/serial.js
+- node_modules/asynckit/serialOrdered.js
+- node_modules/asynckit/stream.js
+- node_modules/atomic-sleep/.travis.yml
+- node_modules/atomic-sleep/LICENSE
+- node_modules/atomic-sleep/index.js
+- node_modules/atomic-sleep/package.json
+- node_modules/atomic-sleep/readme.md
+- node_modules/atomic-sleep/test.js
+- node_modules/axios/CHANGELOG.md
+- node_modules/axios/LICENSE
+- node_modules/axios/MIGRATION_GUIDE.md
+- node_modules/axios/README.md
+- node_modules/axios/dist/axios.js
+- node_modules/axios/dist/axios.js.map
+- node_modules/axios/dist/axios.min.js
+- node_modules/axios/dist/axios.min.js.map
+- node_modules/axios/dist/browser/axios.cjs
+- node_modules/axios/dist/browser/axios.cjs.map
+- node_modules/axios/dist/esm/axios.js
+- node_modules/axios/dist/esm/axios.js.map
+- node_modules/axios/dist/esm/axios.min.js
+- node_modules/axios/dist/esm/axios.min.js.map
+- node_modules/axios/dist/node/axios.cjs
+- node_modules/axios/dist/node/axios.cjs.map
+- node_modules/axios/index.d.cts
+- node_modules/axios/index.d.ts
+- node_modules/axios/index.js
+- node_modules/axios/lib/adapters/README.md
+- node_modules/axios/lib/adapters/adapters.js
+- node_modules/axios/lib/adapters/fetch.js
+- node_modules/axios/lib/adapters/http.js
+- node_modules/axios/lib/adapters/xhr.js
+- node_modules/axios/lib/axios.js
+- node_modules/axios/lib/cancel/CancelToken.js
+- node_modules/axios/lib/cancel/CanceledError.js
+- node_modules/axios/lib/cancel/isCancel.js
+- node_modules/axios/lib/core/Axios.js
+- node_modules/axios/lib/core/AxiosError.js
+- node_modules/axios/lib/core/AxiosHeaders.js
+- node_modules/axios/lib/core/InterceptorManager.js
+- node_modules/axios/lib/core/README.md
+- node_modules/axios/lib/core/buildFullPath.js
+- node_modules/axios/lib/core/dispatchRequest.js
+- node_modules/axios/lib/core/mergeConfig.js
+- node_modules/axios/lib/core/settle.js
+- node_modules/axios/lib/core/transformData.js
+- node_modules/axios/lib/defaults/index.js
+- node_modules/axios/lib/defaults/transitional.js
+- node_modules/axios/lib/env/README.md
+- node_modules/axios/lib/env/classes/FormData.js
+- node_modules/axios/lib/env/data.js
+- node_modules/axios/lib/helpers/AxiosTransformStream.js
+- node_modules/axios/lib/helpers/AxiosURLSearchParams.js
+- node_modules/axios/lib/helpers/HttpStatusCode.js
+- node_modules/axios/lib/helpers/README.md
+- node_modules/axios/lib/helpers/ZlibHeaderTransformStream.js
+- node_modules/axios/lib/helpers/bind.js
+- node_modules/axios/lib/helpers/buildURL.js
+- node_modules/axios/lib/helpers/callbackify.js
+- node_modules/axios/lib/helpers/combineURLs.js
+- node_modules/axios/lib/helpers/composeSignals.js
+- node_modules/axios/lib/helpers/cookies.js
+- node_modules/axios/lib/helpers/deprecatedMethod.js
+- node_modules/axios/lib/helpers/estimateDataURLDecodedBytes.js
+- node_modules/axios/lib/helpers/formDataToJSON.js
+- node_modules/axios/lib/helpers/formDataToStream.js
+- node_modules/axios/lib/helpers/fromDataURI.js
+- node_modules/axios/lib/helpers/isAbsoluteURL.js
+- node_modules/axios/lib/helpers/isAxiosError.js
+- node_modules/axios/lib/helpers/isURLSameOrigin.js
+- node_modules/axios/lib/helpers/null.js
+- node_modules/axios/lib/helpers/parseHeaders.js
+- node_modules/axios/lib/helpers/parseProtocol.js
+- node_modules/axios/lib/helpers/progressEventReducer.js
+- node_modules/axios/lib/helpers/readBlob.js
+- node_modules/axios/lib/helpers/resolveConfig.js
+- node_modules/axios/lib/helpers/speedometer.js
+- node_modules/axios/lib/helpers/spread.js
+- node_modules/axios/lib/helpers/throttle.js
+- node_modules/axios/lib/helpers/toFormData.js
+- node_modules/axios/lib/helpers/toURLEncodedForm.js
+- node_modules/axios/lib/helpers/trackStream.js
+- node_modules/axios/lib/helpers/validator.js
+- node_modules/axios/lib/platform/browser/classes/Blob.js
+- node_modules/axios/lib/platform/browser/classes/FormData.js
+- node_modules/axios/lib/platform/browser/classes/URLSearchParams.js
+- node_modules/axios/lib/platform/browser/index.js
+- node_modules/axios/lib/platform/common/utils.js
+- node_modules/axios/lib/platform/index.js
+- node_modules/axios/lib/platform/node/classes/FormData.js
+- node_modules/axios/lib/platform/node/classes/URLSearchParams.js
+- node_modules/axios/lib/platform/node/index.js
+- node_modules/axios/lib/utils.js
+- node_modules/axios/package.json
+- node_modules/balanced-match/LICENSE.md
+- node_modules/balanced-match/README.md
+- node_modules/balanced-match/dist/commonjs/index.d.ts
+- node_modules/balanced-match/dist/commonjs/index.d.ts.map
+- node_modules/balanced-match/dist/commonjs/index.js
+- node_modules/balanced-match/dist/commonjs/index.js.map
+- node_modules/balanced-match/dist/commonjs/package.json
+- node_modules/balanced-match/dist/esm/index.d.ts
+- node_modules/balanced-match/dist/esm/index.d.ts.map
+- node_modules/balanced-match/dist/esm/index.js
+- node_modules/balanced-match/dist/esm/index.js.map
+- node_modules/balanced-match/dist/esm/package.json
+- node_modules/balanced-match/package.json
+- node_modules/base64-js/LICENSE
+- node_modules/base64-js/README.md
+- node_modules/base64-js/base64js.min.js
+- node_modules/base64-js/index.d.ts
+- node_modules/base64-js/index.js
+- node_modules/base64-js/package.json
+- node_modules/binary-extensions/binary-extensions.json
+- node_modules/binary-extensions/binary-extensions.json.d.ts
+- node_modules/binary-extensions/index.d.ts
+- node_modules/binary-extensions/index.js
+- node_modules/binary-extensions/license
+- node_modules/binary-extensions/package.json
+- node_modules/binary-extensions/readme.md
+- node_modules/body-parser/HISTORY.md
+- node_modules/body-parser/LICENSE
+- node_modules/body-parser/README.md
+- node_modules/body-parser/index.js
+- node_modules/body-parser/lib/read.js
+- node_modules/body-parser/lib/types/json.js
+- node_modules/body-parser/lib/types/raw.js
+- node_modules/body-parser/lib/types/text.js
+- node_modules/body-parser/lib/types/urlencoded.js
+- node_modules/body-parser/package.json
+- node_modules/brace-expansion/LICENSE
+- node_modules/brace-expansion/README.md
+- node_modules/brace-expansion/dist/commonjs/index.d.ts
+- node_modules/brace-expansion/dist/commonjs/index.d.ts.map
+- node_modules/brace-expansion/dist/commonjs/index.js
+- node_modules/brace-expansion/dist/commonjs/index.js.map
+- node_modules/brace-expansion/dist/commonjs/package.json
+- node_modules/brace-expansion/dist/esm/index.d.ts
+- node_modules/brace-expansion/dist/esm/index.d.ts.map
+- node_modules/brace-expansion/dist/esm/index.js
+- node_modules/brace-expansion/dist/esm/index.js.map
+- node_modules/brace-expansion/dist/esm/package.json
+- node_modules/brace-expansion/package.json
+- node_modules/braces/LICENSE
+- node_modules/braces/README.md
+- node_modules/braces/index.js
+- node_modules/braces/lib/compile.js
+- node_modules/braces/lib/constants.js
+- node_modules/braces/lib/expand.js
+- node_modules/braces/lib/parse.js
+- node_modules/braces/lib/stringify.js
+- node_modules/braces/lib/utils.js
+- node_modules/braces/package.json
+- node_modules/bson/LICENSE.md
+- node_modules/bson/README.md
+- node_modules/bson/bson.d.ts
+- node_modules/bson/etc/prepare.js
+- node_modules/bson/lib/bson.bundle.js
+- node_modules/bson/lib/bson.bundle.js.map
+- node_modules/bson/lib/bson.cjs
+- node_modules/bson/lib/bson.cjs.map
+- node_modules/bson/lib/bson.mjs
+- node_modules/bson/lib/bson.mjs.map
+- node_modules/bson/lib/bson.node.mjs
+- node_modules/bson/lib/bson.node.mjs.map
+- node_modules/bson/lib/bson.rn.cjs
+- node_modules/bson/lib/bson.rn.cjs.map
+- node_modules/bson/package.json
+- node_modules/bson/src/binary.ts
+- node_modules/bson/src/bson.ts
+- node_modules/bson/src/bson_value.ts
+- node_modules/bson/src/code.ts
+- node_modules/bson/src/constants.ts
+- node_modules/bson/src/db_ref.ts
+- node_modules/bson/src/decimal128.ts
+- node_modules/bson/src/double.ts
+- node_modules/bson/src/error.ts
+- node_modules/bson/src/extended_json.ts
+- node_modules/bson/src/index.ts
+- node_modules/bson/src/int_32.ts
+- node_modules/bson/src/long.ts
+- node_modules/bson/src/max_key.ts
+- node_modules/bson/src/min_key.ts
+- node_modules/bson/src/objectid.ts
+- node_modules/bson/src/parse_utf8.ts
+- node_modules/bson/src/parser/calculate_size.ts
+- node_modules/bson/src/parser/deserializer.ts
+- node_modules/bson/src/parser/on_demand/index.ts
+- node_modules/bson/src/parser/on_demand/parse_to_elements.ts
+- node_modules/bson/src/parser/serializer.ts
+- node_modules/bson/src/parser/utils.ts
+- node_modules/bson/src/regexp.ts
+- node_modules/bson/src/symbol.ts
+- node_modules/bson/src/timestamp.ts
+- node_modules/bson/src/utils/byte_utils.ts
+- node_modules/bson/src/utils/latin.ts
+- node_modules/bson/src/utils/node_byte_utils.ts
+- node_modules/bson/src/utils/number_utils.ts
+- node_modules/bson/src/utils/string_utils.ts
+- node_modules/bson/src/utils/web_byte_utils.ts
+- node_modules/bson/vendor/base64/LICENSE-MIT.txt
+- node_modules/bson/vendor/base64/README.md
+- node_modules/bson/vendor/base64/base64.js
+- node_modules/bson/vendor/base64/package.json
+- node_modules/bson/vendor/text-encoding/LICENSE.md
+- node_modules/bson/vendor/text-encoding/README.md
+- node_modules/bson/vendor/text-encoding/index.js
+- node_modules/bson/vendor/text-encoding/lib/encoding-indexes.js
+- node_modules/bson/vendor/text-encoding/lib/encoding.js
+- node_modules/bson/vendor/text-encoding/package.json
+- node_modules/buffer/AUTHORS.md
+- node_modules/buffer/LICENSE
+- node_modules/buffer/README.md
+- node_modules/buffer/index.d.ts
+- node_modules/buffer/index.js
+- node_modules/buffer/package.json
+- node_modules/bytes/History.md
+- node_modules/bytes/LICENSE
+- node_modules/bytes/Readme.md
+- node_modules/bytes/index.js
+- node_modules/bytes/package.json
+- node_modules/call-bind-apply-helpers/.eslintrc
+- node_modules/call-bind-apply-helpers/.github/FUNDING.yml
+- node_modules/call-bind-apply-helpers/.nycrc
+- node_modules/call-bind-apply-helpers/CHANGELOG.md
+- node_modules/call-bind-apply-helpers/LICENSE
+- node_modules/call-bind-apply-helpers/README.md
+- node_modules/call-bind-apply-helpers/actualApply.d.ts
+- node_modules/call-bind-apply-helpers/actualApply.js
+- node_modules/call-bind-apply-helpers/applyBind.d.ts
+- node_modules/call-bind-apply-helpers/applyBind.js
+- node_modules/call-bind-apply-helpers/functionApply.d.ts
+- node_modules/call-bind-apply-helpers/functionApply.js
+- node_modules/call-bind-apply-helpers/functionCall.d.ts
+- node_modules/call-bind-apply-helpers/functionCall.js
+- node_modules/call-bind-apply-helpers/index.d.ts
+- node_modules/call-bind-apply-helpers/index.js
+- node_modules/call-bind-apply-helpers/package.json
+- node_modules/call-bind-apply-helpers/reflectApply.d.ts
+- node_modules/call-bind-apply-helpers/reflectApply.js
+- node_modules/call-bind-apply-helpers/test/index.js
+- node_modules/call-bind-apply-helpers/tsconfig.json
+- node_modules/call-bound/.eslintrc
+- node_modules/call-bound/.github/FUNDING.yml
+- node_modules/call-bound/.nycrc
+- node_modules/call-bound/CHANGELOG.md
+- node_modules/call-bound/LICENSE
+- node_modules/call-bound/README.md
+- node_modules/call-bound/index.d.ts
+- node_modules/call-bound/index.js
+- node_modules/call-bound/package.json
+- node_modules/call-bound/test/index.js
+- node_modules/call-bound/tsconfig.json
+- node_modules/chokidar/LICENSE
+- node_modules/chokidar/README.md
+- node_modules/chokidar/index.js
+- node_modules/chokidar/lib/constants.js
+- node_modules/chokidar/lib/fsevents-handler.js
+- node_modules/chokidar/lib/nodefs-handler.js
+- node_modules/chokidar/package.json
+- node_modules/chokidar/types/index.d.ts
+- node_modules/colorette/LICENSE.md
+- node_modules/colorette/README.md
+- node_modules/colorette/index.cjs
+- node_modules/colorette/index.d.ts
+- node_modules/colorette/index.js
+- node_modules/colorette/package.json
+- node_modules/combined-stream/License
+- node_modules/combined-stream/Readme.md
+- node_modules/combined-stream/lib/combined_stream.js
+- node_modules/combined-stream/package.json
+- node_modules/combined-stream/yarn.lock
+- node_modules/content-disposition/HISTORY.md
+- node_modules/content-disposition/LICENSE
+- node_modules/content-disposition/README.md
+- node_modules/content-disposition/index.js
+- node_modules/content-disposition/package.json
+- node_modules/content-type/HISTORY.md
+- node_modules/content-type/LICENSE
+- node_modules/content-type/README.md
+- node_modules/content-type/index.js
+- node_modules/content-type/package.json
+- node_modules/cookie-signature/History.md
+- node_modules/cookie-signature/Readme.md
+- node_modules/cookie-signature/index.js
+- node_modules/cookie-signature/package.json
+- node_modules/cookie/LICENSE
+- node_modules/cookie/README.md
+- node_modules/cookie/SECURITY.md
+- node_modules/cookie/index.js
+- node_modules/cookie/package.json
+- node_modules/dateformat/LICENSE
+- node_modules/dateformat/Readme.md
+- node_modules/dateformat/lib/dateformat.js
+- node_modules/dateformat/package.json
+- node_modules/debug/.coveralls.yml
+- node_modules/debug/.eslintrc
+- node_modules/debug/.npmignore
+- node_modules/debug/.travis.yml
+- node_modules/debug/CHANGELOG.md
+- node_modules/debug/LICENSE
+- node_modules/debug/Makefile
+- node_modules/debug/README.md
+- node_modules/debug/component.json
+- node_modules/debug/karma.conf.js
+- node_modules/debug/node.js
+- node_modules/debug/package.json
+- node_modules/debug/src/browser.js
+- node_modules/debug/src/debug.js
+- node_modules/debug/src/index.js
+- node_modules/debug/src/inspector-log.js
+- node_modules/debug/src/node.js
+- node_modules/delayed-stream/.npmignore
+- node_modules/delayed-stream/License
+- node_modules/delayed-stream/Makefile
+- node_modules/delayed-stream/Readme.md
+- node_modules/delayed-stream/lib/delayed_stream.js
+- node_modules/delayed-stream/package.json
+- node_modules/depd/History.md
+- node_modules/depd/LICENSE
+- node_modules/depd/Readme.md
+- node_modules/depd/index.js
+- node_modules/depd/lib/browser/index.js
+- node_modules/depd/package.json
+- node_modules/destroy/LICENSE
+- node_modules/destroy/README.md
+- node_modules/destroy/index.js
+- node_modules/destroy/package.json
+- node_modules/dotenv/CHANGELOG.md
+- node_modules/dotenv/LICENSE
+- node_modules/dotenv/README-es.md
+- node_modules/dotenv/README.md
+- node_modules/dotenv/SECURITY.md
+- node_modules/dotenv/config.d.ts
+- node_modules/dotenv/config.js
+- node_modules/dotenv/lib/cli-options.js
+- node_modules/dotenv/lib/env-options.js
+- node_modules/dotenv/lib/main.d.ts
+- node_modules/dotenv/lib/main.js
+- node_modules/dotenv/package.json
+- node_modules/dunder-proto/.eslintrc
+- node_modules/dunder-proto/.github/FUNDING.yml
+- node_modules/dunder-proto/.nycrc
+- node_modules/dunder-proto/CHANGELOG.md
+- node_modules/dunder-proto/LICENSE
+- node_modules/dunder-proto/README.md
+- node_modules/dunder-proto/get.d.ts
+- node_modules/dunder-proto/get.js
+- node_modules/dunder-proto/package.json
+- node_modules/dunder-proto/set.d.ts
+- node_modules/dunder-proto/set.js
+- node_modules/dunder-proto/test/get.js
+- node_modules/dunder-proto/test/index.js
+- node_modules/dunder-proto/test/set.js
+- node_modules/dunder-proto/tsconfig.json
+- node_modules/ee-first/LICENSE
+- node_modules/ee-first/README.md
+- node_modules/ee-first/index.js
+- node_modules/ee-first/package.json
+- node_modules/encodeurl/LICENSE
+- node_modules/encodeurl/README.md
+- node_modules/encodeurl/index.js
+- node_modules/encodeurl/package.json
+- node_modules/end-of-stream/LICENSE
+- node_modules/end-of-stream/README.md
+- node_modules/end-of-stream/index.js
+- node_modules/end-of-stream/package.json
+- node_modules/es-define-property/.eslintrc
+- node_modules/es-define-property/.github/FUNDING.yml
+- node_modules/es-define-property/.nycrc
+- node_modules/es-define-property/CHANGELOG.md
+- node_modules/es-define-property/LICENSE
+- node_modules/es-define-property/README.md
+- node_modules/es-define-property/index.d.ts
+- node_modules/es-define-property/index.js
+- node_modules/es-define-property/package.json
+- node_modules/es-define-property/test/index.js
+- node_modules/es-define-property/tsconfig.json
+- node_modules/es-errors/.eslintrc
+- node_modules/es-errors/.github/FUNDING.yml
+- node_modules/es-errors/CHANGELOG.md
+- node_modules/es-errors/LICENSE
+- node_modules/es-errors/README.md
+- node_modules/es-errors/eval.d.ts
+- node_modules/es-errors/eval.js
+- node_modules/es-errors/index.d.ts
+- node_modules/es-errors/index.js
+- node_modules/es-errors/package.json
+- node_modules/es-errors/range.d.ts
+- node_modules/es-errors/range.js
+- node_modules/es-errors/ref.d.ts
+- node_modules/es-errors/ref.js
+- node_modules/es-errors/syntax.d.ts
+- node_modules/es-errors/syntax.js
+- node_modules/es-errors/test/index.js
+- node_modules/es-errors/tsconfig.json
+- node_modules/es-errors/type.d.ts
+- node_modules/es-errors/type.js
+- node_modules/es-errors/uri.d.ts
+- node_modules/es-errors/uri.js
+- node_modules/es-object-atoms/.eslintrc
+- node_modules/es-object-atoms/.github/FUNDING.yml
+- node_modules/es-object-atoms/CHANGELOG.md
+- node_modules/es-object-atoms/LICENSE
+- node_modules/es-object-atoms/README.md
+- node_modules/es-object-atoms/RequireObjectCoercible.d.ts
+- node_modules/es-object-atoms/RequireObjectCoercible.js
+- node_modules/es-object-atoms/ToObject.d.ts
+- node_modules/es-object-atoms/ToObject.js
+- node_modules/es-object-atoms/index.d.ts
+- node_modules/es-object-atoms/index.js
+- node_modules/es-object-atoms/isObject.d.ts
+- node_modules/es-object-atoms/isObject.js
+- node_modules/es-object-atoms/package.json
+- node_modules/es-object-atoms/test/index.js
+- node_modules/es-object-atoms/tsconfig.json
+- node_modules/es-set-tostringtag/.eslintrc
+- node_modules/es-set-tostringtag/.nycrc
+- node_modules/es-set-tostringtag/CHANGELOG.md
+- node_modules/es-set-tostringtag/LICENSE
+- node_modules/es-set-tostringtag/README.md
+- node_modules/es-set-tostringtag/index.d.ts
+- node_modules/es-set-tostringtag/index.js
+- node_modules/es-set-tostringtag/package.json
+- node_modules/es-set-tostringtag/test/index.js
+- node_modules/es-set-tostringtag/tsconfig.json
+- node_modules/escape-html/LICENSE
+- node_modules/escape-html/Readme.md
+- node_modules/escape-html/index.js
+- node_modules/escape-html/package.json
+- node_modules/etag/HISTORY.md
+- node_modules/etag/LICENSE
+- node_modules/etag/README.md
+- node_modules/etag/index.js
+- node_modules/etag/package.json
+- node_modules/event-target-shim/LICENSE
+- node_modules/event-target-shim/README.md
+- node_modules/event-target-shim/dist/event-target-shim.js
+- node_modules/event-target-shim/dist/event-target-shim.js.map
+- node_modules/event-target-shim/dist/event-target-shim.mjs
+- node_modules/event-target-shim/dist/event-target-shim.mjs.map
+- node_modules/event-target-shim/dist/event-target-shim.umd.js
+- node_modules/event-target-shim/dist/event-target-shim.umd.js.map
+- node_modules/event-target-shim/index.d.ts
+- node_modules/event-target-shim/package.json
+- node_modules/events/.airtap.yml
+- node_modules/events/.github/FUNDING.yml
+- node_modules/events/.travis.yml
+- node_modules/events/History.md
+- node_modules/events/LICENSE
+- node_modules/events/Readme.md
+- node_modules/events/events.js
+- node_modules/events/package.json
+- node_modules/events/security.md
+- node_modules/events/tests/add-listeners.js
+- node_modules/events/tests/check-listener-leaks.js
+- node_modules/events/tests/common.js
+- node_modules/events/tests/errors.js
+- node_modules/events/tests/events-list.js
+- node_modules/events/tests/events-once.js
+- node_modules/events/tests/index.js
+- node_modules/events/tests/legacy-compat.js
+- node_modules/events/tests/listener-count.js
+- node_modules/events/tests/listeners-side-effects.js
+- node_modules/events/tests/listeners.js
+- node_modules/events/tests/max-listeners.js
+- node_modules/events/tests/method-names.js
+- node_modules/events/tests/modify-in-emit.js
+- node_modules/events/tests/num-args.js
+- node_modules/events/tests/once.js
+- node_modules/events/tests/prepend.js
+- node_modules/events/tests/remove-all-listeners.js
+- node_modules/events/tests/remove-listeners.js
+- node_modules/events/tests/set-max-listeners-side-effects.js
+- node_modules/events/tests/special-event-names.js
+- node_modules/events/tests/subclass.js
+- node_modules/events/tests/symbols.js
+- node_modules/express/History.md
+- node_modules/express/LICENSE
+- node_modules/express/Readme.md
+- node_modules/express/index.js
+- node_modules/express/lib/application.js
+- node_modules/express/lib/express.js
+- node_modules/express/lib/middleware/init.js
+- node_modules/express/lib/middleware/query.js
+- node_modules/express/lib/request.js
+- node_modules/express/lib/response.js
+- node_modules/express/lib/router/index.js
+- node_modules/express/lib/router/layer.js
+- node_modules/express/lib/router/route.js
+- node_modules/express/lib/utils.js
+- node_modules/express/lib/view.js
+- node_modules/express/package.json
+- node_modules/fast-copy/.release-it.beta.json
+- node_modules/fast-copy/.release-it.json
+- node_modules/fast-copy/CHANGELOG.md
+- node_modules/fast-copy/LICENSE
+- node_modules/fast-copy/README.md
+- node_modules/fast-copy/dist/cjs/index.cjs
+- node_modules/fast-copy/dist/cjs/index.cjs.map
+- node_modules/fast-copy/dist/cjs/types/copier.d.ts
+- node_modules/fast-copy/dist/cjs/types/index.d.ts
+- node_modules/fast-copy/dist/cjs/types/utils.d.ts
+- node_modules/fast-copy/dist/esm/index.mjs
+- node_modules/fast-copy/dist/esm/index.mjs.map
+- node_modules/fast-copy/dist/esm/types/copier.d.ts
+- node_modules/fast-copy/dist/esm/types/index.d.ts
+- node_modules/fast-copy/dist/esm/types/utils.d.ts
+- node_modules/fast-copy/dist/min/index.js
+- node_modules/fast-copy/dist/min/index.js.map
+- node_modules/fast-copy/dist/min/types/copier.d.ts
+- node_modules/fast-copy/dist/min/types/index.d.ts
+- node_modules/fast-copy/dist/min/types/utils.d.ts
+- node_modules/fast-copy/dist/umd/index.js
+- node_modules/fast-copy/dist/umd/index.js.map
+- node_modules/fast-copy/dist/umd/types/copier.d.ts
+- node_modules/fast-copy/dist/umd/types/index.d.ts
+- node_modules/fast-copy/dist/umd/types/utils.d.ts
+- node_modules/fast-copy/flow-typed/fast-copy.js
+- node_modules/fast-copy/index.d.ts
+- node_modules/fast-copy/package.json
+- node_modules/fast-copy/rollup/config.base.js
+- node_modules/fast-copy/rollup/config.cjs.js
+- node_modules/fast-copy/rollup/config.esm.js
+- node_modules/fast-copy/rollup/config.min.js
+- node_modules/fast-copy/rollup/config.umd.js
+- node_modules/fast-copy/rollup/packageJson.js
+- node_modules/fast-copy/tsconfig/base.json
+- node_modules/fast-copy/tsconfig/cjs.json
+- node_modules/fast-copy/tsconfig/declarations.json
+- node_modules/fast-copy/tsconfig/esm.json
+- node_modules/fast-copy/tsconfig/min.json
+- node_modules/fast-copy/tsconfig/umd.json
+- node_modules/fast-redact/.github/workflows/ci.yml
+- node_modules/fast-redact/LICENSE
+- node_modules/fast-redact/benchmark/index.js
+- node_modules/fast-redact/example/default-usage.js
+- node_modules/fast-redact/example/intermediate-wildcard-array.js
+- node_modules/fast-redact/example/multi-wildcard-array-depth.js
+- node_modules/fast-redact/example/multi-wildcard-array-end.js
+- node_modules/fast-redact/example/multi-wildcard-array.js
+- node_modules/fast-redact/example/serialize-false.js
+- node_modules/fast-redact/example/serialize-function.js
+- node_modules/fast-redact/example/top-wildcard-object.js
+- node_modules/fast-redact/index.js
+- node_modules/fast-redact/lib/modifiers.js
+- node_modules/fast-redact/lib/parse.js
+- node_modules/fast-redact/lib/redactor.js
+- node_modules/fast-redact/lib/restorer.js
+- node_modules/fast-redact/lib/rx.js
+- node_modules/fast-redact/lib/state.js
+- node_modules/fast-redact/lib/validator.js
+- node_modules/fast-redact/package.json
+- node_modules/fast-redact/readme.md
+- node_modules/fast-redact/test/index.js
+- node_modules/fast-safe-stringify/.travis.yml
+- node_modules/fast-safe-stringify/CHANGELOG.md
+- node_modules/fast-safe-stringify/LICENSE
+- node_modules/fast-safe-stringify/benchmark.js
+- node_modules/fast-safe-stringify/index.d.ts
+- node_modules/fast-safe-stringify/index.js
+- node_modules/fast-safe-stringify/package.json
+- node_modules/fast-safe-stringify/readme.md
+- node_modules/fast-safe-stringify/test-stable.js
+- node_modules/fast-safe-stringify/test.js
+- node_modules/fill-range/LICENSE
+- node_modules/fill-range/README.md
+- node_modules/fill-range/index.js
+- node_modules/fill-range/package.json
+- node_modules/finalhandler/HISTORY.md
+- node_modules/finalhandler/LICENSE
+- node_modules/finalhandler/README.md
+- node_modules/finalhandler/SECURITY.md
+- node_modules/finalhandler/index.js
+- node_modules/finalhandler/package.json
+- node_modules/follow-redirects/LICENSE
+- node_modules/follow-redirects/README.md
+- node_modules/follow-redirects/debug.js
+- node_modules/follow-redirects/http.js
+- node_modules/follow-redirects/https.js
+- node_modules/follow-redirects/index.js
+- node_modules/follow-redirects/package.json
+- node_modules/form-data-encoder/@type/FileLike.d.ts
+- node_modules/form-data-encoder/@type/FormDataEncoder.d.ts
+- node_modules/form-data-encoder/@type/FormDataLike.d.ts
+- node_modules/form-data-encoder/@type/index.d.ts
+- node_modules/form-data-encoder/@type/util/createBoundary.d.ts
+- node_modules/form-data-encoder/@type/util/escapeName.d.ts
+- node_modules/form-data-encoder/@type/util/isFileLike.d.ts
+- node_modules/form-data-encoder/@type/util/isFormData.d.ts
+- node_modules/form-data-encoder/@type/util/isFunction.d.ts
+- node_modules/form-data-encoder/@type/util/isPlainObject.d.ts
+- node_modules/form-data-encoder/@type/util/normalizeValue.d.ts
+- node_modules/form-data-encoder/lib/cjs/FileLike.js
+- node_modules/form-data-encoder/lib/cjs/FormDataEncoder.js
+- node_modules/form-data-encoder/lib/cjs/FormDataLike.js
+- node_modules/form-data-encoder/lib/cjs/index.js
+- node_modules/form-data-encoder/lib/cjs/package.json
+- node_modules/form-data-encoder/lib/cjs/util/createBoundary.js
+- node_modules/form-data-encoder/lib/cjs/util/escapeName.js
+- node_modules/form-data-encoder/lib/cjs/util/isFileLike.js
+- node_modules/form-data-encoder/lib/cjs/util/isFormData.js
+- node_modules/form-data-encoder/lib/cjs/util/isFunction.js
+- node_modules/form-data-encoder/lib/cjs/util/isPlainObject.js
+- node_modules/form-data-encoder/lib/cjs/util/normalizeValue.js
+- node_modules/form-data-encoder/lib/esm/FileLike.js
+- node_modules/form-data-encoder/lib/esm/FormDataEncoder.js
+- node_modules/form-data-encoder/lib/esm/FormDataLike.js
+- node_modules/form-data-encoder/lib/esm/index.js
+- node_modules/form-data-encoder/lib/esm/package.json
+- node_modules/form-data-encoder/lib/esm/util/createBoundary.js
+- node_modules/form-data-encoder/lib/esm/util/escapeName.js
+- node_modules/form-data-encoder/lib/esm/util/isFileLike.js
+- node_modules/form-data-encoder/lib/esm/util/isFormData.js
+- node_modules/form-data-encoder/lib/esm/util/isFunction.js
+- node_modules/form-data-encoder/lib/esm/util/isPlainObject.js
+- node_modules/form-data-encoder/lib/esm/util/normalizeValue.js
+- node_modules/form-data-encoder/license
+- node_modules/form-data-encoder/package.json
+- node_modules/form-data-encoder/readme.md
+- node_modules/form-data/CHANGELOG.md
+- node_modules/form-data/License
+- node_modules/form-data/README.md
+- node_modules/form-data/index.d.ts
+- node_modules/form-data/lib/browser.js
+- node_modules/form-data/lib/form_data.js
+- node_modules/form-data/lib/populate.js
+- node_modules/form-data/package.json
+- node_modules/formdata-node/@type/Blob.d.ts
+- node_modules/formdata-node/@type/BlobPart.d.ts
+- node_modules/formdata-node/@type/File.d.ts
+- node_modules/formdata-node/@type/FormData.d.ts
+- node_modules/formdata-node/@type/blobHelpers.d.ts
+- node_modules/formdata-node/@type/browser.d.ts
+- node_modules/formdata-node/@type/deprecateConstructorEntries.d.ts
+- node_modules/formdata-node/@type/fileFromPath.d.ts
+- node_modules/formdata-node/@type/index.d.ts
+- node_modules/formdata-node/@type/isBlob.d.ts
+- node_modules/formdata-node/@type/isFile.d.ts
+- node_modules/formdata-node/@type/isFunction.d.ts
+- node_modules/formdata-node/@type/isPlainObject.d.ts
+- node_modules/formdata-node/lib/cjs/Blob.js
+- node_modules/formdata-node/lib/cjs/BlobPart.js
+- node_modules/formdata-node/lib/cjs/File.js
+- node_modules/formdata-node/lib/cjs/FormData.js
+- node_modules/formdata-node/lib/cjs/blobHelpers.js
+- node_modules/formdata-node/lib/cjs/browser.js
+- node_modules/formdata-node/lib/cjs/deprecateConstructorEntries.js
+- node_modules/formdata-node/lib/cjs/fileFromPath.js
+- node_modules/formdata-node/lib/cjs/index.js
+- node_modules/formdata-node/lib/cjs/isBlob.js
+- node_modules/formdata-node/lib/cjs/isFile.js
+- node_modules/formdata-node/lib/cjs/isFunction.js
+- node_modules/formdata-node/lib/cjs/isPlainObject.js
+- node_modules/formdata-node/lib/cjs/package.json
+- node_modules/formdata-node/lib/esm/Blob.js
+- node_modules/formdata-node/lib/esm/BlobPart.js
+- node_modules/formdata-node/lib/esm/File.js
+- node_modules/formdata-node/lib/esm/FormData.js
+- node_modules/formdata-node/lib/esm/blobHelpers.js
+- node_modules/formdata-node/lib/esm/browser.js
+- node_modules/formdata-node/lib/esm/deprecateConstructorEntries.js
+- node_modules/formdata-node/lib/esm/fileFromPath.js
+- node_modules/formdata-node/lib/esm/index.js
+- node_modules/formdata-node/lib/esm/isBlob.js
+- node_modules/formdata-node/lib/esm/isFile.js
+- node_modules/formdata-node/lib/esm/isFunction.js
+- node_modules/formdata-node/lib/esm/isPlainObject.js
+- node_modules/formdata-node/lib/esm/package.json
+- node_modules/formdata-node/lib/node-domexception.d.ts
+- node_modules/formdata-node/license
+- node_modules/formdata-node/node_modules/web-streams-polyfill/LICENSE
+- node_modules/formdata-node/node_modules/web-streams-polyfill/README.md
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/polyfill.es5.js
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/polyfill.js
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/ponyfill.es5.js
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/ponyfill.es5.mjs
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/ponyfill.js
+- node_modules/formdata-node/node_modules/web-streams-polyfill/dist/ponyfill.mjs
+- node_modules/formdata-node/node_modules/web-streams-polyfill/es5/package.json
+- node_modules/formdata-node/node_modules/web-streams-polyfill/package.json
+- node_modules/formdata-node/node_modules/web-streams-polyfill/polyfill/es5/package.json
+- node_modules/formdata-node/node_modules/web-streams-polyfill/polyfill/package.json
+- node_modules/formdata-node/node_modules/web-streams-polyfill/types/polyfill.d.ts
+- node_modules/formdata-node/node_modules/web-streams-polyfill/types/ponyfill.d.ts
+- node_modules/formdata-node/node_modules/web-streams-polyfill/types/tsdoc-metadata.json
+- node_modules/formdata-node/package.json
+- node_modules/formdata-node/readme.md
+- node_modules/forwarded/HISTORY.md
+- node_modules/forwarded/LICENSE
+- node_modules/forwarded/README.md
+- node_modules/forwarded/index.js
+- node_modules/forwarded/package.json
+- node_modules/fresh/HISTORY.md
+- node_modules/fresh/LICENSE
+- node_modules/fresh/README.md
+- node_modules/fresh/index.js
+- node_modules/fresh/package.json
+- node_modules/function-bind/.eslintrc
+- node_modules/function-bind/.github/FUNDING.yml
+- node_modules/function-bind/.github/SECURITY.md
+- node_modules/function-bind/.nycrc
+- node_modules/function-bind/CHANGELOG.md
+- node_modules/function-bind/LICENSE
+- node_modules/function-bind/README.md
+- node_modules/function-bind/implementation.js
+- node_modules/function-bind/index.js
+- node_modules/function-bind/package.json
+- node_modules/function-bind/test/.eslintrc
+- node_modules/function-bind/test/index.js
+- node_modules/get-intrinsic/.eslintrc
+- node_modules/get-intrinsic/.github/FUNDING.yml
+- node_modules/get-intrinsic/.nycrc
+- node_modules/get-intrinsic/CHANGELOG.md
+- node_modules/get-intrinsic/LICENSE
+- node_modules/get-intrinsic/README.md
+- node_modules/get-intrinsic/index.js
+- node_modules/get-intrinsic/package.json
+- node_modules/get-intrinsic/test/GetIntrinsic.js
+- node_modules/get-proto/.eslintrc
+- node_modules/get-proto/.github/FUNDING.yml
+- node_modules/get-proto/.nycrc
+- node_modules/get-proto/CHANGELOG.md
+- node_modules/get-proto/LICENSE
+- node_modules/get-proto/Object.getPrototypeOf.d.ts
+- node_modules/get-proto/Object.getPrototypeOf.js
+- node_modules/get-proto/README.md
+- node_modules/get-proto/Reflect.getPrototypeOf.d.ts
+- node_modules/get-proto/Reflect.getPrototypeOf.js
+- node_modules/get-proto/index.d.ts
+- node_modules/get-proto/index.js
+- node_modules/get-proto/package.json
+- node_modules/get-proto/test/index.js
+- node_modules/get-proto/tsconfig.json
+- node_modules/glob-parent/CHANGELOG.md
+- node_modules/glob-parent/LICENSE
+- node_modules/glob-parent/README.md
+- node_modules/glob-parent/index.js
+- node_modules/glob-parent/package.json
+- node_modules/gopd/.eslintrc
+- node_modules/gopd/.github/FUNDING.yml
+- node_modules/gopd/CHANGELOG.md
+- node_modules/gopd/LICENSE
+- node_modules/gopd/README.md
+- node_modules/gopd/gOPD.d.ts
+- node_modules/gopd/gOPD.js
+- node_modules/gopd/index.d.ts
+- node_modules/gopd/index.js
+- node_modules/gopd/package.json
+- node_modules/gopd/test/index.js
+- node_modules/gopd/tsconfig.json
+- node_modules/groq-sdk/CHANGELOG.md
+- node_modules/groq-sdk/LICENSE
+- node_modules/groq-sdk/README.md
+- node_modules/groq-sdk/_shims/MultipartBody.d.ts
+- node_modules/groq-sdk/_shims/MultipartBody.d.ts.map
+- node_modules/groq-sdk/_shims/MultipartBody.js
+- node_modules/groq-sdk/_shims/MultipartBody.js.map
+- node_modules/groq-sdk/_shims/MultipartBody.mjs
+- node_modules/groq-sdk/_shims/MultipartBody.mjs.map
+- node_modules/groq-sdk/_shims/README.md
+- node_modules/groq-sdk/_shims/auto/runtime-bun.d.ts
+- node_modules/groq-sdk/_shims/auto/runtime-bun.d.ts.map
+- node_modules/groq-sdk/_shims/auto/runtime-bun.js
+- node_modules/groq-sdk/_shims/auto/runtime-bun.js.map
+- node_modules/groq-sdk/_shims/auto/runtime-bun.mjs
+- node_modules/groq-sdk/_shims/auto/runtime-bun.mjs.map
+- node_modules/groq-sdk/_shims/auto/runtime-node.d.ts
+- node_modules/groq-sdk/_shims/auto/runtime-node.d.ts.map
+- node_modules/groq-sdk/_shims/auto/runtime-node.js
+- node_modules/groq-sdk/_shims/auto/runtime-node.js.map
+- node_modules/groq-sdk/_shims/auto/runtime-node.mjs
+- node_modules/groq-sdk/_shims/auto/runtime-node.mjs.map
+- node_modules/groq-sdk/_shims/auto/runtime.d.ts
+- node_modules/groq-sdk/_shims/auto/runtime.d.ts.map
+- node_modules/groq-sdk/_shims/auto/runtime.js
+- node_modules/groq-sdk/_shims/auto/runtime.js.map
+- node_modules/groq-sdk/_shims/auto/runtime.mjs
+- node_modules/groq-sdk/_shims/auto/runtime.mjs.map
+- node_modules/groq-sdk/_shims/auto/types-node.d.ts
+- node_modules/groq-sdk/_shims/auto/types-node.d.ts.map
+- node_modules/groq-sdk/_shims/auto/types-node.js
+- node_modules/groq-sdk/_shims/auto/types-node.js.map
+- node_modules/groq-sdk/_shims/auto/types-node.mjs
+- node_modules/groq-sdk/_shims/auto/types-node.mjs.map
+- node_modules/groq-sdk/_shims/auto/types.d.ts
+- node_modules/groq-sdk/_shims/auto/types.js
+- node_modules/groq-sdk/_shims/auto/types.mjs
+- node_modules/groq-sdk/_shims/bun-runtime.d.ts
+- node_modules/groq-sdk/_shims/bun-runtime.d.ts.map
+- node_modules/groq-sdk/_shims/bun-runtime.js
+- node_modules/groq-sdk/_shims/bun-runtime.js.map
+- node_modules/groq-sdk/_shims/bun-runtime.mjs
+- node_modules/groq-sdk/_shims/bun-runtime.mjs.map
+- node_modules/groq-sdk/_shims/index.d.ts
+- node_modules/groq-sdk/_shims/index.js
+- node_modules/groq-sdk/_shims/index.mjs
+- node_modules/groq-sdk/_shims/manual-types.d.ts
+- node_modules/groq-sdk/_shims/manual-types.js
+- node_modules/groq-sdk/_shims/manual-types.mjs
+- node_modules/groq-sdk/_shims/node-runtime.d.ts
+- node_modules/groq-sdk/_shims/node-runtime.d.ts.map
+- node_modules/groq-sdk/_shims/node-runtime.js
+- node_modules/groq-sdk/_shims/node-runtime.js.map
+- node_modules/groq-sdk/_shims/node-runtime.mjs
+- node_modules/groq-sdk/_shims/node-runtime.mjs.map
+- node_modules/groq-sdk/_shims/node-types.d.ts
+- node_modules/groq-sdk/_shims/node-types.js
+- node_modules/groq-sdk/_shims/node-types.mjs
+- node_modules/groq-sdk/_shims/registry.d.ts
+- node_modules/groq-sdk/_shims/registry.d.ts.map
+- node_modules/groq-sdk/_shims/registry.js
+- node_modules/groq-sdk/_shims/registry.js.map
+- node_modules/groq-sdk/_shims/registry.mjs
+- node_modules/groq-sdk/_shims/registry.mjs.map
+- node_modules/groq-sdk/_shims/web-runtime.d.ts
+- node_modules/groq-sdk/_shims/web-runtime.d.ts.map
+- node_modules/groq-sdk/_shims/web-runtime.js
+- node_modules/groq-sdk/_shims/web-runtime.js.map
+- node_modules/groq-sdk/_shims/web-runtime.mjs
+- node_modules/groq-sdk/_shims/web-runtime.mjs.map
+- node_modules/groq-sdk/_shims/web-types.d.ts
+- node_modules/groq-sdk/_shims/web-types.js
+- node_modules/groq-sdk/_shims/web-types.mjs
+- node_modules/groq-sdk/core.d.ts
+- node_modules/groq-sdk/core.d.ts.map
+- node_modules/groq-sdk/core.js
+- node_modules/groq-sdk/core.js.map
+- node_modules/groq-sdk/core.mjs
+- node_modules/groq-sdk/core.mjs.map
+- node_modules/groq-sdk/error.d.ts
+- node_modules/groq-sdk/error.d.ts.map
+- node_modules/groq-sdk/error.js
+- node_modules/groq-sdk/error.js.map
+- node_modules/groq-sdk/error.mjs
+- node_modules/groq-sdk/error.mjs.map
+- node_modules/groq-sdk/index.d.mts
+- node_modules/groq-sdk/index.d.ts
+- node_modules/groq-sdk/index.d.ts.map
+- node_modules/groq-sdk/index.js
+- node_modules/groq-sdk/index.js.map
+- node_modules/groq-sdk/index.mjs
+- node_modules/groq-sdk/index.mjs.map
+- node_modules/groq-sdk/lib/streaming.d.ts
+- node_modules/groq-sdk/lib/streaming.d.ts.map
+- node_modules/groq-sdk/lib/streaming.js
+- node_modules/groq-sdk/lib/streaming.js.map
+- node_modules/groq-sdk/lib/streaming.mjs
+- node_modules/groq-sdk/lib/streaming.mjs.map
+- node_modules/groq-sdk/package.json
+- node_modules/groq-sdk/resource.d.ts
+- node_modules/groq-sdk/resource.d.ts.map
+- node_modules/groq-sdk/resource.js
+- node_modules/groq-sdk/resource.js.map
+- node_modules/groq-sdk/resource.mjs
+- node_modules/groq-sdk/resource.mjs.map
+- node_modules/groq-sdk/resources/audio/audio.d.ts
+- node_modules/groq-sdk/resources/audio/audio.d.ts.map
+- node_modules/groq-sdk/resources/audio/audio.js
+- node_modules/groq-sdk/resources/audio/audio.js.map
+- node_modules/groq-sdk/resources/audio/audio.mjs
+- node_modules/groq-sdk/resources/audio/audio.mjs.map
+- node_modules/groq-sdk/resources/audio/index.d.ts
+- node_modules/groq-sdk/resources/audio/index.d.ts.map
+- node_modules/groq-sdk/resources/audio/index.js
+- node_modules/groq-sdk/resources/audio/index.js.map
+- node_modules/groq-sdk/resources/audio/index.mjs
+- node_modules/groq-sdk/resources/audio/index.mjs.map
+- node_modules/groq-sdk/resources/audio/transcriptions.d.ts
+- node_modules/groq-sdk/resources/audio/transcriptions.d.ts.map
+- node_modules/groq-sdk/resources/audio/transcriptions.js
+- node_modules/groq-sdk/resources/audio/transcriptions.js.map
+- node_modules/groq-sdk/resources/audio/transcriptions.mjs
+- node_modules/groq-sdk/resources/audio/transcriptions.mjs.map
+- node_modules/groq-sdk/resources/audio/translations.d.ts
+- node_modules/groq-sdk/resources/audio/translations.d.ts.map
+- node_modules/groq-sdk/resources/audio/translations.js
+- node_modules/groq-sdk/resources/audio/translations.js.map
+- node_modules/groq-sdk/resources/audio/translations.mjs
+- node_modules/groq-sdk/resources/audio/translations.mjs.map
+- node_modules/groq-sdk/resources/chat/chat.d.ts
+- node_modules/groq-sdk/resources/chat/chat.d.ts.map
+- node_modules/groq-sdk/resources/chat/chat.js
+- node_modules/groq-sdk/resources/chat/chat.js.map
+- node_modules/groq-sdk/resources/chat/chat.mjs
+- node_modules/groq-sdk/resources/chat/chat.mjs.map
+- node_modules/groq-sdk/resources/chat/completions.d.ts
+- node_modules/groq-sdk/resources/chat/completions.d.ts.map
+- node_modules/groq-sdk/resources/chat/completions.js
+- node_modules/groq-sdk/resources/chat/completions.js.map
+- node_modules/groq-sdk/resources/chat/completions.mjs
+- node_modules/groq-sdk/resources/chat/completions.mjs.map
+- node_modules/groq-sdk/resources/chat/index.d.ts
+- node_modules/groq-sdk/resources/chat/index.d.ts.map
+- node_modules/groq-sdk/resources/chat/index.js
+- node_modules/groq-sdk/resources/chat/index.js.map
+- node_modules/groq-sdk/resources/chat/index.mjs
+- node_modules/groq-sdk/resources/chat/index.mjs.map
+- node_modules/groq-sdk/resources/completions.d.ts
+- node_modules/groq-sdk/resources/completions.d.ts.map
+- node_modules/groq-sdk/resources/completions.js
+- node_modules/groq-sdk/resources/completions.js.map
+- node_modules/groq-sdk/resources/completions.mjs
+- node_modules/groq-sdk/resources/completions.mjs.map
+- node_modules/groq-sdk/resources/embeddings.d.ts
+- node_modules/groq-sdk/resources/embeddings.d.ts.map
+- node_modules/groq-sdk/resources/embeddings.js
+- node_modules/groq-sdk/resources/embeddings.js.map
+- node_modules/groq-sdk/resources/embeddings.mjs
+- node_modules/groq-sdk/resources/embeddings.mjs.map
+- node_modules/groq-sdk/resources/index.d.ts
+- node_modules/groq-sdk/resources/index.d.ts.map
+- node_modules/groq-sdk/resources/index.js
+- node_modules/groq-sdk/resources/index.js.map
+- node_modules/groq-sdk/resources/index.mjs
+- node_modules/groq-sdk/resources/index.mjs.map
+- node_modules/groq-sdk/resources/models.d.ts
+- node_modules/groq-sdk/resources/models.d.ts.map
+- node_modules/groq-sdk/resources/models.js
+- node_modules/groq-sdk/resources/models.js.map
+- node_modules/groq-sdk/resources/models.mjs
+- node_modules/groq-sdk/resources/models.mjs.map
+- node_modules/groq-sdk/resources/shared.d.ts
+- node_modules/groq-sdk/resources/shared.d.ts.map
+- node_modules/groq-sdk/resources/shared.js
+- node_modules/groq-sdk/resources/shared.js.map
+- node_modules/groq-sdk/resources/shared.mjs
+- node_modules/groq-sdk/resources/shared.mjs.map
+- node_modules/groq-sdk/shims/node.d.ts
+- node_modules/groq-sdk/shims/node.d.ts.map
+- node_modules/groq-sdk/shims/node.js
+- node_modules/groq-sdk/shims/node.js.map
+- node_modules/groq-sdk/shims/node.mjs
+- node_modules/groq-sdk/shims/node.mjs.map
+- node_modules/groq-sdk/shims/web.d.ts
+- node_modules/groq-sdk/shims/web.d.ts.map
+- node_modules/groq-sdk/shims/web.js
+- node_modules/groq-sdk/shims/web.js.map
+- node_modules/groq-sdk/shims/web.mjs
+- node_modules/groq-sdk/shims/web.mjs.map
+- node_modules/groq-sdk/src/_shims/MultipartBody.ts
+- node_modules/groq-sdk/src/_shims/README.md
+- node_modules/groq-sdk/src/_shims/auto/runtime-bun.ts
+- node_modules/groq-sdk/src/_shims/auto/runtime-node.ts
+- node_modules/groq-sdk/src/_shims/auto/runtime.ts
+- node_modules/groq-sdk/src/_shims/auto/types-node.ts
+- node_modules/groq-sdk/src/_shims/auto/types.d.ts
+- node_modules/groq-sdk/src/_shims/auto/types.js
+- node_modules/groq-sdk/src/_shims/auto/types.mjs
+- node_modules/groq-sdk/src/_shims/bun-runtime.ts
+- node_modules/groq-sdk/src/_shims/index.d.ts
+- node_modules/groq-sdk/src/_shims/index.js
+- node_modules/groq-sdk/src/_shims/index.mjs
+- node_modules/groq-sdk/src/_shims/manual-types.d.ts
+- node_modules/groq-sdk/src/_shims/manual-types.js
+- node_modules/groq-sdk/src/_shims/manual-types.mjs
+- node_modules/groq-sdk/src/_shims/node-runtime.ts
+- node_modules/groq-sdk/src/_shims/node-types.d.ts
+- node_modules/groq-sdk/src/_shims/node-types.js
+- node_modules/groq-sdk/src/_shims/node-types.mjs
+- node_modules/groq-sdk/src/_shims/registry.ts
+- node_modules/groq-sdk/src/_shims/web-runtime.ts
+- node_modules/groq-sdk/src/_shims/web-types.d.ts
+- node_modules/groq-sdk/src/_shims/web-types.js
+- node_modules/groq-sdk/src/_shims/web-types.mjs
+- node_modules/groq-sdk/src/core.ts
+- node_modules/groq-sdk/src/error.ts
+- node_modules/groq-sdk/src/index.ts
+- node_modules/groq-sdk/src/lib/.keep
+- node_modules/groq-sdk/src/lib/streaming.ts
+- node_modules/groq-sdk/src/resource.ts
+- node_modules/groq-sdk/src/resources/audio/audio.ts
+- node_modules/groq-sdk/src/resources/audio/index.ts
+- node_modules/groq-sdk/src/resources/audio/transcriptions.ts
+- node_modules/groq-sdk/src/resources/audio/translations.ts
+- node_modules/groq-sdk/src/resources/chat/chat.ts
+- node_modules/groq-sdk/src/resources/chat/completions.ts
+- node_modules/groq-sdk/src/resources/chat/index.ts
+- node_modules/groq-sdk/src/resources/completions.ts
+- node_modules/groq-sdk/src/resources/embeddings.ts
+- node_modules/groq-sdk/src/resources/index.ts
+- node_modules/groq-sdk/src/resources/models.ts
+- node_modules/groq-sdk/src/resources/shared.ts
+- node_modules/groq-sdk/src/shims/node.ts
+- node_modules/groq-sdk/src/shims/web.ts
+- node_modules/groq-sdk/src/tsconfig.json
+- node_modules/groq-sdk/src/uploads.ts
+- node_modules/groq-sdk/src/version.ts
+- node_modules/groq-sdk/uploads.d.ts
+- node_modules/groq-sdk/uploads.d.ts.map
+- node_modules/groq-sdk/uploads.js
+- node_modules/groq-sdk/uploads.js.map
+- node_modules/groq-sdk/uploads.mjs
+- node_modules/groq-sdk/uploads.mjs.map
+- node_modules/groq-sdk/version.d.ts
+- node_modules/groq-sdk/version.d.ts.map
+- node_modules/groq-sdk/version.js
+- node_modules/groq-sdk/version.js.map
+- node_modules/groq-sdk/version.mjs
+- node_modules/groq-sdk/version.mjs.map
+- node_modules/has-flag/index.js
+- node_modules/has-flag/license
+- node_modules/has-flag/package.json
+- node_modules/has-flag/readme.md
+- node_modules/has-symbols/.eslintrc
+- node_modules/has-symbols/.github/FUNDING.yml
+- node_modules/has-symbols/.nycrc
+- node_modules/has-symbols/CHANGELOG.md
+- node_modules/has-symbols/LICENSE
+- node_modules/has-symbols/README.md
+- node_modules/has-symbols/index.d.ts
+- node_modules/has-symbols/index.js
+- node_modules/has-symbols/package.json
+- node_modules/has-symbols/shams.d.ts
+- node_modules/has-symbols/shams.js
+- node_modules/has-symbols/test/index.js
+- node_modules/has-symbols/test/shams/core-js.js
+- node_modules/has-symbols/test/shams/get-own-property-symbols.js
+- node_modules/has-symbols/test/tests.js
+- node_modules/has-symbols/tsconfig.json
+- node_modules/has-tostringtag/.eslintrc
+- node_modules/has-tostringtag/.github/FUNDING.yml
+- node_modules/has-tostringtag/.nycrc
+- node_modules/has-tostringtag/CHANGELOG.md
+- node_modules/has-tostringtag/LICENSE
+- node_modules/has-tostringtag/README.md
+- node_modules/has-tostringtag/index.d.ts
+- node_modules/has-tostringtag/index.js
+- node_modules/has-tostringtag/package.json
+- node_modules/has-tostringtag/shams.d.ts
+- node_modules/has-tostringtag/shams.js
+- node_modules/has-tostringtag/test/index.js
+- node_modules/has-tostringtag/test/shams/core-js.js
+- node_modules/has-tostringtag/test/shams/get-own-property-symbols.js
+- node_modules/has-tostringtag/test/tests.js
+- node_modules/has-tostringtag/tsconfig.json
+- node_modules/hasown/.eslintrc
+- node_modules/hasown/.github/FUNDING.yml
+- node_modules/hasown/.nycrc
+- node_modules/hasown/CHANGELOG.md
+- node_modules/hasown/LICENSE
+- node_modules/hasown/README.md
+- node_modules/hasown/index.d.ts
+- node_modules/hasown/index.js
+- node_modules/hasown/package.json
+- node_modules/hasown/tsconfig.json
+- node_modules/help-me/.github/workflows/ci.yml
+- node_modules/help-me/LICENSE
+- node_modules/help-me/README.md
+- node_modules/help-me/doc/hello.txt
+- node_modules/help-me/doc/help.txt
+- node_modules/help-me/example.js
+- node_modules/help-me/fixture/basic/hello.txt
+- node_modules/help-me/fixture/basic/help.txt
+- node_modules/help-me/fixture/dir/a/b.txt
+- node_modules/help-me/fixture/no-ext/hello
+- node_modules/help-me/fixture/sameprefix/hello world.txt
+- node_modules/help-me/fixture/sameprefix/hello.txt
+- node_modules/help-me/fixture/shortnames/abcde fghi lmno.txt
+- node_modules/help-me/fixture/shortnames/abcde hello.txt
+- node_modules/help-me/fixture/shortnames/hello world.txt
+- node_modules/help-me/help-me.js
+- node_modules/help-me/package.json
+- node_modules/help-me/test.js
+- node_modules/http-errors/HISTORY.md
+- node_modules/http-errors/LICENSE
+- node_modules/http-errors/README.md
+- node_modules/http-errors/index.js
+- node_modules/http-errors/package.json
+- node_modules/humanize-ms/History.md
+- node_modules/humanize-ms/LICENSE
+- node_modules/humanize-ms/README.md
+- node_modules/humanize-ms/index.js
+- node_modules/humanize-ms/package.json
+- node_modules/iconv-lite/Changelog.md
+- node_modules/iconv-lite/LICENSE
+- node_modules/iconv-lite/README.md
+- node_modules/iconv-lite/encodings/dbcs-codec.js
+- node_modules/iconv-lite/encodings/dbcs-data.js
+- node_modules/iconv-lite/encodings/index.js
+- node_modules/iconv-lite/encodings/internal.js
+- node_modules/iconv-lite/encodings/sbcs-codec.js
+- node_modules/iconv-lite/encodings/sbcs-data-generated.js
+- node_modules/iconv-lite/encodings/sbcs-data.js
+- node_modules/iconv-lite/encodings/tables/big5-added.json
+- node_modules/iconv-lite/encodings/tables/cp936.json
+- node_modules/iconv-lite/encodings/tables/cp949.json
+- node_modules/iconv-lite/encodings/tables/cp950.json
+- node_modules/iconv-lite/encodings/tables/eucjp.json
+- node_modules/iconv-lite/encodings/tables/gb18030-ranges.json
+- node_modules/iconv-lite/encodings/tables/gbk-added.json
+- node_modules/iconv-lite/encodings/tables/shiftjis.json
+- node_modules/iconv-lite/encodings/utf16.js
+- node_modules/iconv-lite/encodings/utf7.js
+- node_modules/iconv-lite/lib/bom-handling.js
+- node_modules/iconv-lite/lib/extend-node.js
+- node_modules/iconv-lite/lib/index.d.ts
+- node_modules/iconv-lite/lib/index.js
+- node_modules/iconv-lite/lib/streams.js
+- node_modules/iconv-lite/package.json
+- node_modules/ieee754/LICENSE
+- node_modules/ieee754/README.md
+- node_modules/ieee754/index.d.ts
+- node_modules/ieee754/index.js
+- node_modules/ieee754/package.json
+- node_modules/ignore-by-default/LICENSE
+- node_modules/ignore-by-default/README.md
+- node_modules/ignore-by-default/index.js
+- node_modules/ignore-by-default/package.json
+- node_modules/inherits/LICENSE
+- node_modules/inherits/README.md
+- node_modules/inherits/inherits.js
+- node_modules/inherits/inherits_browser.js
+- node_modules/inherits/package.json
+- node_modules/ipaddr.js/LICENSE
+- node_modules/ipaddr.js/README.md
+- node_modules/ipaddr.js/ipaddr.min.js
+- node_modules/ipaddr.js/lib/ipaddr.js
+- node_modules/ipaddr.js/lib/ipaddr.js.d.ts
+- node_modules/ipaddr.js/package.json
+- node_modules/is-binary-path/index.d.ts
+- node_modules/is-binary-path/index.js
+- node_modules/is-binary-path/license
+- node_modules/is-binary-path/package.json
+- node_modules/is-binary-path/readme.md
+- node_modules/is-extglob/LICENSE
+- node_modules/is-extglob/README.md
+- node_modules/is-extglob/index.js
+- node_modules/is-extglob/package.json
+- node_modules/is-glob/LICENSE
+- node_modules/is-glob/README.md
+- node_modules/is-glob/index.js
+- node_modules/is-glob/package.json
+- node_modules/is-number/LICENSE
+- node_modules/is-number/README.md
+- node_modules/is-number/index.js
+- node_modules/is-number/package.json
+- node_modules/joycon/LICENSE
+- node_modules/joycon/README.md
+- node_modules/joycon/lib/index.js
+- node_modules/joycon/package.json
+- node_modules/joycon/types/index.d.ts
+- node_modules/kareem/CHANGELOG.md
+- node_modules/kareem/LICENSE
+- node_modules/kareem/README.md
+- node_modules/kareem/SECURITY.md
+- node_modules/kareem/index.d.ts
+- node_modules/kareem/index.js
+- node_modules/kareem/package.json
+- node_modules/math-intrinsics/.eslintrc
+- node_modules/math-intrinsics/.github/FUNDING.yml
+- node_modules/math-intrinsics/CHANGELOG.md
+- node_modules/math-intrinsics/LICENSE
+- node_modules/math-intrinsics/README.md
+- node_modules/math-intrinsics/abs.d.ts
+- node_modules/math-intrinsics/abs.js
+- node_modules/math-intrinsics/constants/maxArrayLength.d.ts
+- node_modules/math-intrinsics/constants/maxArrayLength.js
+- node_modules/math-intrinsics/constants/maxSafeInteger.d.ts
+- node_modules/math-intrinsics/constants/maxSafeInteger.js
+- node_modules/math-intrinsics/constants/maxValue.d.ts
+- node_modules/math-intrinsics/constants/maxValue.js
+- node_modules/math-intrinsics/floor.d.ts
+- node_modules/math-intrinsics/floor.js
+- node_modules/math-intrinsics/isFinite.d.ts
+- node_modules/math-intrinsics/isFinite.js
+- node_modules/math-intrinsics/isInteger.d.ts
+- node_modules/math-intrinsics/isInteger.js
+- node_modules/math-intrinsics/isNaN.d.ts
+- node_modules/math-intrinsics/isNaN.js
+- node_modules/math-intrinsics/isNegativeZero.d.ts
+- node_modules/math-intrinsics/isNegativeZero.js
+- node_modules/math-intrinsics/max.d.ts
+- node_modules/math-intrinsics/max.js
+- node_modules/math-intrinsics/min.d.ts
+- node_modules/math-intrinsics/min.js
+- node_modules/math-intrinsics/mod.d.ts
+- node_modules/math-intrinsics/mod.js
+- node_modules/math-intrinsics/package.json
+- node_modules/math-intrinsics/pow.d.ts
+- node_modules/math-intrinsics/pow.js
+- node_modules/math-intrinsics/round.d.ts
+- node_modules/math-intrinsics/round.js
+- node_modules/math-intrinsics/sign.d.ts
+- node_modules/math-intrinsics/sign.js
+- node_modules/math-intrinsics/test/index.js
+- node_modules/math-intrinsics/tsconfig.json
+- node_modules/media-typer/HISTORY.md
+- node_modules/media-typer/LICENSE
+- node_modules/media-typer/README.md
+- node_modules/media-typer/index.js
+- node_modules/media-typer/package.json
+- node_modules/memory-pager/.travis.yml
+- node_modules/memory-pager/LICENSE
+- node_modules/memory-pager/README.md
+- node_modules/memory-pager/index.js
+- node_modules/memory-pager/package.json
+- node_modules/memory-pager/test.js
+- node_modules/merge-descriptors/HISTORY.md
+- node_modules/merge-descriptors/LICENSE
+- node_modules/merge-descriptors/README.md
+- node_modules/merge-descriptors/index.js
+- node_modules/merge-descriptors/package.json
+- node_modules/methods/HISTORY.md
+- node_modules/methods/LICENSE
+- node_modules/methods/README.md
+- node_modules/methods/index.js
+- node_modules/methods/package.json
+- node_modules/mime-db/HISTORY.md
+- node_modules/mime-db/LICENSE
+- node_modules/mime-db/README.md
+- node_modules/mime-db/db.json
+- node_modules/mime-db/index.js
+- node_modules/mime-db/package.json
+- node_modules/mime-types/HISTORY.md
+- node_modules/mime-types/LICENSE
+- node_modules/mime-types/README.md
+- node_modules/mime-types/index.js
+- node_modules/mime-types/package.json
+- node_modules/mime/.npmignore
+- node_modules/mime/CHANGELOG.md
+- node_modules/mime/LICENSE
+- node_modules/mime/README.md
+- node_modules/mime/cli.js
+- node_modules/mime/mime.js
+- node_modules/mime/package.json
+- node_modules/mime/src/build.js
+- node_modules/mime/src/test.js
+- node_modules/mime/types.json
+- node_modules/minimatch/LICENSE.md
+- node_modules/minimatch/README.md
+- node_modules/minimatch/dist/commonjs/assert-valid-pattern.d.ts
+- node_modules/minimatch/dist/commonjs/assert-valid-pattern.d.ts.map
+- node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
+- node_modules/minimatch/dist/commonjs/assert-valid-pattern.js.map
+- node_modules/minimatch/dist/commonjs/ast.d.ts
+- node_modules/minimatch/dist/commonjs/ast.d.ts.map
+- node_modules/minimatch/dist/commonjs/ast.js
+- node_modules/minimatch/dist/commonjs/ast.js.map
+- node_modules/minimatch/dist/commonjs/brace-expressions.d.ts
+- node_modules/minimatch/dist/commonjs/brace-expressions.d.ts.map
+- node_modules/minimatch/dist/commonjs/brace-expressions.js
+- node_modules/minimatch/dist/commonjs/brace-expressions.js.map
+- node_modules/minimatch/dist/commonjs/escape.d.ts
+- node_modules/minimatch/dist/commonjs/escape.d.ts.map
+- node_modules/minimatch/dist/commonjs/escape.js
+- node_modules/minimatch/dist/commonjs/escape.js.map
+- node_modules/minimatch/dist/commonjs/index.d.ts
+- node_modules/minimatch/dist/commonjs/index.d.ts.map
+- node_modules/minimatch/dist/commonjs/index.js
+- node_modules/minimatch/dist/commonjs/index.js.map
+- node_modules/minimatch/dist/commonjs/package.json
+- node_modules/minimatch/dist/commonjs/unescape.d.ts
+- node_modules/minimatch/dist/commonjs/unescape.d.ts.map
+- node_modules/minimatch/dist/commonjs/unescape.js
+- node_modules/minimatch/dist/commonjs/unescape.js.map
+- node_modules/minimatch/dist/esm/assert-valid-pattern.d.ts
+- node_modules/minimatch/dist/esm/assert-valid-pattern.d.ts.map
+- node_modules/minimatch/dist/esm/assert-valid-pattern.js
+- node_modules/minimatch/dist/esm/assert-valid-pattern.js.map
+- node_modules/minimatch/dist/esm/ast.d.ts
+- node_modules/minimatch/dist/esm/ast.d.ts.map
+- node_modules/minimatch/dist/esm/ast.js
+- node_modules/minimatch/dist/esm/ast.js.map
+- node_modules/minimatch/dist/esm/brace-expressions.d.ts
+- node_modules/minimatch/dist/esm/brace-expressions.d.ts.map
+- node_modules/minimatch/dist/esm/brace-expressions.js
+- node_modules/minimatch/dist/esm/brace-expressions.js.map
+- node_modules/minimatch/dist/esm/escape.d.ts
+- node_modules/minimatch/dist/esm/escape.d.ts.map
+- node_modules/minimatch/dist/esm/escape.js
+- node_modules/minimatch/dist/esm/escape.js.map
+- node_modules/minimatch/dist/esm/index.d.ts
+- node_modules/minimatch/dist/esm/index.d.ts.map
+- node_modules/minimatch/dist/esm/index.js
+- node_modules/minimatch/dist/esm/index.js.map
+- node_modules/minimatch/dist/esm/package.json
+- node_modules/minimatch/dist/esm/unescape.d.ts
+- node_modules/minimatch/dist/esm/unescape.d.ts.map
+- node_modules/minimatch/dist/esm/unescape.js
+- node_modules/minimatch/dist/esm/unescape.js.map
+- node_modules/minimatch/package.json
+- node_modules/minimist/.eslintrc
+- node_modules/minimist/.github/FUNDING.yml
+- node_modules/minimist/.nycrc
+- node_modules/minimist/CHANGELOG.md
+- node_modules/minimist/LICENSE
+- node_modules/minimist/README.md
+- node_modules/minimist/example/parse.js
+- node_modules/minimist/index.js
+- node_modules/minimist/package.json
+- node_modules/minimist/test/all_bool.js
+- node_modules/minimist/test/bool.js
+- node_modules/minimist/test/dash.js
+- node_modules/minimist/test/default_bool.js
+- node_modules/minimist/test/dotted.js
+- node_modules/minimist/test/kv_short.js
+- node_modules/minimist/test/long.js
+- node_modules/minimist/test/num.js
+- node_modules/minimist/test/parse.js
+- node_modules/minimist/test/parse_modified.js
+- node_modules/minimist/test/proto.js
+- node_modules/minimist/test/short.js
+- node_modules/minimist/test/stop_early.js
+- node_modules/minimist/test/unknown.js
+- node_modules/minimist/test/whitespace.js
+- node_modules/mongodb-connection-string-url/.esm-wrapper.mjs
+- node_modules/mongodb-connection-string-url/LICENSE
+- node_modules/mongodb-connection-string-url/README.md
+- node_modules/mongodb-connection-string-url/lib/index.d.ts
+- node_modules/mongodb-connection-string-url/lib/index.js
+- node_modules/mongodb-connection-string-url/lib/index.js.map
+- node_modules/mongodb-connection-string-url/lib/redact.d.ts
+- node_modules/mongodb-connection-string-url/lib/redact.js
+- node_modules/mongodb-connection-string-url/lib/redact.js.map
+- node_modules/mongodb-connection-string-url/package.json
+- node_modules/mongodb/LICENSE.md
+- node_modules/mongodb/README.md
+- node_modules/mongodb/etc/prepare.js
+- node_modules/mongodb/lib/admin.js
+- node_modules/mongodb/lib/admin.js.map
+- node_modules/mongodb/lib/beta.d.ts
+- node_modules/mongodb/lib/beta.js
+- node_modules/mongodb/lib/beta.js.map
+- node_modules/mongodb/lib/bson.js
+- node_modules/mongodb/lib/bson.js.map
+- node_modules/mongodb/lib/bulk/common.js
+- node_modules/mongodb/lib/bulk/common.js.map
+- node_modules/mongodb/lib/bulk/ordered.js
+- node_modules/mongodb/lib/bulk/ordered.js.map
+- node_modules/mongodb/lib/bulk/unordered.js
+- node_modules/mongodb/lib/bulk/unordered.js.map
+- node_modules/mongodb/lib/change_stream.js
+- node_modules/mongodb/lib/change_stream.js.map
+- node_modules/mongodb/lib/client-side-encryption/auto_encrypter.js
+- node_modules/mongodb/lib/client-side-encryption/auto_encrypter.js.map
+- node_modules/mongodb/lib/client-side-encryption/client_encryption.js
+- node_modules/mongodb/lib/client-side-encryption/client_encryption.js.map
+- node_modules/mongodb/lib/client-side-encryption/crypto_callbacks.js
+- node_modules/mongodb/lib/client-side-encryption/crypto_callbacks.js.map
+- node_modules/mongodb/lib/client-side-encryption/errors.js
+- node_modules/mongodb/lib/client-side-encryption/errors.js.map
+- node_modules/mongodb/lib/client-side-encryption/mongocryptd_manager.js
+- node_modules/mongodb/lib/client-side-encryption/mongocryptd_manager.js.map
+- node_modules/mongodb/lib/client-side-encryption/providers/aws.js
+- node_modules/mongodb/lib/client-side-encryption/providers/aws.js.map
+- node_modules/mongodb/lib/client-side-encryption/providers/azure.js
+- node_modules/mongodb/lib/client-side-encryption/providers/azure.js.map
+- node_modules/mongodb/lib/client-side-encryption/providers/gcp.js
+- node_modules/mongodb/lib/client-side-encryption/providers/gcp.js.map
+- node_modules/mongodb/lib/client-side-encryption/providers/index.js
+- node_modules/mongodb/lib/client-side-encryption/providers/index.js.map
+- node_modules/mongodb/lib/client-side-encryption/state_machine.js
+- node_modules/mongodb/lib/client-side-encryption/state_machine.js.map
+- node_modules/mongodb/lib/cmap/auth/auth_provider.js
+- node_modules/mongodb/lib/cmap/auth/auth_provider.js.map
+- node_modules/mongodb/lib/cmap/auth/aws_temporary_credentials.js
+- node_modules/mongodb/lib/cmap/auth/aws_temporary_credentials.js.map
+- node_modules/mongodb/lib/cmap/auth/gssapi.js
+- node_modules/mongodb/lib/cmap/auth/gssapi.js.map
+- node_modules/mongodb/lib/cmap/auth/mongo_credentials.js
+- node_modules/mongodb/lib/cmap/auth/mongo_credentials.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_aws.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_aws.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/automated_callback_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/automated_callback_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/azure_machine_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/azure_machine_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/callback_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/callback_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/command_builders.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/command_builders.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/gcp_machine_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/gcp_machine_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/human_callback_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/human_callback_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/k8s_machine_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/k8s_machine_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/token_cache.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/token_cache.js.map
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/token_machine_workflow.js
+- node_modules/mongodb/lib/cmap/auth/mongodb_oidc/token_machine_workflow.js.map
+- node_modules/mongodb/lib/cmap/auth/plain.js
+- node_modules/mongodb/lib/cmap/auth/plain.js.map
+- node_modules/mongodb/lib/cmap/auth/providers.js
+- node_modules/mongodb/lib/cmap/auth/providers.js.map
+- node_modules/mongodb/lib/cmap/auth/scram.js
+- node_modules/mongodb/lib/cmap/auth/scram.js.map
+- node_modules/mongodb/lib/cmap/auth/x509.js
+- node_modules/mongodb/lib/cmap/auth/x509.js.map
+- node_modules/mongodb/lib/cmap/command_monitoring_events.js
+- node_modules/mongodb/lib/cmap/command_monitoring_events.js.map
+- node_modules/mongodb/lib/cmap/commands.js
+- node_modules/mongodb/lib/cmap/commands.js.map
+- node_modules/mongodb/lib/cmap/connect.js
+- node_modules/mongodb/lib/cmap/connect.js.map
+- node_modules/mongodb/lib/cmap/connection.js
+- node_modules/mongodb/lib/cmap/connection.js.map
+- node_modules/mongodb/lib/cmap/connection_pool.js
+- node_modules/mongodb/lib/cmap/connection_pool.js.map
+- node_modules/mongodb/lib/cmap/connection_pool_events.js
+- node_modules/mongodb/lib/cmap/connection_pool_events.js.map
+- node_modules/mongodb/lib/cmap/errors.js
+- node_modules/mongodb/lib/cmap/errors.js.map
+- node_modules/mongodb/lib/cmap/handshake/client_metadata.js
+- node_modules/mongodb/lib/cmap/handshake/client_metadata.js.map
+- node_modules/mongodb/lib/cmap/metrics.js
+- node_modules/mongodb/lib/cmap/metrics.js.map
+- node_modules/mongodb/lib/cmap/stream_description.js
+- node_modules/mongodb/lib/cmap/stream_description.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/compression.js
+- node_modules/mongodb/lib/cmap/wire_protocol/compression.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/constants.js
+- node_modules/mongodb/lib/cmap/wire_protocol/constants.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/on_data.js
+- node_modules/mongodb/lib/cmap/wire_protocol/on_data.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/on_demand/document.js
+- node_modules/mongodb/lib/cmap/wire_protocol/on_demand/document.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/responses.js
+- node_modules/mongodb/lib/cmap/wire_protocol/responses.js.map
+- node_modules/mongodb/lib/cmap/wire_protocol/shared.js
+- node_modules/mongodb/lib/cmap/wire_protocol/shared.js.map
+- node_modules/mongodb/lib/collection.js
+- node_modules/mongodb/lib/collection.js.map
+- node_modules/mongodb/lib/connection_string.js
+- node_modules/mongodb/lib/connection_string.js.map
+- node_modules/mongodb/lib/constants.js
+- node_modules/mongodb/lib/constants.js.map
+- node_modules/mongodb/lib/cursor/abstract_cursor.js
+- node_modules/mongodb/lib/cursor/abstract_cursor.js.map
+- node_modules/mongodb/lib/cursor/aggregation_cursor.js
+- node_modules/mongodb/lib/cursor/aggregation_cursor.js.map
+- node_modules/mongodb/lib/cursor/change_stream_cursor.js
+- node_modules/mongodb/lib/cursor/change_stream_cursor.js.map
+- node_modules/mongodb/lib/cursor/client_bulk_write_cursor.js
+- node_modules/mongodb/lib/cursor/client_bulk_write_cursor.js.map
+- node_modules/mongodb/lib/cursor/explainable_cursor.js
+- node_modules/mongodb/lib/cursor/explainable_cursor.js.map
+- node_modules/mongodb/lib/cursor/find_cursor.js
+- node_modules/mongodb/lib/cursor/find_cursor.js.map
+- node_modules/mongodb/lib/cursor/list_collections_cursor.js
+- node_modules/mongodb/lib/cursor/list_collections_cursor.js.map
+- node_modules/mongodb/lib/cursor/list_indexes_cursor.js
+- node_modules/mongodb/lib/cursor/list_indexes_cursor.js.map
+- node_modules/mongodb/lib/cursor/list_search_indexes_cursor.js
+- node_modules/mongodb/lib/cursor/list_search_indexes_cursor.js.map
+- node_modules/mongodb/lib/cursor/run_command_cursor.js
+- node_modules/mongodb/lib/cursor/run_command_cursor.js.map
+- node_modules/mongodb/lib/db.js
+- node_modules/mongodb/lib/db.js.map
+- node_modules/mongodb/lib/deps.js
+- node_modules/mongodb/lib/deps.js.map
+- node_modules/mongodb/lib/encrypter.js
+- node_modules/mongodb/lib/encrypter.js.map
+- node_modules/mongodb/lib/error.js
+- node_modules/mongodb/lib/error.js.map
+- node_modules/mongodb/lib/explain.js
+- node_modules/mongodb/lib/explain.js.map
+- node_modules/mongodb/lib/gridfs/download.js
+- node_modules/mongodb/lib/gridfs/download.js.map
+- node_modules/mongodb/lib/gridfs/index.js
+- node_modules/mongodb/lib/gridfs/index.js.map
+- node_modules/mongodb/lib/gridfs/upload.js
+- node_modules/mongodb/lib/gridfs/upload.js.map
+- node_modules/mongodb/lib/index.js
+- node_modules/mongodb/lib/index.js.map
+- node_modules/mongodb/lib/mongo_client.js
+- node_modules/mongodb/lib/mongo_client.js.map
+- node_modules/mongodb/lib/mongo_client_auth_providers.js
+- node_modules/mongodb/lib/mongo_client_auth_providers.js.map
+- node_modules/mongodb/lib/mongo_logger.js
+- node_modules/mongodb/lib/mongo_logger.js.map
+- node_modules/mongodb/lib/mongo_types.js
+- node_modules/mongodb/lib/mongo_types.js.map
+- node_modules/mongodb/lib/operations/aggregate.js
+- node_modules/mongodb/lib/operations/aggregate.js.map
+- node_modules/mongodb/lib/operations/client_bulk_write/client_bulk_write.js
+- node_modules/mongodb/lib/operations/client_bulk_write/client_bulk_write.js.map
+- node_modules/mongodb/lib/operations/client_bulk_write/command_builder.js
+- node_modules/mongodb/lib/operations/client_bulk_write/command_builder.js.map
+- node_modules/mongodb/lib/operations/client_bulk_write/common.js
+- node_modules/mongodb/lib/operations/client_bulk_write/common.js.map
+- node_modules/mongodb/lib/operations/client_bulk_write/executor.js
+- node_modules/mongodb/lib/operations/client_bulk_write/executor.js.map
+- node_modules/mongodb/lib/operations/client_bulk_write/results_merger.js
+- node_modules/mongodb/lib/operations/client_bulk_write/results_merger.js.map
+- node_modules/mongodb/lib/operations/command.js
+- node_modules/mongodb/lib/operations/command.js.map
+- node_modules/mongodb/lib/operations/count.js
+- node_modules/mongodb/lib/operations/count.js.map
+- node_modules/mongodb/lib/operations/create_collection.js
+- node_modules/mongodb/lib/operations/create_collection.js.map
+- node_modules/mongodb/lib/operations/delete.js
+- node_modules/mongodb/lib/operations/delete.js.map
+- node_modules/mongodb/lib/operations/distinct.js
+- node_modules/mongodb/lib/operations/distinct.js.map
+- node_modules/mongodb/lib/operations/drop.js
+- node_modules/mongodb/lib/operations/drop.js.map
+- node_modules/mongodb/lib/operations/estimated_document_count.js
+- node_modules/mongodb/lib/operations/estimated_document_count.js.map
+- node_modules/mongodb/lib/operations/execute_operation.js
+- node_modules/mongodb/lib/operations/execute_operation.js.map
+- node_modules/mongodb/lib/operations/find.js
+- node_modules/mongodb/lib/operations/find.js.map
+- node_modules/mongodb/lib/operations/find_and_modify.js
+- node_modules/mongodb/lib/operations/find_and_modify.js.map
+- node_modules/mongodb/lib/operations/get_more.js
+- node_modules/mongodb/lib/operations/get_more.js.map
+- node_modules/mongodb/lib/operations/indexes.js
+- node_modules/mongodb/lib/operations/indexes.js.map
+- node_modules/mongodb/lib/operations/insert.js
+- node_modules/mongodb/lib/operations/insert.js.map
+- node_modules/mongodb/lib/operations/kill_cursors.js
+- node_modules/mongodb/lib/operations/kill_cursors.js.map
+- node_modules/mongodb/lib/operations/list_collections.js
+- node_modules/mongodb/lib/operations/list_collections.js.map
+- node_modules/mongodb/lib/operations/list_databases.js
+- node_modules/mongodb/lib/operations/list_databases.js.map
+- node_modules/mongodb/lib/operations/operation.js
+- node_modules/mongodb/lib/operations/operation.js.map
+- node_modules/mongodb/lib/operations/profiling_level.js
+- node_modules/mongodb/lib/operations/profiling_level.js.map
+- node_modules/mongodb/lib/operations/remove_user.js
+- node_modules/mongodb/lib/operations/remove_user.js.map
+- node_modules/mongodb/lib/operations/rename.js
+- node_modules/mongodb/lib/operations/rename.js.map
+- node_modules/mongodb/lib/operations/run_command.js
+- node_modules/mongodb/lib/operations/run_command.js.map
+- node_modules/mongodb/lib/operations/search_indexes/create.js
+- node_modules/mongodb/lib/operations/search_indexes/create.js.map
+- node_modules/mongodb/lib/operations/search_indexes/drop.js
+- node_modules/mongodb/lib/operations/search_indexes/drop.js.map
+- node_modules/mongodb/lib/operations/search_indexes/update.js
+- node_modules/mongodb/lib/operations/search_indexes/update.js.map
+- node_modules/mongodb/lib/operations/set_profiling_level.js
+- node_modules/mongodb/lib/operations/set_profiling_level.js.map
+- node_modules/mongodb/lib/operations/stats.js
+- node_modules/mongodb/lib/operations/stats.js.map
+- node_modules/mongodb/lib/operations/update.js
+- node_modules/mongodb/lib/operations/update.js.map
+- node_modules/mongodb/lib/operations/validate_collection.js
+- node_modules/mongodb/lib/operations/validate_collection.js.map
+- node_modules/mongodb/lib/read_concern.js
+- node_modules/mongodb/lib/read_concern.js.map
+- node_modules/mongodb/lib/read_preference.js
+- node_modules/mongodb/lib/read_preference.js.map
+- node_modules/mongodb/lib/resource_management.js
+- node_modules/mongodb/lib/resource_management.js.map
+- node_modules/mongodb/lib/sdam/common.js
+- node_modules/mongodb/lib/sdam/common.js.map
+- node_modules/mongodb/lib/sdam/events.js
+- node_modules/mongodb/lib/sdam/events.js.map
+- node_modules/mongodb/lib/sdam/monitor.js
+- node_modules/mongodb/lib/sdam/monitor.js.map
+- node_modules/mongodb/lib/sdam/server.js
+- node_modules/mongodb/lib/sdam/server.js.map
+- node_modules/mongodb/lib/sdam/server_description.js
+- node_modules/mongodb/lib/sdam/server_description.js.map
+- node_modules/mongodb/lib/sdam/server_selection.js
+- node_modules/mongodb/lib/sdam/server_selection.js.map
+- node_modules/mongodb/lib/sdam/server_selection_events.js
+- node_modules/mongodb/lib/sdam/server_selection_events.js.map
+- node_modules/mongodb/lib/sdam/srv_polling.js
+- node_modules/mongodb/lib/sdam/srv_polling.js.map
+- node_modules/mongodb/lib/sdam/topology.js
+- node_modules/mongodb/lib/sdam/topology.js.map
+- node_modules/mongodb/lib/sdam/topology_description.js
+- node_modules/mongodb/lib/sdam/topology_description.js.map
+- node_modules/mongodb/lib/sessions.js
+- node_modules/mongodb/lib/sessions.js.map
+- node_modules/mongodb/lib/sort.js
+- node_modules/mongodb/lib/sort.js.map
+- node_modules/mongodb/lib/timeout.js
+- node_modules/mongodb/lib/timeout.js.map
+- node_modules/mongodb/lib/transactions.js
+- node_modules/mongodb/lib/transactions.js.map
+- node_modules/mongodb/lib/utils.js
+- node_modules/mongodb/lib/utils.js.map
+- node_modules/mongodb/lib/write_concern.js
+- node_modules/mongodb/lib/write_concern.js.map
+- node_modules/mongodb/mongodb.d.ts
+- node_modules/mongodb/package.json
+- node_modules/mongodb/src/admin.ts
+- node_modules/mongodb/src/beta.ts
+- node_modules/mongodb/src/bson.ts
+- node_modules/mongodb/src/bulk/common.ts
+- node_modules/mongodb/src/bulk/ordered.ts
+- node_modules/mongodb/src/bulk/unordered.ts
+- node_modules/mongodb/src/change_stream.ts
+- node_modules/mongodb/src/client-side-encryption/auto_encrypter.ts
+- node_modules/mongodb/src/client-side-encryption/client_encryption.ts
+- node_modules/mongodb/src/client-side-encryption/crypto_callbacks.ts
+- node_modules/mongodb/src/client-side-encryption/errors.ts
+- node_modules/mongodb/src/client-side-encryption/mongocryptd_manager.ts
+- node_modules/mongodb/src/client-side-encryption/providers/aws.ts
+- node_modules/mongodb/src/client-side-encryption/providers/azure.ts
+- node_modules/mongodb/src/client-side-encryption/providers/gcp.ts
+- node_modules/mongodb/src/client-side-encryption/providers/index.ts
+- node_modules/mongodb/src/client-side-encryption/state_machine.ts
+- node_modules/mongodb/src/cmap/auth/auth_provider.ts
+- node_modules/mongodb/src/cmap/auth/aws_temporary_credentials.ts
+- node_modules/mongodb/src/cmap/auth/gssapi.ts
+- node_modules/mongodb/src/cmap/auth/mongo_credentials.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_aws.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/automated_callback_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/azure_machine_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/callback_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/command_builders.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/gcp_machine_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/human_callback_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/k8s_machine_workflow.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/token_cache.ts
+- node_modules/mongodb/src/cmap/auth/mongodb_oidc/token_machine_workflow.ts
+- node_modules/mongodb/src/cmap/auth/plain.ts
+- node_modules/mongodb/src/cmap/auth/providers.ts
+- node_modules/mongodb/src/cmap/auth/scram.ts
+- node_modules/mongodb/src/cmap/auth/x509.ts
+- node_modules/mongodb/src/cmap/command_monitoring_events.ts
+- node_modules/mongodb/src/cmap/commands.ts
+- node_modules/mongodb/src/cmap/connect.ts
+- node_modules/mongodb/src/cmap/connection.ts
+- node_modules/mongodb/src/cmap/connection_pool.ts
+- node_modules/mongodb/src/cmap/connection_pool_events.ts
+- node_modules/mongodb/src/cmap/errors.ts
+- node_modules/mongodb/src/cmap/handshake/client_metadata.ts
+- node_modules/mongodb/src/cmap/metrics.ts
+- node_modules/mongodb/src/cmap/stream_description.ts
+- node_modules/mongodb/src/cmap/wire_protocol/compression.ts
+- node_modules/mongodb/src/cmap/wire_protocol/constants.ts
+- node_modules/mongodb/src/cmap/wire_protocol/on_data.ts
+- node_modules/mongodb/src/cmap/wire_protocol/on_demand/document.ts
+- node_modules/mongodb/src/cmap/wire_protocol/responses.ts
+- node_modules/mongodb/src/cmap/wire_protocol/shared.ts
+- node_modules/mongodb/src/collection.ts
+- node_modules/mongodb/src/connection_string.ts
+- node_modules/mongodb/src/constants.ts
+- node_modules/mongodb/src/cursor/abstract_cursor.ts
+- node_modules/mongodb/src/cursor/aggregation_cursor.ts
+- node_modules/mongodb/src/cursor/change_stream_cursor.ts
+- node_modules/mongodb/src/cursor/client_bulk_write_cursor.ts
+- node_modules/mongodb/src/cursor/explainable_cursor.ts
+- node_modules/mongodb/src/cursor/find_cursor.ts
+- node_modules/mongodb/src/cursor/list_collections_cursor.ts
+- node_modules/mongodb/src/cursor/list_indexes_cursor.ts
+- node_modules/mongodb/src/cursor/list_search_indexes_cursor.ts
+- node_modules/mongodb/src/cursor/run_command_cursor.ts
+- node_modules/mongodb/src/db.ts
+- node_modules/mongodb/src/deps.ts
+- node_modules/mongodb/src/encrypter.ts
+- node_modules/mongodb/src/error.ts
+- node_modules/mongodb/src/explain.ts
+- node_modules/mongodb/src/gridfs/download.ts
+- node_modules/mongodb/src/gridfs/index.ts
+- node_modules/mongodb/src/gridfs/upload.ts
+- node_modules/mongodb/src/index.ts
+- node_modules/mongodb/src/mongo_client.ts
+- node_modules/mongodb/src/mongo_client_auth_providers.ts
+- node_modules/mongodb/src/mongo_logger.ts
+- node_modules/mongodb/src/mongo_types.ts
+- node_modules/mongodb/src/operations/aggregate.ts
+- node_modules/mongodb/src/operations/client_bulk_write/client_bulk_write.ts
+- node_modules/mongodb/src/operations/client_bulk_write/command_builder.ts
+- node_modules/mongodb/src/operations/client_bulk_write/common.ts
+- node_modules/mongodb/src/operations/client_bulk_write/executor.ts
+- node_modules/mongodb/src/operations/client_bulk_write/results_merger.ts
+- node_modules/mongodb/src/operations/command.ts
+- node_modules/mongodb/src/operations/count.ts
+- node_modules/mongodb/src/operations/create_collection.ts
+- node_modules/mongodb/src/operations/delete.ts
+- node_modules/mongodb/src/operations/distinct.ts
+- node_modules/mongodb/src/operations/drop.ts
+- node_modules/mongodb/src/operations/estimated_document_count.ts
+- node_modules/mongodb/src/operations/execute_operation.ts
+- node_modules/mongodb/src/operations/find.ts
+- node_modules/mongodb/src/operations/find_and_modify.ts
+- node_modules/mongodb/src/operations/get_more.ts
+- node_modules/mongodb/src/operations/indexes.ts
+- node_modules/mongodb/src/operations/insert.ts
+- node_modules/mongodb/src/operations/kill_cursors.ts
+- node_modules/mongodb/src/operations/list_collections.ts
+- node_modules/mongodb/src/operations/list_databases.ts
+- node_modules/mongodb/src/operations/operation.ts
+- node_modules/mongodb/src/operations/profiling_level.ts
+- node_modules/mongodb/src/operations/remove_user.ts
+- node_modules/mongodb/src/operations/rename.ts
+- node_modules/mongodb/src/operations/run_command.ts
+- node_modules/mongodb/src/operations/search_indexes/create.ts
+- node_modules/mongodb/src/operations/search_indexes/drop.ts
+- node_modules/mongodb/src/operations/search_indexes/update.ts
+- node_modules/mongodb/src/operations/set_profiling_level.ts
+- node_modules/mongodb/src/operations/stats.ts
+- node_modules/mongodb/src/operations/update.ts
+- node_modules/mongodb/src/operations/validate_collection.ts
+- node_modules/mongodb/src/read_concern.ts
+- node_modules/mongodb/src/read_preference.ts
+- node_modules/mongodb/src/resource_management.ts
+- node_modules/mongodb/src/sdam/common.ts
+- node_modules/mongodb/src/sdam/events.ts
+- node_modules/mongodb/src/sdam/monitor.ts
+- node_modules/mongodb/src/sdam/server.ts
+- node_modules/mongodb/src/sdam/server_description.ts
+- node_modules/mongodb/src/sdam/server_selection.ts
+- node_modules/mongodb/src/sdam/server_selection_events.ts
+- node_modules/mongodb/src/sdam/srv_polling.ts
+- node_modules/mongodb/src/sdam/topology.ts
+- node_modules/mongodb/src/sdam/topology_description.ts
+- node_modules/mongodb/src/sessions.ts
+- node_modules/mongodb/src/sort.ts
+- node_modules/mongodb/src/timeout.ts
+- node_modules/mongodb/src/transactions.ts
+- node_modules/mongodb/src/utils.ts
+- node_modules/mongodb/src/write_concern.ts
+- node_modules/mongodb/tsconfig.json
+- node_modules/mongoose/LICENSE.md
+- node_modules/mongoose/README.md
+- node_modules/mongoose/SECURITY.md
+- node_modules/mongoose/browser.js
+- node_modules/mongoose/dist/browser.umd.js
+- node_modules/mongoose/index.js
+- node_modules/mongoose/lib/aggregate.js
+- node_modules/mongoose/lib/browser.js
+- node_modules/mongoose/lib/browserDocument.js
+- node_modules/mongoose/lib/cast.js
+- node_modules/mongoose/lib/cast/bigint.js
+- node_modules/mongoose/lib/cast/boolean.js
+- node_modules/mongoose/lib/cast/date.js
+- node_modules/mongoose/lib/cast/decimal128.js
+- node_modules/mongoose/lib/cast/double.js
+- node_modules/mongoose/lib/cast/int32.js
+- node_modules/mongoose/lib/cast/number.js
+- node_modules/mongoose/lib/cast/objectid.js
+- node_modules/mongoose/lib/cast/string.js
+- node_modules/mongoose/lib/cast/uuid.js
+- node_modules/mongoose/lib/collection.js
+- node_modules/mongoose/lib/connection.js
+- node_modules/mongoose/lib/connectionState.js
+- node_modules/mongoose/lib/constants.js
+- node_modules/mongoose/lib/cursor/aggregationCursor.js
+- node_modules/mongoose/lib/cursor/changeStream.js
+- node_modules/mongoose/lib/cursor/queryCursor.js
+- node_modules/mongoose/lib/document.js
+- node_modules/mongoose/lib/documentProvider.js
+- node_modules/mongoose/lib/driver.js
+- node_modules/mongoose/lib/drivers/SPEC.md
+- node_modules/mongoose/lib/drivers/browser/binary.js
+- node_modules/mongoose/lib/drivers/browser/decimal128.js
+- node_modules/mongoose/lib/drivers/browser/index.js
+- node_modules/mongoose/lib/drivers/browser/objectid.js
+- node_modules/mongoose/lib/drivers/node-mongodb-native/bulkWriteResult.js
+- node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js
+- node_modules/mongoose/lib/drivers/node-mongodb-native/connection.js
+- node_modules/mongoose/lib/drivers/node-mongodb-native/index.js
+- node_modules/mongoose/lib/error/browserMissingSchema.js
+- node_modules/mongoose/lib/error/bulkSaveIncompleteError.js
+- node_modules/mongoose/lib/error/bulkWriteError.js
+- node_modules/mongoose/lib/error/cast.js
+- node_modules/mongoose/lib/error/createCollectionsError.js
+- node_modules/mongoose/lib/error/divergentArray.js
+- node_modules/mongoose/lib/error/eachAsyncMultiError.js
+- node_modules/mongoose/lib/error/index.js
+- node_modules/mongoose/lib/error/invalidSchemaOption.js
+- node_modules/mongoose/lib/error/messages.js
+- node_modules/mongoose/lib/error/missingSchema.js
+- node_modules/mongoose/lib/error/mongooseError.js
+- node_modules/mongoose/lib/error/notFound.js
+- node_modules/mongoose/lib/error/objectExpected.js
+- node_modules/mongoose/lib/error/objectParameter.js
+- node_modules/mongoose/lib/error/overwriteModel.js
+- node_modules/mongoose/lib/error/parallelSave.js
+- node_modules/mongoose/lib/error/parallelValidate.js
+- node_modules/mongoose/lib/error/serverSelection.js
+- node_modules/mongoose/lib/error/setOptionError.js
+- node_modules/mongoose/lib/error/strict.js
+- node_modules/mongoose/lib/error/strictPopulate.js
+- node_modules/mongoose/lib/error/syncIndexes.js
+- node_modules/mongoose/lib/error/validation.js
+- node_modules/mongoose/lib/error/validator.js
+- node_modules/mongoose/lib/error/version.js
+- node_modules/mongoose/lib/helpers/aggregate/prepareDiscriminatorPipeline.js
+- node_modules/mongoose/lib/helpers/aggregate/stringifyFunctionOperators.js
+- node_modules/mongoose/lib/helpers/arrayDepth.js
+- node_modules/mongoose/lib/helpers/clone.js
+- node_modules/mongoose/lib/helpers/common.js
+- node_modules/mongoose/lib/helpers/createJSONSchemaTypeDefinition.js
+- node_modules/mongoose/lib/helpers/cursor/eachAsync.js
+- node_modules/mongoose/lib/helpers/discriminator/applyEmbeddedDiscriminators.js
+- node_modules/mongoose/lib/helpers/discriminator/areDiscriminatorValuesEqual.js
+- node_modules/mongoose/lib/helpers/discriminator/checkEmbeddedDiscriminatorKeyProjection.js
+- node_modules/mongoose/lib/helpers/discriminator/getConstructor.js
+- node_modules/mongoose/lib/helpers/discriminator/getDiscriminatorByValue.js
+- node_modules/mongoose/lib/helpers/discriminator/getSchemaDiscriminatorByValue.js
+- node_modules/mongoose/lib/helpers/discriminator/mergeDiscriminatorSchema.js
+- node_modules/mongoose/lib/helpers/document/applyDefaults.js
+- node_modules/mongoose/lib/helpers/document/applyTimestamps.js
+- node_modules/mongoose/lib/helpers/document/applyVirtuals.js
+- node_modules/mongoose/lib/helpers/document/cleanModifiedSubpaths.js
+- node_modules/mongoose/lib/helpers/document/compile.js
+- node_modules/mongoose/lib/helpers/document/getDeepestSubdocumentForPath.js
+- node_modules/mongoose/lib/helpers/document/getEmbeddedDiscriminatorPath.js
+- node_modules/mongoose/lib/helpers/document/handleSpreadDoc.js
+- node_modules/mongoose/lib/helpers/each.js
+- node_modules/mongoose/lib/helpers/error/combinePathErrors.js
+- node_modules/mongoose/lib/helpers/firstKey.js
+- node_modules/mongoose/lib/helpers/get.js
+- node_modules/mongoose/lib/helpers/getConstructorName.js
+- node_modules/mongoose/lib/helpers/getDefaultBulkwriteResult.js
+- node_modules/mongoose/lib/helpers/getFunctionName.js
+- node_modules/mongoose/lib/helpers/immediate.js
+- node_modules/mongoose/lib/helpers/indexes/applySchemaCollation.js
+- node_modules/mongoose/lib/helpers/indexes/decorateDiscriminatorIndexOptions.js
+- node_modules/mongoose/lib/helpers/indexes/getRelatedIndexes.js
+- node_modules/mongoose/lib/helpers/indexes/isDefaultIdIndex.js
+- node_modules/mongoose/lib/helpers/indexes/isIndexEqual.js
+- node_modules/mongoose/lib/helpers/indexes/isIndexSpecEqual.js
+- node_modules/mongoose/lib/helpers/indexes/isTextIndex.js
+- node_modules/mongoose/lib/helpers/indexes/isTimeseriesIndex.js
+- node_modules/mongoose/lib/helpers/isAsyncFunction.js
+- node_modules/mongoose/lib/helpers/isBsonType.js
+- node_modules/mongoose/lib/helpers/isMongooseObject.js
+- node_modules/mongoose/lib/helpers/isObject.js
+- node_modules/mongoose/lib/helpers/isPOJO.js
+- node_modules/mongoose/lib/helpers/isPromise.js
+- node_modules/mongoose/lib/helpers/isSimpleValidator.js
+- node_modules/mongoose/lib/helpers/minimize.js
+- node_modules/mongoose/lib/helpers/model/applyDefaultsToPOJO.js
+- node_modules/mongoose/lib/helpers/model/applyHooks.js
+- node_modules/mongoose/lib/helpers/model/applyMethods.js
+- node_modules/mongoose/lib/helpers/model/applyStaticHooks.js
+- node_modules/mongoose/lib/helpers/model/applyStatics.js
+- node_modules/mongoose/lib/helpers/model/castBulkWrite.js
+- node_modules/mongoose/lib/helpers/model/decorateBulkWriteResult.js
+- node_modules/mongoose/lib/helpers/model/discriminator.js
+- node_modules/mongoose/lib/helpers/model/pushNestedArrayPaths.js
+- node_modules/mongoose/lib/helpers/omitUndefined.js
+- node_modules/mongoose/lib/helpers/once.js
+- node_modules/mongoose/lib/helpers/parallelLimit.js
+- node_modules/mongoose/lib/helpers/path/parentPaths.js
+- node_modules/mongoose/lib/helpers/path/setDottedPath.js
+- node_modules/mongoose/lib/helpers/pluralize.js
+- node_modules/mongoose/lib/helpers/populate/assignRawDocsToIdStructure.js
+- node_modules/mongoose/lib/helpers/populate/assignVals.js
+- node_modules/mongoose/lib/helpers/populate/createPopulateQueryFilter.js
+- node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js
+- node_modules/mongoose/lib/helpers/populate/getSchemaTypes.js
+- node_modules/mongoose/lib/helpers/populate/getVirtual.js
+- node_modules/mongoose/lib/helpers/populate/leanPopulateMap.js
+- node_modules/mongoose/lib/helpers/populate/lookupLocalFields.js
+- node_modules/mongoose/lib/helpers/populate/markArraySubdocsPopulated.js
+- node_modules/mongoose/lib/helpers/populate/modelNamesFromRefPath.js
+- node_modules/mongoose/lib/helpers/populate/removeDeselectedForeignField.js
+- node_modules/mongoose/lib/helpers/populate/setPopulatedVirtualValue.js
+- node_modules/mongoose/lib/helpers/populate/skipPopulateValue.js
+- node_modules/mongoose/lib/helpers/populate/validateRef.js
+- node_modules/mongoose/lib/helpers/printJestWarning.js
+- node_modules/mongoose/lib/helpers/processConnectionOptions.js
+- node_modules/mongoose/lib/helpers/projection/applyProjection.js
+- node_modules/mongoose/lib/helpers/projection/hasIncludedChildren.js
+- node_modules/mongoose/lib/helpers/projection/isDefiningProjection.js
+- node_modules/mongoose/lib/helpers/projection/isExclusive.js
+- node_modules/mongoose/lib/helpers/projection/isInclusive.js
+- node_modules/mongoose/lib/helpers/projection/isNestedProjection.js
+- node_modules/mongoose/lib/helpers/projection/isPathExcluded.js
+- node_modules/mongoose/lib/helpers/projection/isPathSelectedInclusive.js
+- node_modules/mongoose/lib/helpers/projection/isSubpath.js
+- node_modules/mongoose/lib/helpers/projection/parseProjection.js
+- node_modules/mongoose/lib/helpers/promiseOrCallback.js
+- node_modules/mongoose/lib/helpers/query/applyGlobalOption.js
+- node_modules/mongoose/lib/helpers/query/cast$expr.js
+- node_modules/mongoose/lib/helpers/query/castFilterPath.js
+- node_modules/mongoose/lib/helpers/query/castUpdate.js
+- node_modules/mongoose/lib/helpers/query/getEmbeddedDiscriminatorPath.js
+- node_modules/mongoose/lib/helpers/query/handleImmutable.js
+- node_modules/mongoose/lib/helpers/query/handleReadPreferenceAliases.js
+- node_modules/mongoose/lib/helpers/query/hasDollarKeys.js
+- node_modules/mongoose/lib/helpers/query/isOperator.js
+- node_modules/mongoose/lib/helpers/query/sanitizeFilter.js
+- node_modules/mongoose/lib/helpers/query/sanitizeProjection.js
+- node_modules/mongoose/lib/helpers/query/selectPopulatedFields.js
+- node_modules/mongoose/lib/helpers/query/trusted.js
+- node_modules/mongoose/lib/helpers/query/validOps.js
+- node_modules/mongoose/lib/helpers/schema/addAutoId.js
+- node_modules/mongoose/lib/helpers/schema/applyBuiltinPlugins.js
+- node_modules/mongoose/lib/helpers/schema/applyPlugins.js
+- node_modules/mongoose/lib/helpers/schema/applyReadConcern.js
+- node_modules/mongoose/lib/helpers/schema/applyWriteConcern.js
+- node_modules/mongoose/lib/helpers/schema/cleanPositionalOperators.js
+- node_modules/mongoose/lib/helpers/schema/getIndexes.js
+- node_modules/mongoose/lib/helpers/schema/getKeysInSchemaOrder.js
+- node_modules/mongoose/lib/helpers/schema/getPath.js
+- node_modules/mongoose/lib/helpers/schema/getSubdocumentStrictValue.js
+- node_modules/mongoose/lib/helpers/schema/handleIdOption.js
+- node_modules/mongoose/lib/helpers/schema/handleTimestampOption.js
+- node_modules/mongoose/lib/helpers/schema/idGetter.js
+- node_modules/mongoose/lib/helpers/schema/merge.js
+- node_modules/mongoose/lib/helpers/schematype/handleImmutable.js
+- node_modules/mongoose/lib/helpers/setDefaultsOnInsert.js
+- node_modules/mongoose/lib/helpers/specialProperties.js
+- node_modules/mongoose/lib/helpers/symbols.js
+- node_modules/mongoose/lib/helpers/timers.js
+- node_modules/mongoose/lib/helpers/timestamps/setDocumentTimestamps.js
+- node_modules/mongoose/lib/helpers/timestamps/setupTimestamps.js
+- node_modules/mongoose/lib/helpers/topology/allServersUnknown.js
+- node_modules/mongoose/lib/helpers/topology/isAtlas.js
+- node_modules/mongoose/lib/helpers/topology/isSSLError.js
+- node_modules/mongoose/lib/helpers/update/applyTimestampsToChildren.js
+- node_modules/mongoose/lib/helpers/update/applyTimestampsToUpdate.js
+- node_modules/mongoose/lib/helpers/update/castArrayFilters.js
+- node_modules/mongoose/lib/helpers/update/decorateUpdateWithVersionKey.js
+- node_modules/mongoose/lib/helpers/update/modifiedPaths.js
+- node_modules/mongoose/lib/helpers/update/moveImmutableProperties.js
+- node_modules/mongoose/lib/helpers/update/removeUnusedArrayFilters.js
+- node_modules/mongoose/lib/helpers/update/updatedPathsByArrayFilter.js
+- node_modules/mongoose/lib/helpers/updateValidators.js
+- node_modules/mongoose/lib/index.js
+- node_modules/mongoose/lib/internal.js
+- node_modules/mongoose/lib/model.js
+- node_modules/mongoose/lib/modifiedPathsSnapshot.js
+- node_modules/mongoose/lib/mongoose.js
+- node_modules/mongoose/lib/options.js
+- node_modules/mongoose/lib/options/populateOptions.js
+- node_modules/mongoose/lib/options/propertyOptions.js
+- node_modules/mongoose/lib/options/saveOptions.js
+- node_modules/mongoose/lib/options/schemaArrayOptions.js
+- node_modules/mongoose/lib/options/schemaBufferOptions.js
+- node_modules/mongoose/lib/options/schemaDateOptions.js
+- node_modules/mongoose/lib/options/schemaDocumentArrayOptions.js
+- node_modules/mongoose/lib/options/schemaMapOptions.js
+- node_modules/mongoose/lib/options/schemaNumberOptions.js
+- node_modules/mongoose/lib/options/schemaObjectIdOptions.js
+- node_modules/mongoose/lib/options/schemaStringOptions.js
+- node_modules/mongoose/lib/options/schemaSubdocumentOptions.js
+- node_modules/mongoose/lib/options/schemaTypeOptions.js
+- node_modules/mongoose/lib/options/schemaUnionOptions.js
+- node_modules/mongoose/lib/options/virtualOptions.js
+- node_modules/mongoose/lib/plugins/index.js
+- node_modules/mongoose/lib/plugins/saveSubdocs.js
+- node_modules/mongoose/lib/plugins/sharding.js
+- node_modules/mongoose/lib/plugins/trackTransaction.js
+- node_modules/mongoose/lib/plugins/validateBeforeSave.js
+- node_modules/mongoose/lib/query.js
+- node_modules/mongoose/lib/queryHelpers.js
+- node_modules/mongoose/lib/schema.js
+- node_modules/mongoose/lib/schema/array.js
+- node_modules/mongoose/lib/schema/bigint.js
+- node_modules/mongoose/lib/schema/boolean.js
+- node_modules/mongoose/lib/schema/buffer.js
+- node_modules/mongoose/lib/schema/date.js
+- node_modules/mongoose/lib/schema/decimal128.js
+- node_modules/mongoose/lib/schema/documentArray.js
+- node_modules/mongoose/lib/schema/documentArrayElement.js
+- node_modules/mongoose/lib/schema/double.js
+- node_modules/mongoose/lib/schema/index.js
+- node_modules/mongoose/lib/schema/int32.js
+- node_modules/mongoose/lib/schema/map.js
+- node_modules/mongoose/lib/schema/mixed.js
+- node_modules/mongoose/lib/schema/number.js
+- node_modules/mongoose/lib/schema/objectId.js
+- node_modules/mongoose/lib/schema/operators/bitwise.js
+- node_modules/mongoose/lib/schema/operators/exists.js
+- node_modules/mongoose/lib/schema/operators/geospatial.js
+- node_modules/mongoose/lib/schema/operators/helpers.js
+- node_modules/mongoose/lib/schema/operators/text.js
+- node_modules/mongoose/lib/schema/operators/type.js
+- node_modules/mongoose/lib/schema/string.js
+- node_modules/mongoose/lib/schema/subdocument.js
+- node_modules/mongoose/lib/schema/symbols.js
+- node_modules/mongoose/lib/schema/union.js
+- node_modules/mongoose/lib/schema/uuid.js
+- node_modules/mongoose/lib/schemaType.js
+- node_modules/mongoose/lib/stateMachine.js
+- node_modules/mongoose/lib/types/array/index.js
+- node_modules/mongoose/lib/types/array/isMongooseArray.js
+- node_modules/mongoose/lib/types/array/methods/index.js
+- node_modules/mongoose/lib/types/arraySubdocument.js
+- node_modules/mongoose/lib/types/buffer.js
+- node_modules/mongoose/lib/types/decimal128.js
+- node_modules/mongoose/lib/types/documentArray/index.js
+- node_modules/mongoose/lib/types/documentArray/isMongooseDocumentArray.js
+- node_modules/mongoose/lib/types/documentArray/methods/index.js
+- node_modules/mongoose/lib/types/double.js
+- node_modules/mongoose/lib/types/index.js
+- node_modules/mongoose/lib/types/map.js
+- node_modules/mongoose/lib/types/objectid.js
+- node_modules/mongoose/lib/types/subdocument.js
+- node_modules/mongoose/lib/types/uuid.js
+- node_modules/mongoose/lib/utils.js
+- node_modules/mongoose/lib/validOptions.js
+- node_modules/mongoose/lib/virtualType.js
+- node_modules/mongoose/node_modules/ms/index.js
+- node_modules/mongoose/node_modules/ms/license.md
+- node_modules/mongoose/node_modules/ms/package.json
+- node_modules/mongoose/node_modules/ms/readme.md
+- node_modules/mongoose/package.json
+- node_modules/mongoose/types/aggregate.d.ts
+- node_modules/mongoose/types/augmentations.d.ts
+- node_modules/mongoose/types/callback.d.ts
+- node_modules/mongoose/types/collection.d.ts
+- node_modules/mongoose/types/connection.d.ts
+- node_modules/mongoose/types/cursor.d.ts
+- node_modules/mongoose/types/document.d.ts
+- node_modules/mongoose/types/error.d.ts
+- node_modules/mongoose/types/expressions.d.ts
+- node_modules/mongoose/types/helpers.d.ts
+- node_modules/mongoose/types/index.d.ts
+- node_modules/mongoose/types/indexes.d.ts
+- node_modules/mongoose/types/inferrawdoctype.d.ts
+- node_modules/mongoose/types/inferschematype.d.ts
+- node_modules/mongoose/types/middlewares.d.ts
+- node_modules/mongoose/types/models.d.ts
+- node_modules/mongoose/types/mongooseoptions.d.ts
+- node_modules/mongoose/types/pipelinestage.d.ts
+- node_modules/mongoose/types/populate.d.ts
+- node_modules/mongoose/types/query.d.ts
+- node_modules/mongoose/types/schemaoptions.d.ts
+- node_modules/mongoose/types/schematypes.d.ts
+- node_modules/mongoose/types/session.d.ts
+- node_modules/mongoose/types/types.d.ts
+- node_modules/mongoose/types/utility.d.ts
+- node_modules/mongoose/types/validation.d.ts
+- node_modules/mongoose/types/virtuals.d.ts
+- node_modules/mpath/.travis.yml
+- node_modules/mpath/History.md
+- node_modules/mpath/LICENSE
+- node_modules/mpath/README.md
+- node_modules/mpath/SECURITY.md
+- node_modules/mpath/index.js
+- node_modules/mpath/lib/index.js
+- node_modules/mpath/lib/stringToParts.js
+- node_modules/mpath/package.json
+- node_modules/mpath/test/.eslintrc.yml
+- node_modules/mpath/test/index.js
+- node_modules/mpath/test/stringToParts.js
+- node_modules/mquery/.github/ISSUE_TEMPLATE.md
+- node_modules/mquery/.github/PULL_REQUEST_TEMPLATE.md
+- node_modules/mquery/History.md
+- node_modules/mquery/LICENSE
+- node_modules/mquery/README.md
+- node_modules/mquery/SECURITY.md
+- node_modules/mquery/lib/collection/collection.js
+- node_modules/mquery/lib/collection/index.js
+- node_modules/mquery/lib/collection/node.js
+- node_modules/mquery/lib/env.js
+- node_modules/mquery/lib/mquery.js
+- node_modules/mquery/lib/permissions.js
+- node_modules/mquery/lib/utils.js
+- node_modules/mquery/node_modules/debug/LICENSE
+- node_modules/mquery/node_modules/debug/README.md
+- node_modules/mquery/node_modules/debug/package.json
+- node_modules/mquery/node_modules/debug/src/browser.js
+- node_modules/mquery/node_modules/debug/src/common.js
+- node_modules/mquery/node_modules/debug/src/index.js
+- node_modules/mquery/node_modules/debug/src/node.js
+- node_modules/mquery/node_modules/ms/index.js
+- node_modules/mquery/node_modules/ms/license.md
+- node_modules/mquery/node_modules/ms/package.json
+- node_modules/mquery/node_modules/ms/readme.md
+- node_modules/mquery/package.json
+- node_modules/ms/index.js
+- node_modules/ms/license.md
+- node_modules/ms/package.json
+- node_modules/ms/readme.md
+- node_modules/negotiator/HISTORY.md
+- node_modules/negotiator/LICENSE
+- node_modules/negotiator/README.md
+- node_modules/negotiator/index.js
+- node_modules/negotiator/lib/charset.js
+- node_modules/negotiator/lib/encoding.js
+- node_modules/negotiator/lib/language.js
+- node_modules/negotiator/lib/mediaType.js
+- node_modules/negotiator/package.json
+- node_modules/node-domexception/.history/README_20210527203617.md
+- node_modules/node-domexception/.history/README_20210527212714.md
+- node_modules/node-domexception/.history/README_20210527213345.md
+- node_modules/node-domexception/.history/README_20210527213411.md
+- node_modules/node-domexception/.history/README_20210527213803.md
+- node_modules/node-domexception/.history/README_20210527214323.md
+- node_modules/node-domexception/.history/README_20210527214408.md
+- node_modules/node-domexception/.history/index_20210527203842.js
+- node_modules/node-domexception/.history/index_20210527203947.js
+- node_modules/node-domexception/.history/index_20210527204259.js
+- node_modules/node-domexception/.history/index_20210527204418.js
+- node_modules/node-domexception/.history/index_20210527204756.js
+- node_modules/node-domexception/.history/index_20210527204833.js
+- node_modules/node-domexception/.history/index_20210527211208.js
+- node_modules/node-domexception/.history/index_20210527211248.js
+- node_modules/node-domexception/.history/index_20210527212722.js
+- node_modules/node-domexception/.history/index_20210527212731.js
+- node_modules/node-domexception/.history/index_20210527212746.js
+- node_modules/node-domexception/.history/index_20210527212900.js
+- node_modules/node-domexception/.history/index_20210527213022.js
+- node_modules/node-domexception/.history/index_20210527213822.js
+- node_modules/node-domexception/.history/index_20210527213843.js
+- node_modules/node-domexception/.history/index_20210527213852.js
+- node_modules/node-domexception/.history/index_20210527213910.js
+- node_modules/node-domexception/.history/index_20210527214034.js
+- node_modules/node-domexception/.history/index_20210527214643.js
+- node_modules/node-domexception/.history/index_20210527214654.js
+- node_modules/node-domexception/.history/index_20210527214700.js
+- node_modules/node-domexception/.history/package_20210527203733.json
+- node_modules/node-domexception/.history/package_20210527203825.json
+- node_modules/node-domexception/.history/package_20210527204621.json
+- node_modules/node-domexception/.history/package_20210527204913.json
+- node_modules/node-domexception/.history/package_20210527204925.json
+- node_modules/node-domexception/.history/package_20210527205145.json
+- node_modules/node-domexception/.history/package_20210527205156.json
+- node_modules/node-domexception/.history/test_20210527205603.js
+- node_modules/node-domexception/.history/test_20210527205957.js
+- node_modules/node-domexception/.history/test_20210527210021.js
+- node_modules/node-domexception/LICENSE
+- node_modules/node-domexception/README.md
+- node_modules/node-domexception/index.js
+- node_modules/node-domexception/package.json
+- node_modules/node-fetch/LICENSE.md
+- node_modules/node-fetch/README.md
+- node_modules/node-fetch/browser.js
+- node_modules/node-fetch/lib/index.es.js
+- node_modules/node-fetch/lib/index.js
+- node_modules/node-fetch/lib/index.mjs
+- node_modules/node-fetch/node_modules/tr46/.npmignore
+- node_modules/node-fetch/node_modules/tr46/index.js
+- node_modules/node-fetch/node_modules/tr46/lib/.gitkeep
+- node_modules/node-fetch/node_modules/tr46/lib/mappingTable.json
+- node_modules/node-fetch/node_modules/tr46/package.json
+- node_modules/node-fetch/node_modules/webidl-conversions/LICENSE.md
+- node_modules/node-fetch/node_modules/webidl-conversions/README.md
+- node_modules/node-fetch/node_modules/webidl-conversions/lib/index.js
+- node_modules/node-fetch/node_modules/webidl-conversions/package.json
+- node_modules/node-fetch/node_modules/whatwg-url/LICENSE.txt
+- node_modules/node-fetch/node_modules/whatwg-url/README.md
+- node_modules/node-fetch/node_modules/whatwg-url/lib/URL-impl.js
+- node_modules/node-fetch/node_modules/whatwg-url/lib/URL.js
+- node_modules/node-fetch/node_modules/whatwg-url/lib/public-api.js
+- node_modules/node-fetch/node_modules/whatwg-url/lib/url-state-machine.js
+- node_modules/node-fetch/node_modules/whatwg-url/lib/utils.js
+- node_modules/node-fetch/node_modules/whatwg-url/package.json
+- node_modules/node-fetch/package.json
+- node_modules/nodemon/.prettierrc.json
+- node_modules/nodemon/LICENSE
+- node_modules/nodemon/README.md
+- node_modules/nodemon/bin/nodemon.js
+- node_modules/nodemon/bin/windows-kill.exe
+- node_modules/nodemon/doc/cli/authors.txt
+- node_modules/nodemon/doc/cli/config.txt
+- node_modules/nodemon/doc/cli/help.txt
+- node_modules/nodemon/doc/cli/logo.txt
+- node_modules/nodemon/doc/cli/options.txt
+- node_modules/nodemon/doc/cli/topics.txt
+- node_modules/nodemon/doc/cli/usage.txt
+- node_modules/nodemon/doc/cli/whoami.txt
+- node_modules/nodemon/index.d.ts
+- node_modules/nodemon/jsconfig.json
+- node_modules/nodemon/lib/cli/index.js
+- node_modules/nodemon/lib/cli/parse.js
+- node_modules/nodemon/lib/config/command.js
+- node_modules/nodemon/lib/config/defaults.js
+- node_modules/nodemon/lib/config/exec.js
+- node_modules/nodemon/lib/config/index.js
+- node_modules/nodemon/lib/config/load.js
+- node_modules/nodemon/lib/help/index.js
+- node_modules/nodemon/lib/index.js
+- node_modules/nodemon/lib/monitor/index.js
+- node_modules/nodemon/lib/monitor/match.js
+- node_modules/nodemon/lib/monitor/run.js
+- node_modules/nodemon/lib/monitor/signals.js
+- node_modules/nodemon/lib/monitor/watch.js
+- node_modules/nodemon/lib/nodemon.js
+- node_modules/nodemon/lib/rules/add.js
+- node_modules/nodemon/lib/rules/index.js
+- node_modules/nodemon/lib/rules/parse.js
+- node_modules/nodemon/lib/spawn.js
+- node_modules/nodemon/lib/utils/bus.js
+- node_modules/nodemon/lib/utils/clone.js
+- node_modules/nodemon/lib/utils/colour.js
+- node_modules/nodemon/lib/utils/index.js
+- node_modules/nodemon/lib/utils/log.js
+- node_modules/nodemon/lib/utils/merge.js
+- node_modules/nodemon/lib/version.js
+- node_modules/nodemon/node_modules/debug/LICENSE
+- node_modules/nodemon/node_modules/debug/README.md
+- node_modules/nodemon/node_modules/debug/package.json
+- node_modules/nodemon/node_modules/debug/src/browser.js
+- node_modules/nodemon/node_modules/debug/src/common.js
+- node_modules/nodemon/node_modules/debug/src/index.js
+- node_modules/nodemon/node_modules/debug/src/node.js
+- node_modules/nodemon/node_modules/ms/index.js
+- node_modules/nodemon/node_modules/ms/license.md
+- node_modules/nodemon/node_modules/ms/package.json
+- node_modules/nodemon/node_modules/ms/readme.md
+- node_modules/nodemon/package.json
+- node_modules/normalize-path/LICENSE
+- node_modules/normalize-path/README.md
+- node_modules/normalize-path/index.js
+- node_modules/normalize-path/package.json
+- node_modules/object-inspect/.eslintrc
+- node_modules/object-inspect/.github/FUNDING.yml
+- node_modules/object-inspect/.nycrc
+- node_modules/object-inspect/CHANGELOG.md
+- node_modules/object-inspect/LICENSE
+- node_modules/object-inspect/example/all.js
+- node_modules/object-inspect/example/circular.js
+- node_modules/object-inspect/example/fn.js
+- node_modules/object-inspect/example/inspect.js
+- node_modules/object-inspect/index.js
+- node_modules/object-inspect/package-support.json
+- node_modules/object-inspect/package.json
+- node_modules/object-inspect/readme.markdown
+- node_modules/object-inspect/test-core-js.js
+- node_modules/object-inspect/test/bigint.js
+- node_modules/object-inspect/test/browser/dom.js
+- node_modules/object-inspect/test/circular.js
+- node_modules/object-inspect/test/deep.js
+- node_modules/object-inspect/test/element.js
+- node_modules/object-inspect/test/err.js
+- node_modules/object-inspect/test/fakes.js
+- node_modules/object-inspect/test/fn.js
+- node_modules/object-inspect/test/global.js
+- node_modules/object-inspect/test/has.js
+- node_modules/object-inspect/test/holes.js
+- node_modules/object-inspect/test/indent-option.js
+- node_modules/object-inspect/test/inspect.js
+- node_modules/object-inspect/test/lowbyte.js
+- node_modules/object-inspect/test/number.js
+- node_modules/object-inspect/test/quoteStyle.js
+- node_modules/object-inspect/test/toStringTag.js
+- node_modules/object-inspect/test/undef.js
+- node_modules/object-inspect/test/values.js
+- node_modules/object-inspect/util.inspect.js
+- node_modules/on-exit-leak-free/.github/dependabot.yml
+- node_modules/on-exit-leak-free/.github/workflows/ci.yml
+- node_modules/on-exit-leak-free/LICENSE
+- node_modules/on-exit-leak-free/README.md
+- node_modules/on-exit-leak-free/index.js
+- node_modules/on-exit-leak-free/package.json
+- node_modules/on-exit-leak-free/test/base.test.js
+- node_modules/on-exit-leak-free/test/event-emitter-leak.test.js
+- node_modules/on-exit-leak-free/test/fixtures/beforeExit.js
+- node_modules/on-exit-leak-free/test/fixtures/close.js
+- node_modules/on-exit-leak-free/test/fixtures/gc-not-close.js
+- node_modules/on-exit-leak-free/test/fixtures/unregister.js
+- node_modules/on-finished/HISTORY.md
+- node_modules/on-finished/LICENSE
+- node_modules/on-finished/README.md
+- node_modules/on-finished/index.js
+- node_modules/on-finished/package.json
+- node_modules/once/LICENSE
+- node_modules/once/README.md
+- node_modules/once/once.js
+- node_modules/once/package.json
+- node_modules/parseurl/HISTORY.md
+- node_modules/parseurl/LICENSE
+- node_modules/parseurl/README.md
+- node_modules/parseurl/index.js
+- node_modules/parseurl/package.json
+- node_modules/path-to-regexp/LICENSE
+- node_modules/path-to-regexp/Readme.md
+- node_modules/path-to-regexp/index.js
+- node_modules/path-to-regexp/package.json
+- node_modules/picomatch/CHANGELOG.md
+- node_modules/picomatch/LICENSE
+- node_modules/picomatch/README.md
+- node_modules/picomatch/index.js
+- node_modules/picomatch/lib/constants.js
+- node_modules/picomatch/lib/parse.js
+- node_modules/picomatch/lib/picomatch.js
+- node_modules/picomatch/lib/scan.js
+- node_modules/picomatch/lib/utils.js
+- node_modules/picomatch/package.json
+- node_modules/pino-abstract-transport/.github/dependabot.yml
+- node_modules/pino-abstract-transport/.github/workflows/ci.yml
+- node_modules/pino-abstract-transport/.husky/pre-commit
+- node_modules/pino-abstract-transport/LICENSE
+- node_modules/pino-abstract-transport/README.md
+- node_modules/pino-abstract-transport/index.d.ts
+- node_modules/pino-abstract-transport/index.js
+- node_modules/pino-abstract-transport/package.json
+- node_modules/pino-abstract-transport/test/base.test.js
+- node_modules/pino-abstract-transport/test/fixtures/transport-async-iteration.js
+- node_modules/pino-abstract-transport/test/fixtures/transport-on-data.js
+- node_modules/pino-abstract-transport/test/fixtures/transport-transform.js
+- node_modules/pino-abstract-transport/test/fixtures/worker-pipeline.js
+- node_modules/pino-abstract-transport/test/types/index.test-d.ts
+- node_modules/pino-abstract-transport/test/worker.test.js
+- node_modules/pino-pretty/.editorconfig
+- node_modules/pino-pretty/.eslintrc
+- node_modules/pino-pretty/.github/dependabot.yml
+- node_modules/pino-pretty/.github/workflows/ci.yml
+- node_modules/pino-pretty/.taprc.yaml
+- node_modules/pino-pretty/LICENSE
+- node_modules/pino-pretty/Readme.md
+- node_modules/pino-pretty/benchmark.js
+- node_modules/pino-pretty/bin.js
+- node_modules/pino-pretty/coverage-map.js
+- node_modules/pino-pretty/demo.png
+- node_modules/pino-pretty/docs/help.md
+- node_modules/pino-pretty/help/help.txt
+- node_modules/pino-pretty/index.d.ts
+- node_modules/pino-pretty/index.js
+- node_modules/pino-pretty/lib/colors.js
+- node_modules/pino-pretty/lib/colors.test.js
+- node_modules/pino-pretty/lib/constants.js
+- node_modules/pino-pretty/lib/pretty.js
+- node_modules/pino-pretty/lib/utils/build-safe-sonic-boom.js
+- node_modules/pino-pretty/lib/utils/build-safe-sonic-boom.test.js
+- node_modules/pino-pretty/lib/utils/create-date.js
+- node_modules/pino-pretty/lib/utils/create-date.test.js
+- node_modules/pino-pretty/lib/utils/delete-log-property.js
+- node_modules/pino-pretty/lib/utils/delete-log-property.test.js
+- node_modules/pino-pretty/lib/utils/filter-log.js
+- node_modules/pino-pretty/lib/utils/filter-log.test.js
+- node_modules/pino-pretty/lib/utils/format-time.js
+- node_modules/pino-pretty/lib/utils/format-time.test.js
+- node_modules/pino-pretty/lib/utils/get-level-label-data.js
+- node_modules/pino-pretty/lib/utils/get-property-value.js
+- node_modules/pino-pretty/lib/utils/get-property-value.test.js
+- node_modules/pino-pretty/lib/utils/handle-custom-levels-names-opts.js
+- node_modules/pino-pretty/lib/utils/handle-custom-levels-names-opts.test.js
+- node_modules/pino-pretty/lib/utils/handle-custom-levels-opts.js
+- node_modules/pino-pretty/lib/utils/handle-custom-levels-opts.test.js
+- node_modules/pino-pretty/lib/utils/index.js
+- node_modules/pino-pretty/lib/utils/index.test.js
+- node_modules/pino-pretty/lib/utils/interpret-conditionals.js
+- node_modules/pino-pretty/lib/utils/interpret-conditionals.test.js
+- node_modules/pino-pretty/lib/utils/is-object.js
+- node_modules/pino-pretty/lib/utils/is-object.test.js
+- node_modules/pino-pretty/lib/utils/is-valid-date.js
+- node_modules/pino-pretty/lib/utils/is-valid-date.test.js
+- node_modules/pino-pretty/lib/utils/join-lines-with-indentation.js
+- node_modules/pino-pretty/lib/utils/join-lines-with-indentation.test.js
+- node_modules/pino-pretty/lib/utils/noop.js
+- node_modules/pino-pretty/lib/utils/noop.test.js
+- node_modules/pino-pretty/lib/utils/parse-factory-options.js
+- node_modules/pino-pretty/lib/utils/prettify-error-log.js
+- node_modules/pino-pretty/lib/utils/prettify-error-log.test.js
+- node_modules/pino-pretty/lib/utils/prettify-error.js
+- node_modules/pino-pretty/lib/utils/prettify-error.test.js
+- node_modules/pino-pretty/lib/utils/prettify-level.js
+- node_modules/pino-pretty/lib/utils/prettify-level.test.js
+- node_modules/pino-pretty/lib/utils/prettify-message.js
+- node_modules/pino-pretty/lib/utils/prettify-message.test.js
+- node_modules/pino-pretty/lib/utils/prettify-metadata.js
+- node_modules/pino-pretty/lib/utils/prettify-metadata.test.js
+- node_modules/pino-pretty/lib/utils/prettify-object.js
+- node_modules/pino-pretty/lib/utils/prettify-object.test.js
+- node_modules/pino-pretty/lib/utils/prettify-time.js
+- node_modules/pino-pretty/lib/utils/prettify-time.test.js
+- node_modules/pino-pretty/lib/utils/split-property-key.js
+- node_modules/pino-pretty/lib/utils/split-property-key.test.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/.github/dependabot.yml
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/.github/workflows/ci.yml
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/.husky/pre-commit
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/LICENSE
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/README.md
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/index.d.ts
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/index.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/package.json
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/base.test.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/fixtures/transport-async-iteration.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/fixtures/transport-on-data.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/fixtures/transport-transform.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/fixtures/worker-pipeline.js
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/types/index.test-d.ts
+- node_modules/pino-pretty/node_modules/pino-abstract-transport/test/worker.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/.eslintignore
+- node_modules/pino-pretty/node_modules/sonic-boom/.taprc
+- node_modules/pino-pretty/node_modules/sonic-boom/LICENSE
+- node_modules/pino-pretty/node_modules/sonic-boom/README.md
+- node_modules/pino-pretty/node_modules/sonic-boom/bench.js
+- node_modules/pino-pretty/node_modules/sonic-boom/check.js
+- node_modules/pino-pretty/node_modules/sonic-boom/example.js
+- node_modules/pino-pretty/node_modules/sonic-boom/fixtures/firehose.js
+- node_modules/pino-pretty/node_modules/sonic-boom/index.js
+- node_modules/pino-pretty/node_modules/sonic-boom/package.json
+- node_modules/pino-pretty/node_modules/sonic-boom/test/destroy.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/end.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/flush-sync.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/flush.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/fsync.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/helper.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/minlength.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/mode.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/periodicflush.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/reopen.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/retry.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/sync.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/test/write.test.js
+- node_modules/pino-pretty/node_modules/sonic-boom/types/index.d.ts
+- node_modules/pino-pretty/node_modules/sonic-boom/types/tests/test.ts
+- node_modules/pino-pretty/package.json
+- node_modules/pino-pretty/test/basic.test.js
+- node_modules/pino-pretty/test/cli-rc.test.js
+- node_modules/pino-pretty/test/cli.test.js
+- node_modules/pino-pretty/test/crlf.test.js
+- node_modules/pino-pretty/test/error-objects.test.js
+- node_modules/pino-pretty/test/example/example.js
+- node_modules/pino-pretty/test/types/pino-pretty.test-d.ts
+- node_modules/pino-pretty/tsconfig.json
+- node_modules/pino-std-serializers/.editorconfig
+- node_modules/pino-std-serializers/.eslintignore
+- node_modules/pino-std-serializers/.github/dependabot.yml
+- node_modules/pino-std-serializers/.github/workflows/ci.yml
+- node_modules/pino-std-serializers/.taprc
+- node_modules/pino-std-serializers/LICENSE
+- node_modules/pino-std-serializers/Readme.md
+- node_modules/pino-std-serializers/index.d.ts
+- node_modules/pino-std-serializers/index.js
+- node_modules/pino-std-serializers/lib/err-helpers.js
+- node_modules/pino-std-serializers/lib/err-proto.js
+- node_modules/pino-std-serializers/lib/err-with-cause.js
+- node_modules/pino-std-serializers/lib/err.js
+- node_modules/pino-std-serializers/lib/req.js
+- node_modules/pino-std-serializers/lib/res.js
+- node_modules/pino-std-serializers/package.json
+- node_modules/pino-std-serializers/test/err-with-cause.test.js
+- node_modules/pino-std-serializers/test/err.test.js
+- node_modules/pino-std-serializers/test/req.test.js
+- node_modules/pino-std-serializers/test/res.test.js
+- node_modules/pino-std-serializers/test/types/index.test-d.ts
+- node_modules/pino-std-serializers/tsconfig.json
+- node_modules/pino/.eslintignore
+- node_modules/pino/.eslintrc
+- node_modules/pino/.github/dependabot.yml
+- node_modules/pino/.github/workflows/bench.yml
+- node_modules/pino/.github/workflows/ci.yml
+- node_modules/pino/.github/workflows/lock-threads.yml
+- node_modules/pino/.github/workflows/package-manager-ci.yml
+- node_modules/pino/.github/workflows/target-main.yml
+- node_modules/pino/.nojekyll
+- node_modules/pino/.prettierignore
+- node_modules/pino/.taprc.yaml
+- node_modules/pino/CNAME
+- node_modules/pino/CONTRIBUTING.md
+- node_modules/pino/LICENSE
+- node_modules/pino/README.md
+- node_modules/pino/SECURITY.md
+- node_modules/pino/benchmarks/basic.bench.js
+- node_modules/pino/benchmarks/child-child.bench.js
+- node_modules/pino/benchmarks/child-creation.bench.js
+- node_modules/pino/benchmarks/child.bench.js
+- node_modules/pino/benchmarks/deep-object.bench.js
+- node_modules/pino/benchmarks/formatters.bench.js
+- node_modules/pino/benchmarks/internal/custom-levels.js
+- node_modules/pino/benchmarks/internal/just-pino-heavy.bench.js
+- node_modules/pino/benchmarks/internal/just-pino.bench.js
+- node_modules/pino/benchmarks/internal/parent-vs-child.bench.js
+- node_modules/pino/benchmarks/internal/redact.bench.js
+- node_modules/pino/benchmarks/long-string.bench.js
+- node_modules/pino/benchmarks/multi-arg.bench.js
+- node_modules/pino/benchmarks/multistream.js
+- node_modules/pino/benchmarks/object.bench.js
+- node_modules/pino/benchmarks/utils/generate-benchmark-doc.js
+- node_modules/pino/benchmarks/utils/runbench.js
+- node_modules/pino/benchmarks/utils/wrap-log-level.js
+- node_modules/pino/bin.js
+- node_modules/pino/browser.js
+- node_modules/pino/build/sync-version.js
+- node_modules/pino/docs/api.md
+- node_modules/pino/docs/asynchronous.md
+- node_modules/pino/docs/benchmarks.md
+- node_modules/pino/docs/browser.md
+- node_modules/pino/docs/bundling.md
+- node_modules/pino/docs/child-loggers.md
+- node_modules/pino/docs/ecosystem.md
+- node_modules/pino/docs/help.md
+- node_modules/pino/docs/lts.md
+- node_modules/pino/docs/pretty.md
+- node_modules/pino/docs/redaction.md
+- node_modules/pino/docs/transports.md
+- node_modules/pino/docs/web.md
+- node_modules/pino/docsify/sidebar.md
+- node_modules/pino/examples/basic.js
+- node_modules/pino/examples/transport.js
+- node_modules/pino/favicon-16x16.png
+- node_modules/pino/favicon-32x32.png
+- node_modules/pino/favicon.ico
+- node_modules/pino/file.js
+- node_modules/pino/inc-version.sh
+- node_modules/pino/index.html
+- node_modules/pino/lib/caller.js
+- node_modules/pino/lib/constants.js
+- node_modules/pino/lib/deprecations.js
+- node_modules/pino/lib/levels.js
+- node_modules/pino/lib/meta.js
+- node_modules/pino/lib/multistream.js
+- node_modules/pino/lib/proto.js
+- node_modules/pino/lib/redaction.js
+- node_modules/pino/lib/symbols.js
+- node_modules/pino/lib/time.js
+- node_modules/pino/lib/tools.js
+- node_modules/pino/lib/transport-stream.js
+- node_modules/pino/lib/transport.js
+- node_modules/pino/lib/worker-pipeline.js
+- node_modules/pino/lib/worker.js
+- node_modules/pino/package.json
+- node_modules/pino/pino-banner.png
+- node_modules/pino/pino-logo-hire.png
+- node_modules/pino/pino-tree.png
+- node_modules/pino/pino.d.ts
+- node_modules/pino/pino.js
+- node_modules/pino/pretty-demo.png
+- node_modules/pino/test/basic.test.js
+- node_modules/pino/test/broken-pipe.test.js
+- node_modules/pino/test/browser-child.test.js
+- node_modules/pino/test/browser-disabled.test.js
+- node_modules/pino/test/browser-early-console-freeze.test.js
+- node_modules/pino/test/browser-levels.test.js
+- node_modules/pino/test/browser-serializers.test.js
+- node_modules/pino/test/browser-timestamp.test.js
+- node_modules/pino/test/browser-transmit.test.js
+- node_modules/pino/test/browser.test.js
+- node_modules/pino/test/complex-objects.test.js
+- node_modules/pino/test/crlf.test.js
+- node_modules/pino/test/custom-levels.test.js
+- node_modules/pino/test/error.test.js
+- node_modules/pino/test/errorKey.test.js
+- node_modules/pino/test/escaping.test.js
+- node_modules/pino/test/esm/esm.mjs
+- node_modules/pino/test/esm/index.test.js
+- node_modules/pino/test/esm/named-exports.mjs
+- node_modules/pino/test/exit.test.js
+- node_modules/pino/test/fixtures/broken-pipe/basic.js
+- node_modules/pino/test/fixtures/broken-pipe/destination.js
+- node_modules/pino/test/fixtures/broken-pipe/syncfalse.js
+- node_modules/pino/test/fixtures/console-transport.js
+- node_modules/pino/test/fixtures/default-exit.js
+- node_modules/pino/test/fixtures/destination-exit.js
+- node_modules/pino/test/fixtures/eval/index.js
+- node_modules/pino/test/fixtures/eval/node_modules/14-files.js
+- node_modules/pino/test/fixtures/eval/node_modules/2-files.js
+- node_modules/pino/test/fixtures/eval/node_modules/file1.js
+- node_modules/pino/test/fixtures/eval/node_modules/file10.js
+- node_modules/pino/test/fixtures/eval/node_modules/file11.js
+- node_modules/pino/test/fixtures/eval/node_modules/file12.js
+- node_modules/pino/test/fixtures/eval/node_modules/file13.js
+- node_modules/pino/test/fixtures/eval/node_modules/file14.js
+- node_modules/pino/test/fixtures/eval/node_modules/file2.js
+- node_modules/pino/test/fixtures/eval/node_modules/file3.js
+- node_modules/pino/test/fixtures/eval/node_modules/file4.js
+- node_modules/pino/test/fixtures/eval/node_modules/file5.js
+- node_modules/pino/test/fixtures/eval/node_modules/file6.js
+- node_modules/pino/test/fixtures/eval/node_modules/file7.js
+- node_modules/pino/test/fixtures/eval/node_modules/file8.js
+- node_modules/pino/test/fixtures/eval/node_modules/file9.js
+- node_modules/pino/test/fixtures/noop-transport.js
+- node_modules/pino/test/fixtures/pretty/null-prototype.js
+- node_modules/pino/test/fixtures/stdout-hack-protection.js
+- node_modules/pino/test/fixtures/syncfalse-child.js
+- node_modules/pino/test/fixtures/syncfalse-exit.js
+- node_modules/pino/test/fixtures/syncfalse-flush-exit.js
+- node_modules/pino/test/fixtures/syncfalse.js
+- node_modules/pino/test/fixtures/to-file-transport-with-transform.js
+- node_modules/pino/test/fixtures/to-file-transport.js
+- node_modules/pino/test/fixtures/to-file-transport.mjs
+- node_modules/pino/test/fixtures/transport-exit-immediately-with-async-dest.js
+- node_modules/pino/test/fixtures/transport-exit-immediately.js
+- node_modules/pino/test/fixtures/transport-exit-on-ready.js
+- node_modules/pino/test/fixtures/transport-main.js
+- node_modules/pino/test/fixtures/transport-many-lines.js
+- node_modules/pino/test/fixtures/transport-string-stdout.js
+- node_modules/pino/test/fixtures/transport-transform.js
+- node_modules/pino/test/fixtures/transport-uses-pino-config.js
+- node_modules/pino/test/fixtures/transport-with-on-exit.js
+- node_modules/pino/test/fixtures/transport-worker-data.js
+- node_modules/pino/test/fixtures/transport-worker.js
+- node_modules/pino/test/fixtures/transport-wrong-export-type.js
+- node_modules/pino/test/fixtures/transport/index.js
+- node_modules/pino/test/fixtures/transport/package.json
+- node_modules/pino/test/fixtures/ts/to-file-transport-with-transform.ts
+- node_modules/pino/test/fixtures/ts/to-file-transport.ts
+- node_modules/pino/test/fixtures/ts/transpile.cjs
+- node_modules/pino/test/fixtures/ts/transport-exit-immediately-with-async-dest.ts
+- node_modules/pino/test/fixtures/ts/transport-exit-immediately.ts
+- node_modules/pino/test/fixtures/ts/transport-exit-on-ready.ts
+- node_modules/pino/test/fixtures/ts/transport-main.ts
+- node_modules/pino/test/fixtures/ts/transport-string-stdout.ts
+- node_modules/pino/test/fixtures/ts/transport-worker.ts
+- node_modules/pino/test/formatters.test.js
+- node_modules/pino/test/helper.d.ts
+- node_modules/pino/test/helper.js
+- node_modules/pino/test/hooks.test.js
+- node_modules/pino/test/http.test.js
+- node_modules/pino/test/internals/version.test.js
+- node_modules/pino/test/is-level-enabled.test.js
+- node_modules/pino/test/jest/basic.spec.js
+- node_modules/pino/test/levels.test.js
+- node_modules/pino/test/metadata.test.js
+- node_modules/pino/test/mixin-merge-strategy.test.js
+- node_modules/pino/test/mixin.test.js
+- node_modules/pino/test/multistream.test.js
+- node_modules/pino/test/redact.test.js
+- node_modules/pino/test/serializers.test.js
+- node_modules/pino/test/stdout-protection.test.js
+- node_modules/pino/test/syncfalse.test.js
+- node_modules/pino/test/timestamp.test.js
+- node_modules/pino/test/transport/big.test.js
+- node_modules/pino/test/transport/bundlers-support.test.js
+- node_modules/pino/test/transport/caller.test.js
+- node_modules/pino/test/transport/core.test.js
+- node_modules/pino/test/transport/core.test.ts
+- node_modules/pino/test/transport/core.transpiled.test.ts
+- node_modules/pino/test/transport/module-link.test.js
+- node_modules/pino/test/transport/pipeline.test.js
+- node_modules/pino/test/transport/repl.test.js
+- node_modules/pino/test/transport/syncfalse.test.js
+- node_modules/pino/test/transport/targets.test.js
+- node_modules/pino/test/transport/uses-pino-config.test.js
+- node_modules/pino/test/types/pino-import.test-d.ts
+- node_modules/pino/test/types/pino-multistream.test-d.ts
+- node_modules/pino/test/types/pino-top-export.test-d.ts
+- node_modules/pino/test/types/pino-transport.test-d.ts
+- node_modules/pino/test/types/pino-type-only.test-d.ts
+- node_modules/pino/test/types/pino.test-d.ts
+- node_modules/pino/test/types/pino.ts
+- node_modules/pino/tsconfig.json
+- node_modules/process-warning/.gitattributes
+- node_modules/process-warning/.github/dependabot.yml
+- node_modules/process-warning/.github/workflows/ci.yml
+- node_modules/process-warning/.taprc
+- node_modules/process-warning/LICENSE
+- node_modules/process-warning/README.md
+- node_modules/process-warning/benchmarks/warn.js
+- node_modules/process-warning/examples/example.js
+- node_modules/process-warning/index.js
+- node_modules/process-warning/package.json
+- node_modules/process-warning/test/emit-interpolated-string.test.js
+- node_modules/process-warning/test/emit-once-only.test.js
+- node_modules/process-warning/test/emit-reset.test.js
+- node_modules/process-warning/test/emit-set.test.js
+- node_modules/process-warning/test/emit-unlimited.test.js
+- node_modules/process-warning/test/index.test.js
+- node_modules/process-warning/test/issue-88.test.js
+- node_modules/process-warning/test/jest.test.js
+- node_modules/process-warning/test/no-warnings.test.js
+- node_modules/process-warning/types/index.d.ts
+- node_modules/process-warning/types/index.test-d.ts
+- node_modules/process/.eslintrc
+- node_modules/process/LICENSE
+- node_modules/process/README.md
+- node_modules/process/browser.js
+- node_modules/process/index.js
+- node_modules/process/package.json
+- node_modules/process/test.js
+- node_modules/proxy-addr/HISTORY.md
+- node_modules/proxy-addr/LICENSE
+- node_modules/proxy-addr/README.md
+- node_modules/proxy-addr/index.js
+- node_modules/proxy-addr/package.json
+- node_modules/proxy-from-env/.eslintrc
+- node_modules/proxy-from-env/.travis.yml
+- node_modules/proxy-from-env/LICENSE
+- node_modules/proxy-from-env/README.md
+- node_modules/proxy-from-env/index.js
+- node_modules/proxy-from-env/package.json
+- node_modules/proxy-from-env/test.js
+- node_modules/pstree.remy/.travis.yml
+- node_modules/pstree.remy/LICENSE
+- node_modules/pstree.remy/README.md
+- node_modules/pstree.remy/lib/index.js
+- node_modules/pstree.remy/lib/tree.js
+- node_modules/pstree.remy/lib/utils.js
+- node_modules/pstree.remy/package.json
+- node_modules/pstree.remy/tests/fixtures/index.js
+- node_modules/pstree.remy/tests/fixtures/out1
+- node_modules/pstree.remy/tests/fixtures/out2
+- node_modules/pstree.remy/tests/index.test.js
+- node_modules/pump/.github/FUNDING.yml
+- node_modules/pump/.travis.yml
+- node_modules/pump/LICENSE
+- node_modules/pump/README.md
+- node_modules/pump/SECURITY.md
+- node_modules/pump/index.js
+- node_modules/pump/package.json
+- node_modules/pump/test-browser.js
+- node_modules/pump/test-node.js
+- node_modules/punycode/LICENSE-MIT.txt
+- node_modules/punycode/README.md
+- node_modules/punycode/package.json
+- node_modules/punycode/punycode.es6.js
+- node_modules/punycode/punycode.js
+- node_modules/qs/.editorconfig
+- node_modules/qs/.github/FUNDING.yml
+- node_modules/qs/.github/SECURITY.md
+- node_modules/qs/.github/THREAT_MODEL.md
+- node_modules/qs/.nycrc
+- node_modules/qs/CHANGELOG.md
+- node_modules/qs/LICENSE.md
+- node_modules/qs/README.md
+- node_modules/qs/dist/qs.js
+- node_modules/qs/eslint.config.mjs
+- node_modules/qs/lib/formats.js
+- node_modules/qs/lib/index.js
+- node_modules/qs/lib/parse.js
+- node_modules/qs/lib/stringify.js
+- node_modules/qs/lib/utils.js
+- node_modules/qs/package.json
+- node_modules/qs/test/empty-keys-cases.js
+- node_modules/qs/test/parse.js
+- node_modules/qs/test/stringify.js
+- node_modules/qs/test/utils.js
+- node_modules/quick-format-unescaped/.github/workflows/ci.yml
+- node_modules/quick-format-unescaped/LICENSE
+- node_modules/quick-format-unescaped/benchmark.js
+- node_modules/quick-format-unescaped/index.js
+- node_modules/quick-format-unescaped/package.json
+- node_modules/quick-format-unescaped/readme.md
+- node_modules/quick-format-unescaped/test/index.js
+- node_modules/range-parser/HISTORY.md
+- node_modules/range-parser/LICENSE
+- node_modules/range-parser/README.md
+- node_modules/range-parser/index.js
+- node_modules/range-parser/package.json
+- node_modules/raw-body/LICENSE
+- node_modules/raw-body/README.md
+- node_modules/raw-body/index.d.ts
+- node_modules/raw-body/index.js
+- node_modules/raw-body/package.json
+- node_modules/readable-stream/LICENSE
+- node_modules/readable-stream/README.md
+- node_modules/readable-stream/lib/_stream_duplex.js
+- node_modules/readable-stream/lib/_stream_passthrough.js
+- node_modules/readable-stream/lib/_stream_readable.js
+- node_modules/readable-stream/lib/_stream_transform.js
+- node_modules/readable-stream/lib/_stream_writable.js
+- node_modules/readable-stream/lib/internal/streams/add-abort-signal.js
+- node_modules/readable-stream/lib/internal/streams/buffer_list.js
+- node_modules/readable-stream/lib/internal/streams/compose.js
+- node_modules/readable-stream/lib/internal/streams/destroy.js
+- node_modules/readable-stream/lib/internal/streams/duplex.js
+- node_modules/readable-stream/lib/internal/streams/duplexify.js
+- node_modules/readable-stream/lib/internal/streams/end-of-stream.js
+- node_modules/readable-stream/lib/internal/streams/from.js
+- node_modules/readable-stream/lib/internal/streams/lazy_transform.js
+- node_modules/readable-stream/lib/internal/streams/legacy.js
+- node_modules/readable-stream/lib/internal/streams/operators.js
+- node_modules/readable-stream/lib/internal/streams/passthrough.js
+- node_modules/readable-stream/lib/internal/streams/pipeline.js
+- node_modules/readable-stream/lib/internal/streams/readable.js
+- node_modules/readable-stream/lib/internal/streams/state.js
+- node_modules/readable-stream/lib/internal/streams/transform.js
+- node_modules/readable-stream/lib/internal/streams/utils.js
+- node_modules/readable-stream/lib/internal/streams/writable.js
+- node_modules/readable-stream/lib/internal/validators.js
+- node_modules/readable-stream/lib/ours/browser.js
+- node_modules/readable-stream/lib/ours/errors.js
+- node_modules/readable-stream/lib/ours/index.js
+- node_modules/readable-stream/lib/ours/primordials.js
+- node_modules/readable-stream/lib/ours/util.js
+- node_modules/readable-stream/lib/ours/util/inspect.js
+- node_modules/readable-stream/lib/stream.js
+- node_modules/readable-stream/lib/stream/promises.js
+- node_modules/readable-stream/package.json
+- node_modules/readdirp/LICENSE
+- node_modules/readdirp/README.md
+- node_modules/readdirp/index.d.ts
+- node_modules/readdirp/index.js
+- node_modules/readdirp/package.json
+- node_modules/real-require/LICENSE.md
+- node_modules/real-require/README.md
+- node_modules/real-require/package.json
+- node_modules/real-require/src/index.js
+- node_modules/safe-buffer/LICENSE
+- node_modules/safe-buffer/README.md
+- node_modules/safe-buffer/index.d.ts
+- node_modules/safe-buffer/index.js
+- node_modules/safe-buffer/package.json
+- node_modules/safe-stable-stringify/LICENSE
+- node_modules/safe-stable-stringify/esm/package.json
+- node_modules/safe-stable-stringify/esm/wrapper.d.ts
+- node_modules/safe-stable-stringify/esm/wrapper.js
+- node_modules/safe-stable-stringify/index.d.ts
+- node_modules/safe-stable-stringify/index.js
+- node_modules/safe-stable-stringify/package.json
+- node_modules/safe-stable-stringify/readme.md
+- node_modules/safer-buffer/LICENSE
+- node_modules/safer-buffer/Porting-Buffer.md
+- node_modules/safer-buffer/Readme.md
+- node_modules/safer-buffer/dangerous.js
+- node_modules/safer-buffer/package.json
+- node_modules/safer-buffer/safer.js
+- node_modules/safer-buffer/tests.js
+- node_modules/secure-json-parse/.airtap.yml
+- node_modules/secure-json-parse/.github/dependabot.yml
+- node_modules/secure-json-parse/.github/stale.yml
+- node_modules/secure-json-parse/.github/workflows/ci.yml
+- node_modules/secure-json-parse/LICENSE.md
+- node_modules/secure-json-parse/README.md
+- node_modules/secure-json-parse/benchmarks/ignore.js
+- node_modules/secure-json-parse/benchmarks/no__proto__.js
+- node_modules/secure-json-parse/benchmarks/package.json
+- node_modules/secure-json-parse/benchmarks/remove.js
+- node_modules/secure-json-parse/benchmarks/throw.js
+- node_modules/secure-json-parse/benchmarks/valid.js
+- node_modules/secure-json-parse/index.js
+- node_modules/secure-json-parse/package.json
+- node_modules/secure-json-parse/test/index.test.js
+- node_modules/secure-json-parse/types/index.d.ts
+- node_modules/secure-json-parse/types/index.test-d.ts
+- node_modules/semver/LICENSE
+- node_modules/semver/README.md
+- node_modules/semver/bin/semver.js
+- node_modules/semver/classes/comparator.js
+- node_modules/semver/classes/index.js
+- node_modules/semver/classes/range.js
+- node_modules/semver/classes/semver.js
+- node_modules/semver/functions/clean.js
+- node_modules/semver/functions/cmp.js
+- node_modules/semver/functions/coerce.js
+- node_modules/semver/functions/compare-build.js
+- node_modules/semver/functions/compare-loose.js
+- node_modules/semver/functions/compare.js
+- node_modules/semver/functions/diff.js
+- node_modules/semver/functions/eq.js
+- node_modules/semver/functions/gt.js
+- node_modules/semver/functions/gte.js
+- node_modules/semver/functions/inc.js
+- node_modules/semver/functions/lt.js
+- node_modules/semver/functions/lte.js
+- node_modules/semver/functions/major.js
+- node_modules/semver/functions/minor.js
+- node_modules/semver/functions/neq.js
+- node_modules/semver/functions/parse.js
+- node_modules/semver/functions/patch.js
+- node_modules/semver/functions/prerelease.js
+- node_modules/semver/functions/rcompare.js
+- node_modules/semver/functions/rsort.js
+- node_modules/semver/functions/satisfies.js
+- node_modules/semver/functions/sort.js
+- node_modules/semver/functions/valid.js
+- node_modules/semver/index.js
+- node_modules/semver/internal/constants.js
+- node_modules/semver/internal/debug.js
+- node_modules/semver/internal/identifiers.js
+- node_modules/semver/internal/lrucache.js
+- node_modules/semver/internal/parse-options.js
+- node_modules/semver/internal/re.js
+- node_modules/semver/package.json
+- node_modules/semver/preload.js
+- node_modules/semver/range.bnf
+- node_modules/semver/ranges/gtr.js
+- node_modules/semver/ranges/intersects.js
+- node_modules/semver/ranges/ltr.js
+- node_modules/semver/ranges/max-satisfying.js
+- node_modules/semver/ranges/min-satisfying.js
+- node_modules/semver/ranges/min-version.js
+- node_modules/semver/ranges/outside.js
+- node_modules/semver/ranges/simplify.js
+- node_modules/semver/ranges/subset.js
+- node_modules/semver/ranges/to-comparators.js
+- node_modules/semver/ranges/valid.js
+- node_modules/send/HISTORY.md
+- node_modules/send/LICENSE
+- node_modules/send/README.md
+- node_modules/send/SECURITY.md
+- node_modules/send/index.js
+- node_modules/send/node_modules/ms/index.js
+- node_modules/send/node_modules/ms/license.md
+- node_modules/send/node_modules/ms/package.json
+- node_modules/send/node_modules/ms/readme.md
+- node_modules/send/package.json
+- node_modules/serve-static/HISTORY.md
+- node_modules/serve-static/LICENSE
+- node_modules/serve-static/README.md
+- node_modules/serve-static/index.js
+- node_modules/serve-static/package.json
+- node_modules/setprototypeof/LICENSE
+- node_modules/setprototypeof/README.md
+- node_modules/setprototypeof/index.d.ts
+- node_modules/setprototypeof/index.js
+- node_modules/setprototypeof/package.json
+- node_modules/setprototypeof/test/index.js
+- node_modules/side-channel-list/.editorconfig
+- node_modules/side-channel-list/.eslintrc
+- node_modules/side-channel-list/.github/FUNDING.yml
+- node_modules/side-channel-list/.nycrc
+- node_modules/side-channel-list/CHANGELOG.md
+- node_modules/side-channel-list/LICENSE
+- node_modules/side-channel-list/README.md
+- node_modules/side-channel-list/index.d.ts
+- node_modules/side-channel-list/index.js
+- node_modules/side-channel-list/list.d.ts
+- node_modules/side-channel-list/package.json
+- node_modules/side-channel-list/test/index.js
+- node_modules/side-channel-list/tsconfig.json
+- node_modules/side-channel-map/.editorconfig
+- node_modules/side-channel-map/.eslintrc
+- node_modules/side-channel-map/.github/FUNDING.yml
+- node_modules/side-channel-map/.nycrc
+- node_modules/side-channel-map/CHANGELOG.md
+- node_modules/side-channel-map/LICENSE
+- node_modules/side-channel-map/README.md
+- node_modules/side-channel-map/index.d.ts
+- node_modules/side-channel-map/index.js
+- node_modules/side-channel-map/package.json
+- node_modules/side-channel-map/test/index.js
+- node_modules/side-channel-map/tsconfig.json
+- node_modules/side-channel-weakmap/.editorconfig
+- node_modules/side-channel-weakmap/.eslintrc
+- node_modules/side-channel-weakmap/.github/FUNDING.yml
+- node_modules/side-channel-weakmap/.nycrc
+- node_modules/side-channel-weakmap/CHANGELOG.md
+- node_modules/side-channel-weakmap/LICENSE
+- node_modules/side-channel-weakmap/README.md
+- node_modules/side-channel-weakmap/index.d.ts
+- node_modules/side-channel-weakmap/index.js
+- node_modules/side-channel-weakmap/package.json
+- node_modules/side-channel-weakmap/test/index.js
+- node_modules/side-channel-weakmap/tsconfig.json
+- node_modules/side-channel/.editorconfig
+- node_modules/side-channel/.eslintrc
+- node_modules/side-channel/.github/FUNDING.yml
+- node_modules/side-channel/.nycrc
+- node_modules/side-channel/CHANGELOG.md
+- node_modules/side-channel/LICENSE
+- node_modules/side-channel/README.md
+- node_modules/side-channel/index.d.ts
+- node_modules/side-channel/index.js
+- node_modules/side-channel/package.json
+- node_modules/side-channel/test/index.js
+- node_modules/side-channel/tsconfig.json
+- node_modules/sift/MIT-LICENSE.txt
+- node_modules/sift/README.md
+- node_modules/sift/es/index.js
+- node_modules/sift/es/index.js.map
+- node_modules/sift/es5m/index.js
+- node_modules/sift/es5m/index.js.map
+- node_modules/sift/index.d.ts
+- node_modules/sift/index.js
+- node_modules/sift/lib/core.d.ts
+- node_modules/sift/lib/index.d.ts
+- node_modules/sift/lib/index.js
+- node_modules/sift/lib/index.js.map
+- node_modules/sift/lib/operations.d.ts
+- node_modules/sift/lib/utils.d.ts
+- node_modules/sift/package.json
+- node_modules/sift/sift.csp.min.js
+- node_modules/sift/sift.csp.min.js.map
+- node_modules/sift/sift.min.js
+- node_modules/sift/sift.min.js.map
+- node_modules/sift/src/core.ts
+- node_modules/sift/src/index.ts
+- node_modules/sift/src/operations.ts
+- node_modules/sift/src/utils.ts
+- node_modules/simple-update-notifier/LICENSE
+- node_modules/simple-update-notifier/README.md
+- node_modules/simple-update-notifier/build/index.d.ts
+- node_modules/simple-update-notifier/build/index.js
+- node_modules/simple-update-notifier/package.json
+- node_modules/simple-update-notifier/src/borderedText.ts
+- node_modules/simple-update-notifier/src/cache.spec.ts
+- node_modules/simple-update-notifier/src/cache.ts
+- node_modules/simple-update-notifier/src/getDistVersion.spec.ts
+- node_modules/simple-update-notifier/src/getDistVersion.ts
+- node_modules/simple-update-notifier/src/hasNewVersion.spec.ts
+- node_modules/simple-update-notifier/src/hasNewVersion.ts
+- node_modules/simple-update-notifier/src/index.spec.ts
+- node_modules/simple-update-notifier/src/index.ts
+- node_modules/simple-update-notifier/src/isNpmOrYarn.ts
+- node_modules/simple-update-notifier/src/types.ts
+- node_modules/sonic-boom/.eslintignore
+- node_modules/sonic-boom/.husky/pre-commit
+- node_modules/sonic-boom/.taprc.yaml
+- node_modules/sonic-boom/LICENSE
+- node_modules/sonic-boom/README.md
+- node_modules/sonic-boom/bench.js
+- node_modules/sonic-boom/check.js
+- node_modules/sonic-boom/example.js
+- node_modules/sonic-boom/fixtures/firehose.js
+- node_modules/sonic-boom/index.js
+- node_modules/sonic-boom/package.json
+- node_modules/sonic-boom/test/destroy.test.js
+- node_modules/sonic-boom/test/end.test.js
+- node_modules/sonic-boom/test/flush-sync.test.js
+- node_modules/sonic-boom/test/flush.test.js
+- node_modules/sonic-boom/test/fsync.test.js
+- node_modules/sonic-boom/test/helper.js
+- node_modules/sonic-boom/test/minlength.test.js
+- node_modules/sonic-boom/test/mode.test.js
+- node_modules/sonic-boom/test/reopen.test.js
+- node_modules/sonic-boom/test/retry.test.js
+- node_modules/sonic-boom/test/sync.test.js
+- node_modules/sonic-boom/test/write.test.js
+- node_modules/sonic-boom/types/index.d.ts
+- node_modules/sonic-boom/types/tests/test.ts
+- node_modules/sparse-bitfield/.npmignore
+- node_modules/sparse-bitfield/.travis.yml
+- node_modules/sparse-bitfield/LICENSE
+- node_modules/sparse-bitfield/README.md
+- node_modules/sparse-bitfield/index.js
+- node_modules/sparse-bitfield/package.json
+- node_modules/sparse-bitfield/test.js
+- node_modules/split2/LICENSE
+- node_modules/split2/README.md
+- node_modules/split2/bench.js
+- node_modules/split2/index.js
+- node_modules/split2/package.json
+- node_modules/split2/test.js
+- node_modules/statuses/HISTORY.md
+- node_modules/statuses/LICENSE
+- node_modules/statuses/README.md
+- node_modules/statuses/codes.json
+- node_modules/statuses/index.js
+- node_modules/statuses/package.json
+- node_modules/string_decoder/LICENSE
+- node_modules/string_decoder/README.md
+- node_modules/string_decoder/lib/string_decoder.js
+- node_modules/string_decoder/package.json
+- node_modules/strip-json-comments/index.d.ts
+- node_modules/strip-json-comments/index.js
+- node_modules/strip-json-comments/license
+- node_modules/strip-json-comments/package.json
+- node_modules/strip-json-comments/readme.md
+- node_modules/supports-color/browser.js
+- node_modules/supports-color/index.js
+- node_modules/supports-color/license
+- node_modules/supports-color/package.json
+- node_modules/supports-color/readme.md
+- node_modules/thread-stream/.github/dependabot.yml
+- node_modules/thread-stream/.github/workflows/ci.yml
+- node_modules/thread-stream/.husky/pre-commit
+- node_modules/thread-stream/.taprc
+- node_modules/thread-stream/LICENSE
+- node_modules/thread-stream/README.md
+- node_modules/thread-stream/bench.js
+- node_modules/thread-stream/index.d.ts
+- node_modules/thread-stream/index.js
+- node_modules/thread-stream/lib/indexes.js
+- node_modules/thread-stream/lib/wait.js
+- node_modules/thread-stream/lib/worker.js
+- node_modules/thread-stream/package.json
+- node_modules/thread-stream/test/base.test.js
+- node_modules/thread-stream/test/bench.test.js
+- node_modules/thread-stream/test/bundlers.test.js
+- node_modules/thread-stream/test/close-on-gc.js
+- node_modules/thread-stream/test/commonjs-fallback.test.js
+- node_modules/thread-stream/test/context.test.js
+- node_modules/thread-stream/test/create-and-exit.js
+- node_modules/thread-stream/test/custom-worker.js
+- node_modules/thread-stream/test/dir with spaces/test-package.zip
+- node_modules/thread-stream/test/emit-event.js
+- node_modules/thread-stream/test/end.test.js
+- node_modules/thread-stream/test/error.js
+- node_modules/thread-stream/test/esm.test.mjs
+- node_modules/thread-stream/test/event.test.js
+- node_modules/thread-stream/test/exit.js
+- node_modules/thread-stream/test/get-context.js
+- node_modules/thread-stream/test/helper.d.ts
+- node_modules/thread-stream/test/helper.js
+- node_modules/thread-stream/test/indexes.test.js
+- node_modules/thread-stream/test/multibyte-chars.test.mjs
+- node_modules/thread-stream/test/never-drain.test.js
+- node_modules/thread-stream/test/on-message.js
+- node_modules/thread-stream/test/pkg/index.js
+- node_modules/thread-stream/test/pkg/pkg.config.json
+- node_modules/thread-stream/test/pkg/pkg.test.js
+- node_modules/thread-stream/test/port.js
+- node_modules/thread-stream/test/post-message.test.js
+- node_modules/thread-stream/test/string-limit-2.test.js
+- node_modules/thread-stream/test/string-limit.test.js
+- node_modules/thread-stream/test/thread-management.test.js
+- node_modules/thread-stream/test/to-file-on-destroy.js
+- node_modules/thread-stream/test/to-file-on-final.js
+- node_modules/thread-stream/test/to-file.js
+- node_modules/thread-stream/test/to-file.mjs
+- node_modules/thread-stream/test/to-next.js
+- node_modules/thread-stream/test/transpiled.test.js
+- node_modules/thread-stream/test/ts-commonjs-default-export.zip
+- node_modules/thread-stream/test/ts.test.ts
+- node_modules/thread-stream/test/ts/to-file.ts
+- node_modules/thread-stream/test/ts/transpile.sh
+- node_modules/thread-stream/test/uncaughtException.js
+- node_modules/thread-stream/test/unhandledRejection.js
+- node_modules/thread-stream/test/yarnrc.yml
+- node_modules/to-regex-range/LICENSE
+- node_modules/to-regex-range/README.md
+- node_modules/to-regex-range/index.js
+- node_modules/to-regex-range/package.json
+- node_modules/toidentifier/HISTORY.md
+- node_modules/toidentifier/LICENSE
+- node_modules/toidentifier/README.md
+- node_modules/toidentifier/index.js
+- node_modules/toidentifier/package.json
+- node_modules/touch/LICENSE
+- node_modules/touch/README.md
+- node_modules/touch/bin/nodetouch.js
+- node_modules/touch/index.js
+- node_modules/touch/package.json
+- node_modules/tr46/LICENSE.md
+- node_modules/tr46/README.md
+- node_modules/tr46/index.js
+- node_modules/tr46/lib/mappingTable.json
+- node_modules/tr46/lib/regexes.js
+- node_modules/tr46/lib/statusMapping.js
+- node_modules/tr46/package.json
+- node_modules/type-is/HISTORY.md
+- node_modules/type-is/LICENSE
+- node_modules/type-is/README.md
+- node_modules/type-is/index.js
+- node_modules/type-is/package.json
+- node_modules/uncrypto/LICENSE
+- node_modules/uncrypto/README.md
+- node_modules/uncrypto/dist/crypto.node.cjs
+- node_modules/uncrypto/dist/crypto.node.d.ts
+- node_modules/uncrypto/dist/crypto.node.mjs
+- node_modules/uncrypto/dist/crypto.web.cjs
+- node_modules/uncrypto/dist/crypto.web.d.ts
+- node_modules/uncrypto/dist/crypto.web.mjs
+- node_modules/uncrypto/package.json
+- node_modules/undefsafe/.github/workflows/release.yml
+- node_modules/undefsafe/.jscsrc
+- node_modules/undefsafe/.jshintrc
+- node_modules/undefsafe/.travis.yml
+- node_modules/undefsafe/LICENSE
+- node_modules/undefsafe/README.md
+- node_modules/undefsafe/example.js
+- node_modules/undefsafe/lib/undefsafe.js
+- node_modules/undefsafe/package.json
+- node_modules/undici-types/README.md
+- node_modules/undici-types/agent.d.ts
+- node_modules/undici-types/api.d.ts
+- node_modules/undici-types/balanced-pool.d.ts
+- node_modules/undici-types/cache.d.ts
+- node_modules/undici-types/client.d.ts
+- node_modules/undici-types/connector.d.ts
+- node_modules/undici-types/content-type.d.ts
+- node_modules/undici-types/cookies.d.ts
+- node_modules/undici-types/diagnostics-channel.d.ts
+- node_modules/undici-types/dispatcher.d.ts
+- node_modules/undici-types/errors.d.ts
+- node_modules/undici-types/fetch.d.ts
+- node_modules/undici-types/file.d.ts
+- node_modules/undici-types/filereader.d.ts
+- node_modules/undici-types/formdata.d.ts
+- node_modules/undici-types/global-dispatcher.d.ts
+- node_modules/undici-types/global-origin.d.ts
+- node_modules/undici-types/handlers.d.ts
+- node_modules/undici-types/header.d.ts
+- node_modules/undici-types/index.d.ts
+- node_modules/undici-types/interceptors.d.ts
+- node_modules/undici-types/mock-agent.d.ts
+- node_modules/undici-types/mock-client.d.ts
+- node_modules/undici-types/mock-errors.d.ts
+- node_modules/undici-types/mock-interceptor.d.ts
+- node_modules/undici-types/mock-pool.d.ts
+- node_modules/undici-types/package.json
+- node_modules/undici-types/patch.d.ts
+- node_modules/undici-types/pool-stats.d.ts
+- node_modules/undici-types/pool.d.ts
+- node_modules/undici-types/proxy-agent.d.ts
+- node_modules/undici-types/readable.d.ts
+- node_modules/undici-types/webidl.d.ts
+- node_modules/undici-types/websocket.d.ts
+- node_modules/unpipe/HISTORY.md
+- node_modules/unpipe/LICENSE
+- node_modules/unpipe/README.md
+- node_modules/unpipe/index.js
+- node_modules/unpipe/package.json
+- node_modules/utils-merge/.npmignore
+- node_modules/utils-merge/LICENSE
+- node_modules/utils-merge/README.md
+- node_modules/utils-merge/index.js
+- node_modules/utils-merge/package.json
+- node_modules/vary/HISTORY.md
+- node_modules/vary/LICENSE
+- node_modules/vary/README.md
+- node_modules/vary/index.js
+- node_modules/vary/package.json
+- node_modules/webidl-conversions/LICENSE.md
+- node_modules/webidl-conversions/README.md
+- node_modules/webidl-conversions/lib/index.js
+- node_modules/webidl-conversions/package.json
+- node_modules/whatwg-url/LICENSE.txt
+- node_modules/whatwg-url/README.md
+- node_modules/whatwg-url/index.js
+- node_modules/whatwg-url/lib/Function.js
+- node_modules/whatwg-url/lib/URL-impl.js
+- node_modules/whatwg-url/lib/URL.js
+- node_modules/whatwg-url/lib/URLSearchParams-impl.js
+- node_modules/whatwg-url/lib/URLSearchParams.js
+- node_modules/whatwg-url/lib/VoidFunction.js
+- node_modules/whatwg-url/lib/encoding.js
+- node_modules/whatwg-url/lib/infra.js
+- node_modules/whatwg-url/lib/percent-encoding.js
+- node_modules/whatwg-url/lib/url-state-machine.js
+- node_modules/whatwg-url/lib/urlencoded.js
+- node_modules/whatwg-url/lib/utils.js
+- node_modules/whatwg-url/package.json
+- node_modules/whatwg-url/webidl2js-wrapper.js
+- node_modules/wrappy/LICENSE
+- node_modules/wrappy/README.md
+- node_modules/wrappy/package.json
+- node_modules/wrappy/wrappy.js

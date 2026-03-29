@@ -43,6 +43,7 @@ async function getSession(businessId, phone) {
         // still exists and session data is valid. Only wipe truly deleted conversations.
         const stillValid = await Conversation.exists({
           _id: session.conversationId,
+          businessId,
           status: { $in: ['active', 'handed_off'] },
         })
         if (!stillValid) {

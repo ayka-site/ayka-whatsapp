@@ -4,12 +4,30 @@ const mongoose = require('mongoose')
 const { authenticateJWT, requireRole, enforceBusinessScope } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
 const { Conversation, Contact, Message, Appointment, KnowledgeBase, Business } = require('@ayka/db')
+const { sendTextMessage } = require('../services/whatsapp.service')
+const { decrypt } = require('../utils/encryption')
+const logger = require('../utils/logger')
 const redis = require('../config/redis')
 
 // All client routes require auth + client role + business scope
 router.use(authenticateJWT, requireRole('client'), enforceBusinessScope)
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
+
+function parseMongoTarget(uri) {
+  if (!uri) return { host: null, dbName: null }
+  try {
+    const normalized = uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://') ? uri : `mongodb://${uri}`
+    const parsed = new URL(normalized)
+    const dbName = parsed.pathname ? parsed.pathname.replace(/^\//, '') : null
+    return {
+      host: parsed.host || null,
+      dbName: dbName || null,
+    }
+  } catch (_) {
+    return { host: null, dbName: null }
+  }
+}
 
 /**
  * flushKbCacheForBusiness - Remove Redis KB cache for a business.
@@ -19,6 +37,40 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(id)
 async function flushKbCacheForBusiness(businessId) {
   await redis.del(`kb:${businessId}`)
   return true
+}
+
+const REPLY_WINDOW_MS = 24 * 60 * 60 * 1000
+const MAX_REPLY_TEXT_LENGTH = 2000
+
+function getReplyPolicy({ business, conversation, lastInboundAt }) {
+  const settings = business?.settings || {}
+
+  if (settings.dashboardHandoffReplyEnabled === false) {
+    return { canReply: false, reason: 'feature_disabled', windowExpiresAt: null }
+  }
+
+  const isHandoffState = Boolean(conversation?.flowState?.handoffTriggered) || conversation?.status === 'handed_off'
+  if (!isHandoffState) {
+    return { canReply: false, reason: 'handoff_required', windowExpiresAt: null }
+  }
+
+  if (!lastInboundAt) {
+    return { canReply: false, reason: 'no_inbound_message', windowExpiresAt: null }
+  }
+
+  const inboundAt = new Date(lastInboundAt)
+  const windowExpiresAt = new Date(inboundAt.getTime() + REPLY_WINDOW_MS)
+  const isWithinFreeWindow = Date.now() <= windowExpiresAt.getTime()
+
+  if (isWithinFreeWindow) {
+    return { canReply: true, reason: null, mode: 'free', windowExpiresAt }
+  }
+
+  if (settings.allowPaidReplies === true) {
+    return { canReply: true, reason: null, mode: 'paid', windowExpiresAt }
+  }
+
+  return { canReply: false, reason: 'outside_24h_window', windowExpiresAt }
 }
 
 // Helper: get date range from period string
@@ -90,6 +142,43 @@ router.get('/stats', asyncHandler(async (req, res) => {
     hotLeads: { value: c.hotLeads, delta: delta(c.hotLeads, p.hotLeads) },
     visitsConfirmed: { value: c.visitsConfirmed, delta: delta(c.visitsConfirmed, p.visitsConfirmed) },
     handoffs: { value: c.handoffs, delta: delta(c.handoffs, p.handoffs) },
+  })
+}))
+
+// GET /api/client/system/runtime-source
+router.get('/system/runtime-source', asyncHandler(async (req, res) => {
+  const envMongoUri = process.env.MONGODB_URI || ''
+  const parsedMongo = parseMongoTarget(envMongoUri)
+  const mongoConnection = mongoose.connection || {}
+
+  const targetBusinessId = toObjectId(req.user.businessId)
+  const [conversationCount, contactCount] = await Promise.all([
+    Conversation.countDocuments({ businessId: targetBusinessId }),
+    Contact.countDocuments({ businessId: targetBusinessId }),
+  ])
+
+  res.json({
+    api: {
+      nodeEnv: process.env.NODE_ENV || null,
+      host: req.hostname,
+      uptimeSec: Math.round(process.uptime()),
+    },
+    mongodb: {
+      envTarget: parsedMongo,
+      activeConnection: {
+        host: mongoConnection.host || null,
+        port: mongoConnection.port || null,
+        dbName: mongoConnection.name || mongoConnection.db?.databaseName || null,
+      },
+      yourBusinessCounts: {
+        conversations: conversationCount,
+        contacts: contactCount,
+      },
+    },
+    redis: {
+      envUrl: process.env.REDIS_URL || null,
+      hasPassword: Boolean(process.env.REDIS_PASSWORD),
+    },
   })
 }))
 
@@ -414,11 +503,10 @@ router.get('/conversations/:conversationId/messages', asyncHandler(async (req, r
   const businessId = toObjectId(req.user.businessId)
   const limit = parseInt(req.query.limit) || 50
 
-  // Verify conversation belongs to this business
-  const convo = await Conversation.findOne({
-    _id: req.params.conversationId,
-    businessId,
-  }).lean()
+  const [convo, business] = await Promise.all([
+    Conversation.findOne({ _id: req.params.conversationId, businessId }).lean(),
+    Business.findById(businessId, { settings: 1 }).lean(),
+  ])
 
   if (!convo) {
     return res.status(404).json({ error: 'Conversation not found' })
@@ -426,23 +514,106 @@ router.get('/conversations/:conversationId/messages', asyncHandler(async (req, r
 
   const filter = { conversationId: convo._id, businessId }
 
-  // Cursor-based pagination
   if (req.query.before) {
     filter.timestamp = { $lt: new Date(req.query.before) }
   }
 
-  const messages = await Message.find(filter)
-    .sort({ timestamp: -1 })
-    .limit(limit + 1)
-    .lean()
+  const [messages, lastInbound] = await Promise.all([
+    Message.find(filter).sort({ timestamp: -1 }).limit(limit + 1).lean(),
+    Message.findOne({ conversationId: convo._id, businessId, direction: 'inbound' }, { timestamp: 1 }).sort({ timestamp: -1 }).lean(),
+  ])
 
   const hasMore = messages.length > limit
   const result = hasMore ? messages.slice(0, limit) : messages
+  const replyPolicy = getReplyPolicy({
+    business,
+    conversation: convo,
+    lastInboundAt: lastInbound?.timestamp || null,
+  })
 
   res.json({
-    messages: result.reverse(), // Return in chronological order
+    messages: result.reverse(),
     hasMore,
     conversation: convo,
+    replyPolicy,
+  })
+}))
+
+// POST /api/client/conversations/:conversationId/reply
+router.post('/conversations/:conversationId/reply', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const text = String(req.body?.text || '').trim()
+
+  if (!text) return res.status(400).json({ error: 'Reply text is required' })
+  if (text.length > MAX_REPLY_TEXT_LENGTH) {
+    return res.status(400).json({ error: `Reply text must be under ${MAX_REPLY_TEXT_LENGTH} characters` })
+  }
+
+  const [convo, business] = await Promise.all([
+    Conversation.findOne({ _id: req.params.conversationId, businessId }).lean(),
+    Business.findById(businessId, { whatsapp: 1, settings: 1 }).lean(),
+  ])
+
+  if (!convo) return res.status(404).json({ error: 'Conversation not found' })
+  if (!business?.whatsapp?.phoneNumberId || !business?.whatsapp?.accessToken) {
+    return res.status(400).json({ error: 'WhatsApp is not configured for this business' })
+  }
+
+  const lastInbound = await Message.findOne(
+    { conversationId: convo._id, businessId, direction: 'inbound' },
+    { timestamp: 1 }
+  ).sort({ timestamp: -1 }).lean()
+
+  const replyPolicy = getReplyPolicy({
+    business,
+    conversation: convo,
+    lastInboundAt: lastInbound?.timestamp || null,
+  })
+
+  if (!replyPolicy.canReply) {
+    return res.status(403).json({
+      error: 'Reply is blocked for this conversation',
+      reason: replyPolicy.reason,
+      replyPolicy,
+    })
+  }
+
+  let accessToken = business.whatsapp.accessToken
+  if (String(accessToken).includes(':')) {
+    try {
+      accessToken = decrypt(accessToken)
+    } catch (err) {
+      logger.warn({ err, businessId }, 'Failed to decrypt WhatsApp access token, using raw value')
+    }
+  }
+
+  let waResult
+  try {
+    waResult = await sendTextMessage(convo.phone, text, business.whatsapp.phoneNumberId, accessToken)
+  } catch (err) {
+    logger.error({ err, businessId, conversationId: convo._id }, 'Dashboard handoff reply send failed')
+    return res.status(502).json({ error: 'Failed to send message to WhatsApp' })
+  }
+
+  const waMessageId = waResult?.messages?.[0]?.id || null
+  const message = await Message.create({
+    conversationId: convo._id,
+    businessId,
+    contactId: convo.contactId,
+    direction: 'outbound',
+    role: 'assistant',
+    content: { contentType: 'text', text },
+    waMessageId,
+    status: 'sent',
+    timestamp: new Date(),
+  })
+
+  await Conversation.updateOne({ _id: convo._id }, { $set: { updatedAt: new Date() } })
+
+  res.json({
+    success: true,
+    message,
+    replyPolicy,
   })
 }))
 

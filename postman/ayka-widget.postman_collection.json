@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "AyKa Widget - Quick Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "GET /widget/config/:businessId",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Origin", "value": "{{ORIGIN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/widget/config/{{BUSINESS_ID}}",
+          "host": ["{{BASE_URL}}"],
+          "path": ["widget", "config", "{{BUSINESS_ID}}"]
+        }
+      }
+    },
+    {
+      "name": "POST /widget/init",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Origin", "value": "{{ORIGIN}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"businessId\": \"{{BUSINESS_ID}}\"\n}"
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/widget/init",
+          "host": ["{{BASE_URL}}"],
+          "path": ["widget", "init"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Init returns 200', function () { pm.response.to.have.status(200); });",
+              "try { var j = pm.response.json(); if (j.visitorId) pm.environment.set('VISITOR_ID', j.visitorId); } catch (e) {}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST /widget/message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Origin", "value": "{{ORIGIN}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"businessId\": \"{{BUSINESS_ID}}\",\n  \"message\": \"Hello from Postman\",\n  \"visitorInfo\": {\n    \"name\": \"Postman Test\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/widget/message",
+          "host": ["{{BASE_URL}}"],
+          "path": ["widget", "message"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Message returns expected status', function () { pm.expect([200, 401, 429, 502]).to.include(pm.response.code); });",
+              "try { var r = pm.response.json(); if (r.conversationId) pm.environment.set('LAST_CONV', r.conversationId); } catch(e) {}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

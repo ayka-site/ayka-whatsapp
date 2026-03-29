@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const bcrypt = require('bcryptjs')
-const { User } = require('@ayka/db')
+const { User, Business } = require('@ayka/db')
 const { authenticateJWT, signToken } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
 
@@ -37,6 +37,46 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000)
 
+async function buildAuthUserPayload(user) {
+  const payload = {
+    id: user._id,
+    email: user.email,
+    role: user.role,
+    displayName: user.displayName,
+    businessId: user.businessId,
+    resellerId: user.resellerId,
+    themeConfig: user.themeConfig,
+  }
+
+  if (user.role !== 'client' || !user.businessId) {
+    return payload
+  }
+
+  const business = await Business.findById(user.businessId, {
+    name: 1,
+    settings: 1,
+    widget: 1,
+  }).lean()
+
+  if (!business) return payload
+
+  const existingTheme = payload.themeConfig || {}
+  payload.themeConfig = {
+    ...existingTheme,
+    brandName: existingTheme.brandName
+      || business.widget?.brandName
+      || business.settings?.displayName
+      || business.name
+      || 'Dashboard',
+    logoUrl: existingTheme.logoUrl
+      || business.widget?.agentAvatar
+      || existingTheme.faviconUrl
+      || '',
+  }
+
+  return payload
+}
+
 // POST /api/auth/login
 router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
   const { email, password } = req.body
@@ -62,18 +102,11 @@ router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
   await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } })
 
   const token = signToken(user)
+  const authUser = await buildAuthUserPayload(user)
 
   res.json({
     token,
-    user: {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      displayName: user.displayName,
-      businessId: user.businessId,
-      resellerId: user.resellerId,
-      themeConfig: user.themeConfig,
-    },
+    user: authUser,
   })
 }))
 
@@ -84,16 +117,8 @@ router.get('/me', authenticateJWT, asyncHandler(async (req, res) => {
     return res.status(401).json({ error: 'User not found or deactivated' })
   }
 
-  res.json({
-    id: user._id,
-    email: user.email,
-    role: user.role,
-    displayName: user.displayName,
-    businessId: user.businessId,
-    resellerId: user.resellerId,
-    themeConfig: user.themeConfig,
-    lastLoginAt: user.lastLoginAt,
-  })
+  const authUser = await buildAuthUserPayload(user)
+  res.json({ ...authUser, lastLoginAt: user.lastLoginAt })
 }))
 
 // POST /api/auth/change-password

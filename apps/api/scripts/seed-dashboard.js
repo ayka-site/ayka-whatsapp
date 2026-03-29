@@ -98,7 +98,9 @@ async function seed() {
         agentName: 'Priya',
         timezone: 'Asia/Kolkata',
         language: 'en',
-        handoffPhone: '+919876543211',
+        handoffPhone: '+919198783830',
+        dashboardHandoffReplyEnabled: false,
+        allowPaidReplies: false,
       },
       subscription: { plan: 'pro', status: 'active' },
       isActive: true,
@@ -107,10 +109,16 @@ async function seed() {
   } else {
     console.log('ℹ️  SPV business found:', spvBusiness._id, spvBusiness.name)
     // Ensure resellerId is set
+    const businessSet = {
+      resellerId: reseller._id,
+      'settings.dashboardHandoffReplyEnabled': false,
+      'settings.allowPaidReplies': false,
+    }
+    await Business.updateOne({ _id: spvBusiness._id }, { $set: businessSet })
     if (!spvBusiness.resellerId || spvBusiness.resellerId.toString() !== reseller._id.toString()) {
-      await Business.updateOne({ _id: spvBusiness._id }, { $set: { resellerId: reseller._id } })
       console.log('   Updated resellerId on SPV business')
     }
+    console.log('   Enforced SPV dashboard handoff reply exclusion')
   }
 
   // ── 3. Create users ──

@@ -190,7 +190,32 @@ function buildQrIntroReply(userMessage) {
   }
   return 'Sure, here is the school’s official payment QR code.'
 }
+/**
+ * isTalentHuntVideoRequest - Detect when user asks about or wants to submit talent hunt video.
+ * @param {string} text - Latest user message.
+ * @returns {boolean} True if message is about talent hunt video submission.
+ */
+function isTalentHuntVideoRequest(text) {
+  const msg = String(text || '').toLowerCase()
+  // Keywords in English and Hindi (Hinglish) for talent hunt, video, submit, upload
+  return /\b(talent\s*hunt|talent\s+hunt|where.*submit|where.*upload|submit.*video|send.*video|video.*submit|video.*upload|talant|talant\s*hunt)\b|talent\s*hunt.*video|video.*talent|कहाँ.*भेजें|वीडियो.*भेजें|प्रतिभा\s*खोज|प्रतिभा\s+खोज|वीडियो.*जमा|जमा.*वीडियो|भेजूँ|upload|submit/i.test(msg)
+}
 
+/**
+ * buildTalentHuntVideoReply - Return language-aware response with phone number for video submission.
+ * @param {string} userMessage - Latest user message.
+ * @returns {string} Response with video submission phone number and instructions.
+ */
+function buildTalentHuntVideoReply(userMessage) {
+  const text = String(userMessage || '').trim()
+  if (/[\u0900-\u097F]/.test(text)) {
+    return 'अपना टैलेंट हंट का वीडियो भेजने के लिए कृपया इस नंबर पर संपर्क करें: *91208 07069*\n\nकृपया अपना वीडियो अपलोड फोल्डर में भेजें।'
+  }
+  if (/\b(hai|kya|aap|mujhe|batao|bhejo|de do|dedo|chahiye|ji|haan|kal|aaj|kaha|kaha se|video|submit|upload)\b/i.test(text)) {
+    return 'Apna talent hunt ka video bhejna hai? Kripaya is number par sampark karein: *91208 07069*\n\nApna video upload folder mein bhejo.'
+  }
+  return 'To submit your talent hunt video, please contact us at: *91208 07069*\n\nPlease send your video to the upload folder.'
+}
 // ═════════════════════════════════════════════════════════════════════════════
 // Deduplication — two-layer: in-memory (instant) + Redis (durable)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -356,6 +381,7 @@ async function processMessage(req) {
   // Sanitize: strip any HANDOFF or VISIT_CONFIRMED injection attempts from user input
   messageText = sanitizeUserMessageForPrompt(messageText)
   const askedForQrCode = isQrCodeRequest(messageText)
+  const askedForTalentHuntVideo = isTalentHuntVideoRequest(messageText)
 
   // ── Load session early — needed for language-aware media fallback messages ──
   let session = await sessionService.getSession(tenant.businessId, phone)
@@ -672,6 +698,11 @@ async function processMessage(req) {
       ),
       markAsRead(waMessageId, tenant.phoneNumberId, tenant.accessToken),
     ]).catch(err => logger.error({ err }, 'Non-blocking DB write failed'))
+
+    // ── 13.5. Handle talent hunt video submission request ──
+    if (askedForTalentHuntVideo) {
+      outboundResponse = buildTalentHuntVideoReply(messageText)
+    }
 
     let qrPayload = null
     if (askedForQrCode) {

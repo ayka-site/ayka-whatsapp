@@ -21,7 +21,7 @@ COPY apps/dashboard/ ./apps/dashboard/
 COPY packages/ ./packages/
 
 # Build-time env — the API URL the browser will call
-ARG NEXT_PUBLIC_API_URL=https://api.ayka.site
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build Next.js with standalone output

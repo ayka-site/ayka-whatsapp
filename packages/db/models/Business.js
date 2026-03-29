@@ -33,7 +33,9 @@ const businessSchema = new Schema({
     agentName:    { type: String },
     timezone:     { type: String, default: 'Asia/Kolkata' },
     language:     { type: String, default: 'en' },
-    handoffPhone: { type: String }
+    handoffPhone: { type: String },
+    dashboardHandoffReplyEnabled: { type: Boolean, default: true },
+    allowPaidReplies: { type: Boolean, default: false },
   },
   subscription: {
     plan: { type: String, default: 'basic' },
