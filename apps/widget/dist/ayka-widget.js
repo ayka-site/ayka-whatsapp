@@ -16,7 +16,10 @@
   window.__AYKA_WIDGET_LOADED__ = true;
 
   // ── Read config from script tag ──
-  const scriptTag = document.currentScript || document.querySelector('script[data-business-id]');
+  const scriptTag = document.currentScript || Array.from(document.querySelectorAll('script[data-business-id]')).find(s => {
+    const src = s.getAttribute('src') || '';
+    return src.includes('ayka-widget.js') || src.includes('/widget/embed/');
+  }) || document.querySelector('script[data-business-id]');
   const BUSINESS_ID = scriptTag?.getAttribute('data-business-id');
   const API_URL = scriptTag?.getAttribute('data-api-url') || scriptTag?.src?.replace(/\/widget\/embed\/.*$/, '') || '';
 
@@ -25,14 +28,23 @@
     return;
   }
 
+  function safeJsonParse(raw, fallback) {
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   // ── State ──
   let config = null;
-  let visitorId = localStorage.getItem('ayka_visitor_id');
-  let messages = JSON.parse(localStorage.getItem(`ayka_msgs_${BUSINESS_ID}`) || '[]');
+  let visitorId = localStorage.getItem(`ayka_visitor_id_${BUSINESS_ID}`) || null;
+  let messages = safeJsonParse(localStorage.getItem(`ayka_msgs_${BUSINESS_ID}`) || '[]', []);
   let isOpen = false;
   let isLoading = false;
-  let visitorInfo = JSON.parse(localStorage.getItem(`ayka_vinfo_${BUSINESS_ID}`) || '{}');
+  let visitorInfo = safeJsonParse(localStorage.getItem(`ayka_vinfo_${BUSINESS_ID}`) || '{}', {});
   let infoCollected = !!visitorInfo.name;
+  let pendingRetryMessage = '';
 
   // ── Styles (injected into page) ──
   function injectStyles(theme) {
@@ -125,6 +137,11 @@
       }
       .ayka-input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
       .ayka-input-area button svg { width: 18px; height: 18px; fill: #fff; }
+      .ayka-input-area .ayka-retry-btn {
+        width: auto; min-width: 64px; padding: 0 10px; border-radius: 20px;
+        background: #f59e0b; color: #fff; font-size: 12px; display: none;
+      }
+      .ayka-input-area .ayka-retry-btn.show { display: inline-flex; }
 
       .ayka-powered {
         padding: 6px; text-align: center; font-size: 10px; color: #94a3b8;
@@ -165,9 +182,21 @@
   const CLOSE_ICON = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
   const SEND_ICON = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
 
+  function getSafeText(value, fallback = '') {
+    return String(value ?? fallback);
+  }
+
+  function escapeAttr(value) {
+    return getSafeText(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   // ── Build DOM ──
   function buildWidget() {
     const pos = config?.position === 'bottom-left' ? 'left' : 'right';
+    const safeAgentName = getSafeText(config?.agentName || 'AI Assistant');
+    const safeBrandName = getSafeText(config?.brandName || 'Online');
+    const safePlaceholder = getSafeText(config?.placeholder || 'Type a message…');
+    const safeAgentAvatar = getSafeText(config?.agentAvatar || '');
 
     // Floating button
     const btn = document.createElement('button');
@@ -183,19 +212,20 @@
     panel.innerHTML = `
       <div class="ayka-header">
         <div class="ayka-header-avatar">
-          ${config?.agentAvatar
-            ? `<img src="${config.agentAvatar}" alt="${config.agentName}" />`
-            : (config?.agentName || 'A').charAt(0).toUpperCase()}
+          ${safeAgentAvatar
+            ? `<img src="${escapeAttr(safeAgentAvatar)}" alt="${escapeAttr(safeAgentName)}" />`
+            : safeAgentName.charAt(0).toUpperCase()}
         </div>
         <div class="ayka-header-info">
-          <h3>${config?.agentName || 'AI Assistant'}</h3>
-          <p>${config?.brandName || 'Online'}</p>
+          <h3>${escapeHtml(safeAgentName)}</h3>
+          <p>${escapeHtml(safeBrandName)}</p>
         </div>
       </div>
       <div class="ayka-messages" id="ayka-messages"></div>
       <div class="ayka-input-area" id="ayka-input-area">
-        <input type="text" placeholder="${config?.placeholder || 'Type a message…'}" id="ayka-input" autocomplete="off" />
+        <input type="text" placeholder="${escapeAttr(safePlaceholder)}" id="ayka-input" autocomplete="off" />
         <button id="ayka-send" aria-label="Send">${SEND_ICON}</button>
+        <button id="ayka-retry" class="ayka-retry-btn" aria-label="Retry">Retry</button>
       </div>
       ${config?.poweredBy !== false ? '<div class="ayka-powered">Powered by <a href="https://ayka.in" target="_blank" rel="noopener">AyKa AI</a></div>' : ''}
     `;
@@ -203,6 +233,7 @@
 
     // Events
     document.getElementById('ayka-send').onclick = sendMessage;
+    document.getElementById('ayka-retry').onclick = retryLastMessage;
     document.getElementById('ayka-input').onkeydown = (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     };
@@ -221,6 +252,19 @@
       saveMessages();
       renderMessages();
     }
+  }
+
+  function setRetryVisibility(show) {
+    const retryBtn = document.getElementById('ayka-retry');
+    if (!retryBtn) return;
+    retryBtn.classList.toggle('show', !!show);
+  }
+
+  async function retryLastMessage() {
+    if (!pendingRetryMessage || isLoading) return;
+    const input = document.getElementById('ayka-input');
+    if (input) input.value = pendingRetryMessage;
+    await sendMessage();
   }
 
   function toggleWidget() {
@@ -292,6 +336,7 @@
     const input = document.getElementById('ayka-input');
     const text = input?.value?.trim();
     if (!text || isLoading) return;
+    setRetryVisibility(false);
 
     input.value = '';
     messages.push({ role: 'user', text, time: Date.now() });
@@ -311,10 +356,10 @@
     try {
       const resp = await fetch(`${API_URL}/widget/message`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessId: BUSINESS_ID,
-          visitorId,
           message: text,
           visitorInfo: infoCollected ? visitorInfo : {},
         }),
@@ -324,11 +369,17 @@
 
       if (resp.ok && data.response) {
         messages.push({ role: 'bot', text: data.response, time: Date.now() });
+        pendingRetryMessage = '';
+        setRetryVisibility(false);
       } else {
-        messages.push({ role: 'bot', text: data.error || 'Sorry, something went wrong. Please try again.', time: Date.now() });
+        pendingRetryMessage = text;
+        setRetryVisibility(true);
+        messages.push({ role: 'bot', text: data.error || 'Message failed. Please retry.', time: Date.now() });
       }
     } catch (err) {
-      messages.push({ role: 'bot', text: 'Unable to connect. Please check your internet and try again.', time: Date.now() });
+      pendingRetryMessage = text;
+      setRetryVisibility(true);
+      messages.push({ role: 'bot', text: 'Unable to connect. Please check your internet and click Retry.', time: Date.now() });
     }
 
     isLoading = false;
@@ -353,7 +404,9 @@
   async function init() {
     try {
       // 1. Fetch widget config
-      const configResp = await fetch(`${API_URL}/widget/config/${BUSINESS_ID}`);
+      const configResp = await fetch(`${API_URL}/widget/config/${BUSINESS_ID}`, {
+        credentials: 'include',
+      });
       if (!configResp.ok) {
         console.error('[AyKa Widget] Failed to load config:', configResp.status);
         return;
@@ -364,12 +417,17 @@
       if (!visitorId) {
         const initResp = await fetch(`${API_URL}/widget/init`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: BUSINESS_ID }),
         });
+        if (!initResp.ok) {
+          const initErr = await initResp.json().catch(() => ({}));
+          throw new Error(initErr.error || 'Widget initialization failed');
+        }
         const initData = await initResp.json();
-        visitorId = initData.visitorId;
-        localStorage.setItem('ayka_visitor_id', visitorId);
+        visitorId = initData?.visitorId || null;
+        if (visitorId) localStorage.setItem(`ayka_visitor_id_${BUSINESS_ID}`, visitorId);
       }
 
       // 3. Inject styles and build DOM
@@ -378,6 +436,8 @@
 
     } catch (err) {
       console.error('[AyKa Widget] Initialization failed:', err);
+      messages.push({ role: 'bot', text: 'Chat is temporarily unavailable. Please refresh and try again.', time: Date.now() });
+      saveMessages();
     }
   }
 

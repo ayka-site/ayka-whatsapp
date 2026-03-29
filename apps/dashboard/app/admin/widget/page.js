@@ -3,7 +3,7 @@ import { useState, useRef } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, FormField, FormInput, FormSelect } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-const { apiFetch, API_URL } = require('../../../lib/api')
+const { apiFetch } = require('../../../lib/api')
 
 const DEFAULT_THEME = {
   primaryColor: '#0ea5e9', headerBg: '#0f172a', headerText: '#ffffff',
@@ -20,7 +20,6 @@ export default function AdminWidgetPage() {
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [copied, setCopied] = useState(false)
 
   const clientList = Array.isArray(clients) ? clients : (clients?.clients || [])
 
@@ -83,17 +82,6 @@ export default function AdminWidgetPage() {
       setTimeout(() => setMsg(''), 3000)
     } catch (err) { setMsg(err.message) }
     setSaving(false)
-  }
-
-  function getEmbedCode() {
-    if (!selectedClient) return ''
-    return `<script src="${API_URL}/widget/embed/ayka-widget.js"\n  data-business-id="${selectedClient._id}"\n  data-api-url="${API_URL}"></script>`
-  }
-
-  function copyEmbed() {
-    navigator.clipboard.writeText(getEmbedCode())
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   const t = form.theme || DEFAULT_THEME
@@ -241,19 +229,13 @@ export default function AdminWidgetPage() {
 
             {/* Embed Code */}
             <div className="rounded-xl border border-white/10 p-6" style={{ background: 'var(--color-surface)' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Embed Code</h2>
-                  <p className="text-[11px] opacity-40" style={{ color: 'var(--color-text)' }}>Copy this snippet and paste into any website's HTML — just before &lt;/body&gt;</p>
-                </div>
-                <button onClick={copyEmbed} className="px-3 py-1.5 text-xs rounded-lg font-medium text-white transition-all"
-                  style={{ background: copied ? '#22c55e' : 'var(--color-primary)' }}>
-                  {copied ? '✓ Copied!' : '📋 Copy'}
-                </button>
-              </div>
-              <pre className="text-xs p-4 rounded-lg overflow-x-auto font-mono" style={{ background: 'rgba(0,0,0,0.3)', color: '#22d3ee' }}>
-                {getEmbedCode()}
-              </pre>
+              <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Embed Code</h2>
+              <p className="text-xs opacity-70" style={{ color: 'var(--color-text)' }}>
+                For security and provisioning control, widget embed code is shared by Superadmin only.
+              </p>
+              <p className="text-[11px] opacity-40 mt-2" style={{ color: 'var(--color-text)' }}>
+                Ask Superadmin for your business embed snippet.
+              </p>
             </div>
 
             {/* Save Button */}

@@ -4,7 +4,7 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, SlideOver, ConfirmDialog, FormField, FormInput, FormSelect } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
 import { formatNumber, relativeTime } from '../../../lib/format'
-const { apiFetch } = require('../../../lib/api')
+const { apiFetch, API_URL } = require('../../../lib/api')
 
 const VERTICALS = [
   { value: 'school', label: 'School' },
@@ -17,7 +17,14 @@ const VERTICALS = [
 const EMPTY_CLIENT = {
   resellerId: '', name: '', slug: '', vertical: 'school',
   whatsapp: { phoneNumberId: '', accessToken: '', wabaId: '', verifyToken: '' },
-  settings: { displayName: '', timezone: 'Asia/Kolkata', language: 'en', handoffPhone: '' },
+  settings: {
+    displayName: '',
+    timezone: 'Asia/Kolkata',
+    language: 'en',
+    handoffPhone: '',
+    dashboardHandoffReplyEnabled: true,
+    allowPaidReplies: false,
+  },
   subscription: { status: 'active' },
   pricing: { totalPrice: 0, note: '' },
   isDirect: false,
@@ -37,6 +44,7 @@ export default function SuperAdminClients() {
   const [msg, setMsg] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState(null)
+  const [copiedClientId, setCopiedClientId] = useState('')
 
   const clients = Array.isArray(data) ? data : (data?.clients || data || [])
   const resellers = Array.isArray(resellerList) ? resellerList : (resellerList?.resellers || resellerList || [])
@@ -64,6 +72,8 @@ export default function SuperAdminClients() {
         language: c.settings?.language || 'en',
         handoffPhone: c.settings?.handoffPhone || '',
         agentName: c.settings?.agentName || '',
+        dashboardHandoffReplyEnabled: c.settings?.dashboardHandoffReplyEnabled !== false,
+        allowPaidReplies: !!c.settings?.allowPaidReplies,
       },
       subscription: { status: c.subscription?.status || 'active' },
       pricing: { totalPrice: c.pricing?.totalPrice || 0, note: c.pricing?.note || '' },
@@ -116,6 +126,20 @@ export default function SuperAdminClients() {
     setConfirmOpen(false); setConfirmTarget(null)
   }
 
+  function getWidgetEmbedCode(client) {
+    return `<script src="${API_URL}/widget/embed/ayka-widget.js"\n  data-business-id="${client._id}"\n  data-api-url="${API_URL}"></script>`
+  }
+
+  async function copyWidgetCode(client) {
+    try {
+      await navigator.clipboard.writeText(getWidgetEmbedCode(client))
+      setCopiedClientId(client._id)
+      setTimeout(() => setCopiedClientId(''), 2000)
+    } catch (err) {
+      alert('Copy failed. Please copy manually from browser permissions enabled environment.')
+    }
+  }
+
   return (
     <DashboardLayout requiredRole="superadmin">
       <TopBar title="All Clients" breadcrumbs={['Home', 'Clients']}
@@ -165,6 +189,9 @@ export default function SuperAdminClients() {
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={() => openEdit(c)} className="text-xs px-2 py-1 rounded border border-white/10 hover:bg-white/10" style={{ color: 'var(--color-primary)' }}>Edit</button>
+                      <button onClick={() => copyWidgetCode(c)} className="text-xs px-2 py-1 rounded border border-white/10 hover:bg-white/10 text-cyan-400">
+                        {copiedClientId === c._id ? 'Copied' : 'Copy Code'}
+                      </button>
                       <button onClick={() => { setConfirmTarget(c); setConfirmOpen(true) }} className={`text-xs px-2 py-1 rounded border border-white/10 hover:bg-white/10 ${c.isActive ? 'text-red-400' : 'text-green-400'}`}>
                         {c.isActive ? 'Pause' : 'Resume'}
                       </button>
@@ -219,6 +246,16 @@ export default function SuperAdminClients() {
             <FormField label="Agent Name"><FormInput value={form.settings?.agentName} onChange={v => set('settings.agentName', v)} /></FormField>
             <FormField label="Timezone"><FormInput value={form.settings?.timezone} onChange={v => set('settings.timezone', v)} /></FormField>
             <FormField label="Language"><FormSelect value={form.settings?.language} onChange={v => set('settings.language', v)} options={[{value:'en',label:'English'},{value:'hi',label:'Hindi'},{value:'hinglish',label:'Hinglish'}]} /></FormField>
+          <div className="grid grid-cols-1 gap-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+              <input type="checkbox" checked={form.settings?.dashboardHandoffReplyEnabled !== false} onChange={e => set('settings.dashboardHandoffReplyEnabled', e.target.checked)} className="rounded" />
+              Enable dashboard handoff reply
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+              <input type="checkbox" checked={!!form.settings?.allowPaidReplies} onChange={e => set('settings.allowPaidReplies', e.target.checked)} className="rounded" />
+              Allow paid replies after 24-hour free window
+            </label>
+          </div>
             <FormField label="Handoff Phone"><FormInput value={form.settings?.handoffPhone} onChange={v => set('settings.handoffPhone', v)} placeholder="+91..." /></FormField>
           </div>
 

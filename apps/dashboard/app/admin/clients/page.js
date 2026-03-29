@@ -28,6 +28,8 @@ export default function AdminClients() {
         timezone: c.settings?.timezone || 'Asia/Kolkata',
         language: c.settings?.language || 'en',
         handoffPhone: c.settings?.handoffPhone || '',
+        dashboardHandoffReplyEnabled: c.settings?.dashboardHandoffReplyEnabled !== false,
+        allowPaidReplies: !!c.settings?.allowPaidReplies,
       },
       subscription: {
         plan: c.subscription?.plan || 'basic',
@@ -150,6 +152,24 @@ export default function AdminClients() {
             <FormField label="Timezone"><FormInput value={editForm.settings?.timezone} onChange={v => setEditForm(p => ({ ...p, settings: { ...p.settings, timezone: v } }))} /></FormField>
             <FormField label="Language"><FormSelect value={editForm.settings?.language} onChange={v => setEditForm(p => ({ ...p, settings: { ...p.settings, language: v } }))} options={[{value:'en',label:'English'},{value:'hi',label:'Hindi'},{value:'hinglish',label:'Hinglish'}]} /></FormField>
             <FormField label="Handoff Phone"><FormInput value={editForm.settings?.handoffPhone} onChange={v => setEditForm(p => ({ ...p, settings: { ...p.settings, handoffPhone: v } }))} placeholder="+91..." /></FormField>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editForm.settings?.dashboardHandoffReplyEnabled !== false}
+                onChange={e => setEditForm(p => ({ ...p, settings: { ...p.settings, dashboardHandoffReplyEnabled: e.target.checked } }))}
+              />
+              Enable dashboard handoff reply for this client
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!editForm.settings?.allowPaidReplies}
+                onChange={e => setEditForm(p => ({ ...p, settings: { ...p.settings, allowPaidReplies: e.target.checked } }))}
+              />
+              Allow paid WhatsApp replies after 24-hour free window
+            </label>
           </div>
           <hr className="border-gray-200" />
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Subscription</h3>

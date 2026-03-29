@@ -16,6 +16,10 @@ export default function ClientConversations() {
   const [hasMore, setHasMore] = useState(false)
   const [leadProfile, setLeadProfile] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [replyPolicy, setReplyPolicy] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [replySending, setReplySending] = useState(false)
+  const [replyError, setReplyError] = useState('')
   const msgEndRef = useRef(null)
 
   const url = `/api/client/conversations?page=${page}&limit=50${score ? `&score=${score}` : ''}${search ? `&search=${search}` : ''}`
@@ -23,12 +27,17 @@ export default function ClientConversations() {
 
   async function selectConvo(convo) {
     setSelectedConvo(convo)
+    setReplyError('')
+    setReplyText('')
     setMsgLoading(true)
     try {
       const res = await apiFetch(`/api/client/conversations/${convo._id}/messages?limit=50`)
       setMessages(res.messages || [])
       setHasMore(res.hasMore)
-    } catch {}
+      setReplyPolicy(res.replyPolicy || null)
+    } catch {
+      setReplyPolicy(null)
+    }
     setMsgLoading(false)
   }
 
@@ -40,6 +49,7 @@ export default function ClientConversations() {
       const res = await apiFetch(`/api/client/conversations/${selectedConvo._id}/messages?limit=50&before=${oldest}`)
       setMessages([...(res.messages || []), ...messages])
       setHasMore(res.hasMore)
+      if (res.replyPolicy) setReplyPolicy(res.replyPolicy)
     } catch {}
     setMsgLoading(false)
   }
@@ -53,6 +63,33 @@ export default function ClientConversations() {
     } catch {}
   }
 
+  async function sendReply() {
+    if (!selectedConvo || replySending) return
+    const text = String(replyText || '').trim()
+    if (!text) return
+
+    setReplySending(true)
+    setReplyError('')
+    try {
+      const res = await apiFetch(`/api/client/conversations/${selectedConvo._id}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      })
+      if (res?.message) {
+        setMessages(prev => [...prev, res.message])
+      }
+      if (res?.replyPolicy) setReplyPolicy(res.replyPolicy)
+      setReplyText('')
+    } catch (err) {
+      setReplyError(err.message || 'Failed to send reply')
+      try {
+        const refreshed = await apiFetch(`/api/client/conversations/${selectedConvo._id}/messages?limit=50`)
+        if (refreshed?.replyPolicy) setReplyPolicy(refreshed.replyPolicy)
+      } catch {}
+    }
+    setReplySending(false)
+  }
+
   useEffect(() => {
     if (messages.length) msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -63,6 +100,16 @@ export default function ClientConversations() {
   }
 
   const scores = ['hot', 'warm', 'cold']
+
+  function replyBlockReason(reason) {
+    switch (reason) {
+      case 'feature_disabled': return 'Replies from dashboard are disabled for this business.'
+      case 'handoff_required': return 'Reply is available only after bot handoff.'
+      case 'outside_24h_window': return 'Free 24-hour user window has expired. Paid replies are not enabled yet for this business.'
+      case 'no_inbound_message': return 'No inbound customer message found for this conversation.'
+      default: return 'Reply is currently unavailable for this conversation.'
+    }
+  }
 
   return (
     <DashboardLayout requiredRole="client">
@@ -185,11 +232,43 @@ export default function ClientConversations() {
                 <div ref={msgEndRef} />
               </div>
 
-              {/* Read-only composer */}
-              <div className="p-3 border-t border-white/10">
-                <div className="px-4 py-3 rounded-lg bg-white/5 text-xs text-center opacity-40" style={{ color: 'var(--color-text)' }}>
-                  Replies are handled by the AI
-                </div>
+              {/* Handoff reply composer */}
+              <div className="p-3 border-t border-white/10 space-y-2">
+                {replyError && (
+                  <p className="text-xs text-red-400">{replyError}</p>
+                )}
+
+                {replyPolicy?.canReply ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          sendReply()
+                        }
+                      }}
+                      placeholder={replyPolicy?.mode === 'paid' ? 'Type a paid-reply message…' : 'Type a handoff reply…'}
+                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-white/10 bg-transparent outline-none focus:border-white/30"
+                      style={{ color: 'var(--color-text)' }}
+                      disabled={replySending}
+                    />
+                    <button
+                      onClick={sendReply}
+                      disabled={replySending || !replyText.trim()}
+                      className="px-4 py-2 text-sm rounded-lg font-medium text-white disabled:opacity-50"
+                      style={{ background: 'var(--color-primary)' }}
+                    >
+                      {replySending ? 'Sending…' : 'Send'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 rounded-lg bg-white/5 text-xs text-center opacity-70" style={{ color: 'var(--color-text)' }}>
+                    {replyBlockReason(replyPolicy?.reason)}
+                  </div>
+                )}
               </div>
             </>
           )}
