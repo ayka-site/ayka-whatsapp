@@ -1,6 +1,8 @@
 {
-  "/login/page": "app/login/page.js",
-  "/client/conversations/page": "app/client/conversations/page.js",
   "/client/dashboard/page": "app/client/dashboard/page.js",
-  "/client/leads/page": "app/client/leads/page.js"
+  "/superadmin/dashboard/page": "app/superadmin/dashboard/page.js",
+  "/client/conversations/page": "app/client/conversations/page.js",
+  "/superadmin/clients/page": "app/superadmin/clients/page.js",
+  "/client/leads/page": "app/client/leads/page.js",
+  "/login/page": "app/login/page.js"
 }
