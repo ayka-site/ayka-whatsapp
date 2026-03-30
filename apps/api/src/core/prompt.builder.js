@@ -340,6 +340,8 @@ function sanitizeUserMessageForPrompt(input) {
   const patterns = [
     /HANDOFF\s*:\s*/gi,
     /VISIT_CONFIRMED\s*:\s*/gi,
+    /NAME_PARENT\s*:\s*/gi,
+    /NAME_STUDENT\s*:\s*/gi,
     /<script/gi,
     /ignore\s+(?:all\s+)?previous/gi,
     /ignore\s+previous/gi,
@@ -1126,6 +1128,15 @@ Do NOT list topics ("fees, admission, hostel..."). Just introduce yourself and a
 6. If you have ALREADY asked a question in RECENT CONVERSATION and the parent ignored it to ask something else — answer their question, then try the collection question ONE more time in a completely different way. If ignored twice, drop it and move on.`
 }
 ${!isPostHandoff && missingInfo.length > 0 ? `\nSTILL NEED TO COLLECT (ask the FIRST item you haven't collected yet — one per message):\n${missingBlock}` : ''}
+
+━━━ MACHINE NAME CHECK (INTERNAL CONTROL LINE) ━━━
+- If the latest parent message explicitly contains a person's name, append these two lines at the END:
+  NAME_PARENT: <real parent/guardian name OR NONE>
+  NAME_STUDENT: <real child/student name OR NONE>
+- If not explicit, write NONE.
+- NEVER output words like "Yes", "Ki", "Monthly Fee", "Hostal", "Select Ho Sakti" as names.
+- Only output actual person names. If uncertain, output NONE.
+- Do NOT include these NAME_* lines in handoff-only responses.
 
 Emotional state: ${emotion}${emotion === 'frustrated' ? ' — Acknowledge frustration first. Apologize briefly. Then address their concern using MEMORY.' : emotion === 'hesitant' ? ' — Be reassuring, not pushy. Share facts that build confidence.' : emotion === 'urgent' ? " — Move quickly toward handoff. Don't add unnecessary questions." : ''}
 

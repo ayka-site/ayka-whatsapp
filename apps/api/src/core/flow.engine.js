@@ -46,6 +46,28 @@ function parseAIResponse(rawResponse, flowState) {
   let updatedFlowState = JSON.parse(JSON.stringify(flowState)) // deep clone — never mutate original
   let shouldHandoff    = false
 
+  const parseNameMarker = (label) => {
+    const rx = new RegExp(`(^|\\n)\\s*${label}\\s*:\\s*(.+?)\\s*($|\\n)`, 'i')
+    const match = cleanResponse.match(rx)
+    if (!match?.[2]) return null
+    const rawValue = String(match[2]).trim()
+    if (!rawValue || /^none$/i.test(rawValue)) return null
+    return rawValue
+  }
+
+  const llmParentName = parseNameMarker('NAME_PARENT')
+  const llmStudentName = parseNameMarker('NAME_STUDENT')
+  if (llmParentName || llmStudentName) {
+    updatedFlowState.llmNameHints = {
+      parentName: llmParentName || null,
+      studentName: llmStudentName || null,
+    }
+    cleanResponse = cleanResponse
+      .replace(/(^|\n)\s*NAME_PARENT\s*:\s*.+?(?=\n|$)/gi, '')
+      .replace(/(^|\n)\s*NAME_STUDENT\s*:\s*.+?(?=\n|$)/gi, '')
+      .trim()
+  }
+
   // Require HANDOFF: YES to appear on its own line — prevents embedded/quoted triggers
   if (/(^|\n)\s*HANDOFF\s*:\s*YES\s*($|\n)/i.test(cleanResponse)) {
     shouldHandoff = true
@@ -108,6 +130,43 @@ const DEVANAGARI_NUMBER_MAP = {
   'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पाँच': 5, 'पांच': 5,
   'छह': 6, 'छः': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
   'ग्यारह': 11, 'बारह': 12,
+}
+
+const NON_NAME_LATIN_TOKENS = new Set([
+  'yes', 'no', 'ok', 'okay', 'ki', 'in', 'kon', 'mam', 'sir', 'madam',
+  'monthly', 'yearly', 'fee', 'fees', 'class', 'admission', 'address', 'adress',
+  'hostel', 'hostal', 'video', 'select', 'eligible', 'call', 'kaha', 'hai',
+])
+
+const NON_NAME_DEVANAGARI_TOKENS = new Set([
+  'हाँ', 'हां', 'नहीं', 'जी', 'क्या', 'कौन', 'आप', 'कहाँ', 'कहा', 'मासिक', 'फीस', 'हो', 'सकती', 'है',
+])
+
+function isLikelyHumanName(value) {
+  const text = String(value || '').trim()
+  if (!text) return false
+  if (text.length < 2 || text.length > 60) return false
+  if (/\d/.test(text)) return false
+
+  const normalized = text.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').replace(/\s+/g, ' ').trim()
+  if (!normalized) return false
+
+  if (/(?:in\s+monthly\s+fee|monthly\s+fees|monthly\s+fee|yes\s+is\s+eligible|select\s+ho\s+sakti|call\s+karo|kaha\s+hai)/i.test(normalized)) {
+    return false
+  }
+
+  const words = normalized.split(' ')
+  if (words.length > 4) return false
+
+  if (words.every(w => NON_NAME_LATIN_TOKENS.has(w))) return false
+  if (words.length <= 2 && words.every(w => w.length <= 2)) return false
+
+  const devanagariWords = text.split(/\s+/).filter(Boolean)
+  if (devanagariWords.length > 0 && devanagariWords.every(w => /^[\u0900-\u097F]+$/.test(w))) {
+    if (devanagariWords.every(w => NON_NAME_DEVANAGARI_TOKENS.has(w))) return false
+  }
+
+  return true
 }
 
 /**
@@ -201,6 +260,8 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.collectedData) updated.collectedData = {}
   if (!updated.goals)         updated.goals = {}
 
+  const llmHints = updated.llmNameHints || {}
+
   // Wrap all extraction in try/finally to guarantee recentMessages cleanup (Problem 13)
   try {
 
@@ -283,6 +344,11 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
   // ── Extract parent name from user message ──
   // Allow override if user EXPLICITLY states their name (covers name corrections too)
+  if (llmHints.parentName && isLikelyHumanName(llmHints.parentName)) {
+    updated.collectedData.parentName = llmHints.parentName.trim()
+    updated.goals.parentNameCollected = true
+  }
+
   const hasExplicitNameStatement = /\b(mera\s+naam|mera\s+name|my\s+name\s+is|i\s+am|i'm|this\s+is|main\s+hoon)\b/i.test(userMessage) || /मेरा\s+नाम/.test(userMessage)
   if (!updated.collectedData.parentName || hasExplicitNameStatement) {
     const namePatterns = [
@@ -294,7 +360,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
     // Helper: validate a name candidate — not profanity, not too short
     const isValidName = (name) => {
-      if (!name || name.length < 2) return false
+      if (!isLikelyHumanName(name)) return false
       const words = name.toLowerCase().split(/\s+/)
       return !words.some(w => PROFANITY_BLOCKLIST.has(w))
     }
@@ -321,7 +387,10 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     if (!updated.collectedData.parentName) {
       const lastAI = (updated.recentMessages || flowState.recentMessages || []).filter(m => m.role === 'assistant').slice(-1)[0]
       const lastAIText = (lastAI?.content?.text || '').toLowerCase()
-      const aiAskedName = /(?:नाम|शुभ|आपका|naam|name|aapka\s+shubh|your\s+(?:good\s+)?name|aapka\s+naam)/i.test(lastAIText)
+      const asksAnyName = /(?:नाम|naam|name)/i.test(lastAIText)
+      const asksChildName = /(?:child|student|son|daughter|beta|beti|bachch|bachche|बच्च|बचे|बेटा|बेटी)/i.test(lastAIText)
+      const asksParentCue = /(?:आपका|aapka|your\s+(?:good\s+)?name|parent|guardian|shubh)/i.test(lastAIText)
+      const aiAskedName = asksAnyName && !asksChildName && asksParentCue
 
       if (aiAskedName) {
         const trimmed = userMessage.trim()
@@ -331,7 +400,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         const isDevanagari = words.every(w => /^[\u0900-\u097F]+$/.test(w))
         if (isDevanagari && words.length >= 1 && words.length <= 3) {
           const candidate = words.join(' ')
-          if (candidate.length >= 2) {
+          if (candidate.length >= 2 && isValidName(candidate)) {
             updated.collectedData.parentName  = candidate
             updated.goals.parentNameCollected = true
           }
@@ -373,7 +442,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         // Filter out stop words from captured name
         const nameWords = devNameMatch[1].trim().split(/\s+/).filter(w => !HINDI_STOP.has(w))
         const candidate = nameWords.join(' ')
-        if (candidate.length >= 2) {
+        if (candidate.length >= 2 && isValidName(candidate)) {
           updated.collectedData.parentName  = candidate
           updated.goals.parentNameCollected = true
         }
@@ -531,7 +600,11 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     'help', 'info', 'detail', 'please', 'thanks', 'okay', 'yes', 'no',
   ])
   const explicitStudentCandidate = extractExplicitStudentNameCandidate(userMessage)
-  if (updated.collectedData.studentName && explicitStudentCandidate) {
+  if (llmHints.studentName && isLikelyHumanName(llmHints.studentName)) {
+    updated.collectedData.studentName = llmHints.studentName.trim()
+    updated.goals.studentInfoCollected = true
+  }
+  if (updated.collectedData.studentName && explicitStudentCandidate && isLikelyHumanName(explicitStudentCandidate)) {
     const prev = String(updated.collectedData.studentName).trim()
     if (prev.toLowerCase() !== explicitStudentCandidate.toLowerCase()) {
       updated.collectedData.studentName = explicitStudentCandidate
@@ -561,7 +634,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         const rawWords = match[1].trim().split(/\s+/)
         const cleanWords = rawWords.filter(w => /^[A-Za-z]/.test(w) && !NOT_A_NAME.has(w.toLowerCase()) && !PROFANITY_BLOCKLIST.has(w.toLowerCase()))
         const candidate = cleanWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-        if (candidate.length > 2) {
+        if (candidate.length > 2 && isLikelyHumanName(candidate)) {
           updated.collectedData.studentName  = candidate
           updated.goals.studentInfoCollected = true
         }
@@ -582,7 +655,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         // Devanagari student name
         if (words.length >= 1 && words.length <= 3) {
           const isDevanagari = words.every(w => /^[\u0900-\u097F]+$/.test(w))
-          if (isDevanagari && trimmed.length >= 2) {
+          if (isDevanagari && trimmed.length >= 2 && isLikelyHumanName(trimmed)) {
             updated.collectedData.studentName  = trimmed
             updated.goals.studentInfoCollected = true
           }
@@ -593,7 +666,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
           const allAlpha = words.every(w => /^[A-Za-z]+$/.test(w))
           if (allAlpha) {
             const candidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-            if (candidate.length > 2 && !NOT_A_NAME.has(candidate.toLowerCase()) && !PROFANITY_BLOCKLIST.has(candidate.toLowerCase()) && !words.some(w => PROFANITY_BLOCKLIST.has(w.toLowerCase()))) {
+            if (candidate.length > 2 && isLikelyHumanName(candidate) && !NOT_A_NAME.has(candidate.toLowerCase()) && !PROFANITY_BLOCKLIST.has(candidate.toLowerCase()) && !words.some(w => PROFANITY_BLOCKLIST.has(w.toLowerCase()))) {
               updated.collectedData.studentName  = candidate
               updated.goals.studentInfoCollected = true
             }
@@ -606,8 +679,11 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     if (!updated.collectedData.studentName) {
       const devStudentMatch = userMessage.match(/(?:मेर[\u0947\u0940\u093e]\s+(?:बेट[\u0947\u0940\u093e]|बच्च[\u0947\u093e]|बचे)(?:\s+का\s+नाम)?\s*(?:है\s+)?)\s*([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)
       if (devStudentMatch?.[1] && devStudentMatch[1].length >= 2) {
-        updated.collectedData.studentName  = devStudentMatch[1].trim()
-        updated.goals.studentInfoCollected = true
+        const candidate = devStudentMatch[1].trim()
+        if (isLikelyHumanName(candidate)) {
+          updated.collectedData.studentName  = candidate
+          updated.goals.studentInfoCollected = true
+        }
       }
     }
   }
@@ -667,6 +743,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   // (it was only attached temporarily for bare-name detection)
   } finally {
     delete updated.recentMessages
+    delete updated.llmNameHints
   }
 
   return updated

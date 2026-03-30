@@ -14,6 +14,23 @@ router.use(authenticateJWT, requireRole('client'), enforceBusinessScope)
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id)
 
+function resolveAppointmentScheduledAt(appointment) {
+  if (!appointment) return null
+  if (appointment.scheduledAt) return appointment.scheduledAt
+  const date = String(appointment.scheduledDate || '').trim()
+  const time = String(appointment.scheduledTime || '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null
+  return `${date}T${time}:00+05:30`
+}
+
+function serializeAppointment(appointment) {
+  if (!appointment) return null
+  return {
+    ...appointment,
+    scheduledAt: resolveAppointmentScheduledAt(appointment),
+  }
+}
+
 function parseMongoTarget(uri) {
   if (!uri) return { host: null, dbName: null }
   try {
@@ -441,7 +458,7 @@ router.get('/leads/:conversationId', asyncHandler(async (req, res) => {
   res.json({
     ...conversation,
     messageCount,
-    appointment,
+    appointment: serializeAppointment(appointment),
   })
 }))
 
@@ -636,7 +653,12 @@ router.get('/appointments', asyncHandler(async (req, res) => {
     Appointment.countDocuments(filter),
   ])
 
-  res.json({ appointments, total, page, totalPages: Math.ceil(total / limit) })
+  res.json({
+    appointments: appointments.map(serializeAppointment),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  })
 }))
 
 // GET /api/client/settings

@@ -143,8 +143,9 @@ async function scheduleVisit(session, tenant, visitDateTime) {
   // Documents from vertical config
   const documentsAdvised = config?.scheduling?.documentsRequired || []
 
-  // rawPreference keeps the natural language version the parent typed
-  const rawPreference = collected.preferredVisitTime || visitDateTime
+  // Persist a normalized slot string so timelines never store relative words
+  // like "kal/parso/monday" in appointment timing fields.
+  const rawPreference = `${scheduledDate} ${scheduledTime}`
 
   // Create the appointment
   let appointment

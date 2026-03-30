@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { TopBar, Badge, SlideOver } from '../../../components/UI'
 import { useFetch } from '../../../hooks/useFetch'
-import { formatDate } from '../../../lib/format'
+import { formatDate, formatAppointmentPreference } from '../../../lib/format'
 
 export default function AdminAppointments() {
   const [statusFilter, setStatusFilter] = useState('')
@@ -64,7 +64,7 @@ export default function AdminAppointments() {
                     <td className="p-3"><p className="font-medium" style={{ color: 'var(--color-text)' }}>{a.parentName}</p><p className="text-xs opacity-40">{a.phone}</p></td>
                     <td className="p-3 text-xs">{a.businessName || '—'}</td>
                     <td className="p-3">{a.studentName || '—'}</td>
-                    <td className="p-3 text-xs">{a.rawPreference || '—'}</td>
+                    <td className="p-3 text-xs">{formatAppointmentPreference(a.scheduledAt, a.rawPreference)}</td>
                     <td className="p-3"><Badge score={a.status} /></td>
                     <td className="p-3 text-xs max-w-[180px] truncate">{a.documentsAdvised?.join(', ') || '—'}</td>
                     <td className="p-3 text-xs opacity-50">{formatDate(a.createdAt)}</td>
@@ -85,7 +85,7 @@ export default function AdminAppointments() {
               <div><p className="text-xs text-gray-500">Client</p><p>{selected.businessName || '—'}</p></div>
               <div><p className="text-xs text-gray-500">Student</p><p>{selected.studentName || '—'}</p></div>
               <div><p className="text-xs text-gray-500">Status</p><Badge score={selected.status} /></div>
-              <div><p className="text-xs text-gray-500">Preference</p><p>{selected.rawPreference || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Preference</p><p>{formatAppointmentPreference(selected.scheduledAt, selected.rawPreference)}</p></div>
               <div><p className="text-xs text-gray-500">Scheduled</p><p>{selected.scheduledAt ? formatDate(selected.scheduledAt) : '—'}</p></div>
             </div>
             <hr />
