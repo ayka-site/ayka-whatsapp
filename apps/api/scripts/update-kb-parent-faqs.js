@@ -65,7 +65,11 @@ async function main() {
     },
     {
       q: 'Where to buy books and uniforms? / किताबें और यूनिफॉर्म कहाँ मिलेंगी?',
-      a: 'Books aur uniforms yahan milte hain: Agarwal Gift Gallery, Peepal Chauraha. Contact Number: 9792641527.',
+      a: 'Dresses/Uniforms hamare school ki Agarwal Gift Gallery, Peepal Chauraha, Chowk Bazar, Bahraich mein milti hain. Baaki detailed information ke liye aap school aakar pata kar lijiye.',
+    },
+    {
+      q: 'Do you give discount in fees? / क्या फीस में डिस्काउंट मिलता है?',
+      a: 'Ji, aap school visit kariye. Admission time par concession/discount school office mein discuss hota hai. Agar ek hi parent ke 3 bachche admission le rahe hain, to sibling discount ka consideration admission ke waqt dekha jaata hai.',
     },
     {
       q: 'How many sections are there in each class? / प्रत्येक कक्षा में कितने सेक्शन होते हैं?',
@@ -176,6 +180,7 @@ async function main() {
   }
   updates['content.staff.studentTeacherRatio'] = 'Balanced via sectioning as per class strength; 64 teachers for 1,410 students'
   updates['content.timing.schoolHours'] = 'Summer: 8:00 AM – 1:30 PM; Winter: 9:00 AM – 2:30 PM (subject to government directives)'
+  updates['content.admissions.discountPolicy'] = 'Concession/discount admission time par school office mein discuss hota hai. Agar ek hi parent ke 3 bachche admission le rahe hain, to sibling discount ka consideration admission ke waqt kiya jaata hai.'
   updates['content.transport'] = {
     title: 'Conveyance Fee',
     effectiveFrom: '1st April 2026',
@@ -293,7 +298,7 @@ async function main() {
   }
   updates['content.uniformBookVendor'] = {
     name: 'Agarwal Gift Gallery',
-    location: 'Peepal Chauraha',
+    location: 'Peepal Chauraha, Chowk Bazar, Bahraich',
     contactNumber: '9792641527',
   }
   updates['content.onlinePaymentQR'] = {
