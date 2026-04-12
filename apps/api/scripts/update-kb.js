@@ -1,6 +1,6 @@
 /**
- * KB Update Script — Cross-references PDF data against current MongoDB KB
- * Does targeted $set — never overwrites the entire document
+ * KB Update Script - Cross-references PDF data against current MongoDB KB
+ * Does targeted $set - never overwrites the entire document
  * Logs exactly what changed
  */
 require('dotenv').config()
@@ -19,64 +19,64 @@ async function main() {
   console.log(`Found KB: ${kb._id} (business: ${kb.businessId})\n`)
 
   // ═══════════════════════════════════════════════════════════════════
-  // Build the $set object — only fields that are missing or incorrect
+  // Build the $set object - only fields that are missing or incorrect
   // ═══════════════════════════════════════════════════════════════════
   const updates = {}
   const changes = []
 
   // ── about section corrections ──
-  // Address: missing "Lucknow Road NH-28C" — confirmed from user + PDFs
+  // Address: missing "Lucknow Road NH-28C" - confirmed from user + PDFs
   const currentAddr = kb.content?.about?.address || ''
   if (!currentAddr.includes('Lucknow Road')) {
     updates['content.about.address'] = 'Pashupati Nagar, Lucknow Road NH-28C, Bahraich, Uttar Pradesh – 271902'
-    changes.push(`about.address: Added "Lucknow Road NH-28C" — was "${currentAddr}"`)
+    changes.push(`about.address: Added "Lucknow Road NH-28C" - was "${currentAddr}"`)
   }
 
-  // Founder — missing entirely
+  // Founder - missing entirely
   if (!kb.content?.about?.founder) {
     updates['content.about.founder'] = 'Sant Pathik Ji Maharaj'
     changes.push('about.founder: ADDED "Sant Pathik Ji Maharaj" (from DOC & Intro PDFs)')
   }
 
-  // Manager — missing entirely
+  // Manager - missing entirely
   if (!kb.content?.about?.manager) {
     updates['content.about.manager'] = 'Shri Awadhesh Narayan Agarwal'
     changes.push('about.manager: ADDED "Shri Awadhesh Narayan Agarwal" (from MD & Principal PDF)')
   }
 
-  // Vision — missing
+  // Vision - missing
   if (!kb.content?.about?.vision) {
     updates['content.about.vision'] = 'Education with Values and Excellence'
     changes.push('about.vision: ADDED (from MD desk message)')
   }
 
-  // Mission — missing
+  // Mission - missing
   if (!kb.content?.about?.mission) {
     updates['content.about.mission'] = 'To create an environment where children learn modern education along with Indian cultural values'
     changes.push('about.mission: ADDED (from MD desk message)')
   }
 
-  // Campus in acres — more parent-friendly than sq mtr
+  // Campus in acres - more parent-friendly than sq mtr
   if (!kb.content?.about?.campusAcres) {
     updates['content.about.campusAcres'] = '10 acres'
-    changes.push('about.campusAcres: ADDED "10 acres" (from Intro PDF — more parent-friendly)')
+    changes.push('about.campusAcres: ADDED "10 acres" (from Intro PDF - more parent-friendly)')
   }
 
-  // Medium — user confirmed "English medium"
+  // Medium - user confirmed "English medium"
   if (kb.content?.about?.medium !== 'English') {
     updates['content.about.medium'] = 'English'
-    changes.push(`about.medium: UPDATED to "English" — was "${kb.content?.about?.medium}" (user confirmed CBSE English medium)`)
+    changes.push(`about.medium: UPDATED to "English" - was "${kb.content?.about?.medium}" (user confirmed CBSE English medium)`)
   }
 
-  // Description — update for accuracy (nearly 4 decades, not 35 years)
+  // Description - update for accuracy (nearly 4 decades, not 35 years)
   updates['content.about.description'] = 'Sant Pathik Vidyalaya is a CBSE-affiliated English medium co-educational Senior Secondary school in Bahraich, UP. Established in 1987, the school has nearly four decades of academic excellence. Spread across 10 acres with 75 classrooms, 8 labs, smart board classrooms, STEM & Robotics lab, Sports Mini Stadium, hostel facility, and school transport. The school combines modern education with Indian cultural values.'
-  changes.push('about.description: UPDATED — modernized with new facilities and accurate timeline')
+  changes.push('about.description: UPDATED - modernized with new facilities and accurate timeline')
 
-  // ── principal message — update from PDF ──
+  // ── principal message - update from PDF ──
   updates['content.principal.message'] = 'Our vidyalaya imparts value and skill based education bringing out the best in every child. Our earnest effort is to provide a conducive learning environment so that when students go out, they brim with confidence. The essence of Sant Pathik Vidyalaya lies in its inclusiveness.'
   changes.push('principal.message: UPDATED from Principal\'s desk message in PDF')
 
-  // ── infrastructure — new facilities from PDFs ──
+  // ── infrastructure - new facilities from PDFs ──
   if (!kb.content?.infrastructure?.smartBoards) {
     updates['content.infrastructure.smartBoards'] = 'Digital classrooms with smart boards'
     changes.push('infrastructure.smartBoards: ADDED (from Intro & Achievements PDFs)')
@@ -97,7 +97,7 @@ async function main() {
     changes.push('infrastructure.library: ADDED (from Alumni PDF)')
   }
 
-  // ── transport — was empty, now from PDFs ──
+  // ── transport - was empty, now from PDFs ──
   if (!kb.content?.transport) {
     updates['content.transport'] = {
       summary: 'School transport available for all students covering Bahraich city and surrounding areas',
@@ -106,7 +106,7 @@ async function main() {
     changes.push('transport: ADDED section (from Intro & Office Staff PDFs)')
   }
 
-  // ── hostel — new section from PDFs ──
+  // ── hostel - new section from PDFs ──
   if (!kb.content?.hostel) {
     updates['content.hostel'] = {
       available: true,
@@ -115,24 +115,24 @@ async function main() {
     changes.push('hostel: ADDED section (from Intro PDF)')
   }
 
-  // ── highlights — richer achievements from PDFs ──
+  // ── highlights - richer achievements from PDFs ──
   updates['content.highlights'] = [
-    '99.48% Class 10 result (2024) — Excellent Performance by CBSE',
-    '95.21% Class 12 result (2024) — Excellent Performance by CBSE',
-    'Student Aarav Raghuvanshi (Class V) won ₹3,20,000 on Kaun Banega Crorepati — national recognition',
+    '99.48% Class 10 result (2024) - Excellent Performance by CBSE',
+    '95.21% Class 12 result (2024) - Excellent Performance by CBSE',
+    'Student Aarav Raghuvanshi (Class V) won ₹3,20,000 on Kaun Banega Crorepati - national recognition',
     'Vaishnavi Singh (Class XI) honored at national level by Central Vigilance Commission for essay competition',
     'Runner-up at CBSE Cluster Level in Kabaddi (U-17)',
     '75% Gold medals in District Inter-School Sports Competition (NAPS)',
     '1st position in Kabaddi, Chess, Volleyball, Shot Put, and Athletics (100m, 200m, 400m, 800m, Long Jump) at district level',
-    'Sports Mini Stadium with synthetic playgrounds — largest in Devipatan mandal',
+    'Sports Mini Stadium with synthetic playgrounds - largest in Devipatan mandal',
     'STEM & Robotics Lab and Smart Board digital classrooms',
     'Nearly four decades of educational excellence since 1987',
     'Hostel facility with 24×7 security and mess',
     'Notable alumni in civil services (PCS), medicine (RML Hospital, KGMU), IIT BHU, SAIL, and USA'
   ]
-  changes.push('highlights: UPDATED — expanded from 0 to 12 items from Achievement & Intro PDFs')
+  changes.push('highlights: UPDATED - expanded from 0 to 12 items from Achievement & Intro PDFs')
 
-  // ── subjects — new section from Subject PDF ──
+  // ── subjects - new section from Subject PDF ──
   if (!kb.content?.subjects) {
     updates['content.subjects'] = {
       seniorSecondary: {
@@ -145,22 +145,22 @@ async function main() {
       primary: 'English, Hindi, Mathematics, EVS, Social Science, Computer Education, GK, Art & Craft, Music, Physical Education',
       prePrimary: 'Hindi, English, Numbers & Shapes, Art & Craft, Music & Dance, Social Skills, Ethics, Games (NEP-2020 aligned)'
     }
-    changes.push('subjects: ADDED complete section (from Subject PDF — all levels)')
+    changes.push('subjects: ADDED complete section (from Subject PDF - all levels)')
   }
 
-  // ── core values — from Values/Achievements PDFs ──
+  // ── core values - from Values/Achievements PDFs ──
   if (!kb.content?.coreValues) {
     updates['content.coreValues'] = 'Integrity, Respect, Discipline, Team Work, and Excellence'
     changes.push('coreValues: ADDED (from Achievements & Values PDFs)')
   }
 
-  // ── exam schedule — from Test PDF ──
+  // ── exam schedule - from Test PDF ──
   if (!kb.content?.examSchedule) {
     updates['content.examSchedule'] = 'Periodic Tests in May, August, November. Term Exams in September and February-March. Pre-Board Exams (Class X & XII) in December and January. Board Exams in February-March.'
     changes.push('examSchedule: ADDED (from Test PDF)')
   }
 
-  // ── alumni — from Alumni PDF ──
+  // ── alumni - from Alumni PDF ──
   if (!kb.content?.alumni) {
     updates['content.alumni'] = [
       { name: 'Kirti Vardhan Singh', role: 'PCS, Labour Enforcement Officer', yearPassOut: 2009 },
@@ -177,13 +177,13 @@ async function main() {
     changes.push('alumni: ADDED 10 notable alumni (from Alumni PDF)')
   }
 
-  // ── admissions status — update to current session ──
+  // ── admissions status - update to current session ──
   if (kb.content?.admissions?.status?.includes('2025-26')) {
     updates['content.admissions.status'] = 'Open for 2026-27 session'
     changes.push('admissions.status: UPDATED from "2025-26" to "2026-27"')
   }
 
-  // ── activities — summary from Activities PDF ──
+  // ── activities - summary from Activities PDF ──
   if (!kb.content?.activities) {
     updates['content.activities'] = 'Year-round curricular and co-curricular activities including sports tournaments, quiz competitions, essay writing, art competitions, cultural celebrations, National days, and inter-school competitions. Monthly events for all sections from Pre-Primary to Senior Secondary.'
     changes.push('activities: ADDED summary (from Activities PDF)')

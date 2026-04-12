@@ -1,5 +1,5 @@
 /**
- * scheduling.engine.js — Visit scheduling and staff notification
+ * scheduling.engine.js - Visit scheduling and staff notification
  *
  * Architecture:
  *   Called from conversation.engine.js when LLM emits VISIT_CONFIRMED: YYYY-MM-DD HH:MM
@@ -10,10 +10,10 @@
  *   5. Returns the created appointment (or null if invalid / scheduling disabled)
  *
  * Design principles:
- *   1. Vertical-aware — only runs if vertical config has scheduling.enabled = true
- *   2. Idempotent — if an appointment already exists for this conversation, it's cancelled and replaced
+ *   1. Vertical-aware - only runs if vertical config has scheduling.enabled = true
+ *   2. Idempotent - if an appointment already exists for this conversation, it's cancelled and replaced
  *   3. Staff notification follows same pattern as handoff.engine.js
- *   4. Fails gracefully — appointment creation failure does NOT block the parent's response
+ *   4. Fails gracefully - appointment creation failure does NOT block the parent's response
  *   5. Date/time validation uses real Date arithmetic, not regex guessing
  */
 
@@ -22,7 +22,7 @@ const { sendTextMessage } = require('../services/whatsapp.service')
 const logger = require('../utils/logger')
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Vertical config registry — lazy-loaded, cached
+// Vertical config registry - lazy-loaded, cached
 // ═════════════════════════════════════════════════════════════════════════════
 const _configCache = {}
 
@@ -39,7 +39,7 @@ function _loadVerticalConfig(vertical) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// isSchedulingEnabled — check if vertical supports visit scheduling
+// isSchedulingEnabled - check if vertical supports visit scheduling
 // ═════════════════════════════════════════════════════════════════════════════
 function isSchedulingEnabled(vertical) {
   const config = _loadVerticalConfig(vertical)
@@ -47,7 +47,7 @@ function isSchedulingEnabled(vertical) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// _validateVisitDateTime — validate a "YYYY-MM-DD HH:MM" string from LLM
+// _validateVisitDateTime - validate a "YYYY-MM-DD HH:MM" string from LLM
 //
 // Checks:
 //   1. Format is correct
@@ -76,7 +76,7 @@ function _validateVisitDateTime(visitDateTime) {
   // Use Date.UTC to avoid local-timezone shift when only date parts matter
   const dayOfWeek = new Date(yr, mo - 1, dy).getDay()
   if (dayOfWeek === 0) {
-    return { valid: false, reason: 'Sunday — school is closed', yr, mo, dy, hr, mn }
+    return { valid: false, reason: 'Sunday - school is closed', yr, mo, dy, hr, mn }
   }
 
   // School hours: 09:00 – 14:00 IST
@@ -87,7 +87,7 @@ function _validateVisitDateTime(visitDateTime) {
     return { valid: false, reason: `outside school hours (${hr}:${String(mn).padStart(2,'0')} is not 09:00–14:00)`, yr, mo, dy, hr, mn }
   }
 
-  // Past-date check — compare date strings lexicographically (YYYY-MM-DD sorts correctly)
+  // Past-date check - compare date strings lexicographically (YYYY-MM-DD sorts correctly)
   const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
   const todayStr = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}-${String(nowIST.getDate()).padStart(2, '0')}`
   const visitDateStr = `${yrS}-${moS}-${dyS}`
@@ -99,19 +99,19 @@ function _validateVisitDateTime(visitDateTime) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// scheduleVisit — main public API
+// scheduleVisit - main public API
 //
-// @param {Object} session      — full session object (flowState, phone, etc.)
-// @param {Object} tenant       — { businessId, resellerId, vertical, phoneNumberId, accessToken, settings }
-// @param {string} visitDateTime — LLM-resolved datetime string, e.g. "2026-03-10 10:00"
-// @returns {Object|null}       — created Appointment document, or null
+// @param {Object} session      - full session object (flowState, phone, etc.)
+// @param {Object} tenant       - { businessId, resellerId, vertical, phoneNumberId, accessToken, settings }
+// @param {string} visitDateTime - LLM-resolved datetime string, e.g. "2026-03-10 10:00"
+// @returns {Object|null}       - created Appointment document, or null
 // ═════════════════════════════════════════════════════════════════════════════
 async function scheduleVisit(session, tenant, visitDateTime) {
   const vertical = tenant.vertical
 
   // Gate: vertical must have scheduling enabled
   if (!isSchedulingEnabled(vertical)) {
-    logger.info({ vertical }, 'Scheduling not enabled for this vertical — skipping')
+    logger.info({ vertical }, 'Scheduling not enabled for this vertical - skipping')
     return null
   }
 
@@ -122,7 +122,7 @@ async function scheduleVisit(session, tenant, visitDateTime) {
   // Validate the LLM-resolved datetime
   const validation = _validateVisitDateTime(visitDateTime)
   if (!validation.valid) {
-    logger.warn({ visitDateTime, phone, reason: validation.reason }, 'Visit datetime invalid — skipping appointment creation')
+    logger.warn({ visitDateTime, phone, reason: validation.reason }, 'Visit datetime invalid - skipping appointment creation')
     return null
   }
 
@@ -137,7 +137,7 @@ async function scheduleVisit(session, tenant, visitDateTime) {
       { $set: { status: 'cancelled' } }
     )
   } catch (err) {
-    logger.warn({ err }, 'Failed to cancel previous appointments — continuing')
+    logger.warn({ err }, 'Failed to cancel previous appointments - continuing')
   }
 
   // Documents from vertical config
@@ -173,14 +173,14 @@ async function scheduleVisit(session, tenant, visitDateTime) {
 
   // Notify staff via WhatsApp
   await _notifyStaff(session, tenant, appointment, config).catch(err =>
-    logger.error({ err }, 'Staff visit notification failed — appointment still created')
+    logger.error({ err }, 'Staff visit notification failed - appointment still created')
   )
 
   return appointment
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// _notifyStaff — send WhatsApp message to staff about the new appointment
+// _notifyStaff - send WhatsApp message to staff about the new appointment
 // ═════════════════════════════════════════════════════════════════════════════
 async function _notifyStaff(session, tenant, appointment, config) {
   // Resolve staff phone (same logic as handoff.engine.js)
@@ -198,7 +198,7 @@ async function _notifyStaff(session, tenant, appointment, config) {
   }
 
   if (!staffPhone) {
-    logger.warn({ businessId: tenant.businessId }, 'No staffPhone configured — skipping visit notification')
+    logger.warn({ businessId: tenant.businessId }, 'No staffPhone configured - skipping visit notification')
     return
   }
 

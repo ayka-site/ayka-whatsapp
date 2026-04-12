@@ -66,7 +66,7 @@ export default function AdminSettings() {
         if (tc.textColor) root.style.setProperty('--color-text', tc.textColor)
         if (tc.brandName) document.title = `${tc.brandName} Dashboard`
       }
-      setMsg('Settings saved successfully — theme updated')
+      setMsg('Settings saved successfully - theme updated')
       setEditing(false); refetch()
     } catch (err) { setMsg(err.message) }
     setSaving(false)
@@ -103,24 +103,24 @@ export default function AdminSettings() {
               <FormField label="Name"><FormInput value={form.name} onChange={v => set('name', v)} /></FormField>
               <FormField label="Email"><FormInput value={form.email} onChange={v => set('email', v)} type="email" /></FormField>
               <FormField label="Phone"><FormInput value={form.phone} onChange={v => set('phone', v)} /></FormField>
-              <F label="Slug" value={data?.slug || '—'} />
-              <F label="Setup Cost" value={data?.pricing?.setupCost != null ? `₹${data.pricing.setupCost.toLocaleString()}` : '—'} />
-              <F label="Per Bot Cost" value={data?.pricing?.perBotCost != null ? `₹${data.pricing.perBotCost.toLocaleString()}` : '—'} />
-              <F label="Monthly/Bot" value={data?.pricing?.monthlyPerBot != null ? `₹${data.pricing.monthlyPerBot.toLocaleString()}/mo` : '—'} />
-              <F label="Bot Slots" value={data?.pricing?.botSlots || '—'} />
-              <F label="Platform Fee" value={data?.platformFeeStatus || '—'} />
+              <F label="Slug" value={data?.slug || '-'} />
+              <F label="Setup Cost" value={data?.pricing?.setupCost != null ? `₹${data.pricing.setupCost.toLocaleString()}` : '-'} />
+              <F label="Per Bot Cost" value={data?.pricing?.perBotCost != null ? `₹${data.pricing.perBotCost.toLocaleString()}` : '-'} />
+              <F label="Monthly/Bot" value={data?.pricing?.monthlyPerBot != null ? `₹${data.pricing.monthlyPerBot.toLocaleString()}/mo` : '-'} />
+              <F label="Bot Slots" value={data?.pricing?.botSlots || '-'} />
+              <F label="Platform Fee" value={data?.platformFeeStatus || '-'} />
             </div>
           ) : (
             <div className="space-y-3 text-sm">
-              <F label="Name" value={data?.name || '—'} />
-              <F label="Slug" value={data?.slug || '—'} />
-              <F label="Email" value={data?.email || '—'} />
-              <F label="Phone" value={data?.phone || '—'} />
-              <F label="Setup Cost" value={data?.pricing?.setupCost != null ? `₹${data.pricing.setupCost.toLocaleString()}` : '—'} />
-              <F label="Per Bot Cost" value={data?.pricing?.perBotCost != null ? `₹${data.pricing.perBotCost.toLocaleString()}` : '—'} />
-              <F label="Monthly/Bot" value={data?.pricing?.monthlyPerBot != null ? `₹${data.pricing.monthlyPerBot.toLocaleString()}/mo` : '—'} />
-              <F label="Bot Slots" value={data?.pricing?.botSlots || '—'} />
-              <F label="Platform Fee" value={data?.platformFeeStatus || '—'} />
+              <F label="Name" value={data?.name || '-'} />
+              <F label="Slug" value={data?.slug || '-'} />
+              <F label="Email" value={data?.email || '-'} />
+              <F label="Phone" value={data?.phone || '-'} />
+              <F label="Setup Cost" value={data?.pricing?.setupCost != null ? `₹${data.pricing.setupCost.toLocaleString()}` : '-'} />
+              <F label="Per Bot Cost" value={data?.pricing?.perBotCost != null ? `₹${data.pricing.perBotCost.toLocaleString()}` : '-'} />
+              <F label="Monthly/Bot" value={data?.pricing?.monthlyPerBot != null ? `₹${data.pricing.monthlyPerBot.toLocaleString()}/mo` : '-'} />
+              <F label="Bot Slots" value={data?.pricing?.botSlots || '-'} />
+              <F label="Platform Fee" value={data?.platformFeeStatus || '-'} />
               <F label="Status" value={data?.isActive ? 'Active' : 'Inactive'} />
             </div>
           )}
@@ -160,14 +160,14 @@ export default function AdminSettings() {
             </div>
           ) : (
             <div className="space-y-3 text-sm">
-              <F label="Brand Name" value={theme.brandName || '—'} />
-              <F label="Logo URL" value={theme.logoUrl || '—'} />
+              <F label="Brand Name" value={theme.brandName || '-'} />
+              <F label="Logo URL" value={theme.logoUrl || '-'} />
               <ColorF label="Primary" color={theme.primaryColor} />
               <ColorF label="Accent" color={theme.accentColor} />
-              <F label="Sidebar BG" value={theme.sidebarColor || '—'} />
-              <F label="Surface BG" value={theme.backgroundColor || '—'} />
-              <F label="Text" value={theme.textColor || '—'} />
-              <F label="Favicon" value={theme.faviconUrl || '—'} />
+              <F label="Sidebar BG" value={theme.sidebarColor || '-'} />
+              <F label="Surface BG" value={theme.backgroundColor || '-'} />
+              <F label="Text" value={theme.textColor || '-'} />
+              <F label="Favicon" value={theme.faviconUrl || '-'} />
               <F label="Platform Credit" value={theme.showPlatformCredit ? 'Yes' : 'No'} />
             </div>
           )}
@@ -209,7 +209,7 @@ function ColorF({ label, color }) {
       <span className="text-xs opacity-40 w-28 shrink-0">{label}</span>
       <div className="flex items-center gap-2">
         <span className="w-4 h-4 rounded border border-white/20" style={{ background: color || '#888' }} />
-        <span style={{ color: 'var(--color-text)' }}>{color || '—'}</span>
+        <span style={{ color: 'var(--color-text)' }}>{color || '-'}</span>
       </div>
     </div>
   )

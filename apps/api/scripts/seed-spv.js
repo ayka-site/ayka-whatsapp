@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * seed-spv.js — Onboard SPV School (Production)
+ * seed-spv.js - Onboard SPV School (Production)
  *
  * Creates:
  *   1. Sant Pathik Vidyalaya (SPV) Business document
@@ -135,7 +135,7 @@ async function main() {
     }
     if (waAccessToken) update['whatsapp.accessToken'] = waAccessToken
     await Business.updateOne({ _id: business._id }, { $set: update })
-    console.log(`ℹ️  Business already exists — updated: ${business.name} (${business._id})`)
+    console.log(`ℹ️  Business already exists - updated: ${business.name} (${business._id})`)
   }
 
   // ── 3. Knowledge Base ──
@@ -248,7 +248,7 @@ async function main() {
         },
       }
     )
-    console.log(`ℹ️  Dashboard user already exists — updated: ${ADMIN_EMAIL}`)
+    console.log(`ℹ️  Dashboard user already exists - updated: ${ADMIN_EMAIL}`)
   }
 
   mongoose.disconnect()

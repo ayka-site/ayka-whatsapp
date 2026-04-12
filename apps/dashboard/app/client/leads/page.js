@@ -55,15 +55,15 @@ export default function ClientLeads() {
         <p className="text-xs opacity-40">{row.phone}</p>
       </div>
     )},
-    { key: 'studentName', label: 'Student', render: v => v || '—' },
-    { key: 'interestedClass', label: 'Class', render: v => v || '—' },
+    { key: 'studentName', label: 'Student', render: v => v || '-' },
+    { key: 'interestedClass', label: 'Class', render: v => v || '-' },
     { key: 'leadScore', label: 'Score', render: (v, row) => (
       <span title={row.leadScoreReason}><Badge score={v} /></span>
     )},
     { key: 'source', label: 'Source', render: v => v || 'direct' },
     { key: 'lastMessage', label: 'Last Message', render: v => relativeTime(v) },
-    { key: 'visitConfirmed', label: 'Visit', render: v => v ? <span className="text-green-400">✓</span> : <span className="opacity-20">—</span> },
-    { key: 'handoffTriggered', label: 'Handoff', render: v => v ? <span className="text-green-400">✓</span> : <span className="opacity-20">—</span> },
+    { key: 'visitConfirmed', label: 'Visit', render: v => v ? <span className="text-green-400">✓</span> : <span className="opacity-20">-</span> },
+    { key: 'handoffTriggered', label: 'Handoff', render: v => v ? <span className="text-green-400">✓</span> : <span className="opacity-20">-</span> },
     { key: 'messageCount', label: 'Msgs', render: v => v || 0 },
   ]
 
@@ -120,22 +120,22 @@ export default function ClientLeads() {
         {selectedLead && (
            <div className="space-y-4 text-sm" style={{ color: 'var(--color-text)' }}>
             <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.parentName || '—'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedLead.phone || '—'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.studentName || '—'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{selectedLead.flowState?.collectedData?.interestedClass || '—'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Alt Phone</p><p className="font-medium">{selectedLead.flowState?.collectedData?.altPhone || '—'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Time</p><p className="font-medium">{selectedLead.flowState?.collectedData?.preferredVisitTime || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Parent Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.parentName || '-'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Phone</p><p className="font-medium">{selectedLead.phone || '-'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Student Name</p><p className="font-medium">{selectedLead.flowState?.collectedData?.studentName || '-'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Class</p><p className="font-medium">{selectedLead.flowState?.collectedData?.interestedClass || '-'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Alt Phone</p><p className="font-medium">{selectedLead.flowState?.collectedData?.altPhone || '-'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Time</p><p className="font-medium">{selectedLead.flowState?.collectedData?.preferredVisitTime || '-'}</p></div>
             </div>
             <hr />
             <div className="grid grid-cols-2 gap-3">
                 <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Score</p><Badge score={selectedLead.leadScore} /></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Reason</p><p>{selectedLead.leadScoreReason || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Reason</p><p>{selectedLead.leadScoreReason || '-'}</p></div>
                 <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Visit Confirmed</p><p>{selectedLead.flowState?.visitConfirmed ? `Yes (${formatDate(selectedLead.flowState?.visitConfirmedAt)})` : 'No'}</p></div>
                 <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Handoff</p><p>{selectedLead.flowState?.handoffTriggered ? `Yes (${formatDate(selectedLead.flowState?.handoffAt)})` : 'No'}</p></div>
                 <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Messages</p><p>{selectedLead.messageCount ?? 0}</p></div>
                 <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Source</p><p>{selectedLead.source?.sourceType || 'direct'}</p></div>
-                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>First Contact</p><p>{formatDate(selectedLead.openedAt) || '—'}</p></div>
+                <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>First Contact</p><p>{formatDate(selectedLead.openedAt) || '-'}</p></div>
             </div>
             {selectedLead.appointment && (
               <>
@@ -144,7 +144,7 @@ export default function ClientLeads() {
                 <div className="grid grid-cols-2 gap-3">
                     <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Scheduled</p><p>{formatAppointmentPreference(selectedLead.appointment.scheduledAt, selectedLead.appointment.rawPreference)}</p></div>
                     <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Status</p><Badge score={selectedLead.appointment.status} /></div>
-                    <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Documents</p><p>{selectedLead.appointment.documentsAdvised?.join(', ') || '—'}</p></div>
+                    <div><p className="text-xs opacity-80" style={{ color: 'var(--color-text)' }}>Documents</p><p>{selectedLead.appointment.documentsAdvised?.join(', ') || '-'}</p></div>
                 </div>
               </>
             )}

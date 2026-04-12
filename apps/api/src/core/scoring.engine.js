@@ -1,5 +1,5 @@
 /**
- * scoring.engine.js — Pure deterministic lead scoring engine
+ * scoring.engine.js - Pure deterministic lead scoring engine
  *
  * Architecture:
  *   Takes a flowState + vertical string → returns { score, reason }
@@ -7,16 +7,16 @@
  *   Reason is a human-readable string for the dashboard
  *
  * Design principles:
- *   1. ZERO external dependencies — no DB, no Redis, no LLM, no network
+ *   1. ZERO external dependencies - no DB, no Redis, no LLM, no network
  *   2. Fully testable in isolation with plain JS objects
- *   3. Vertical-aware — scoring rules are loaded from vertical config files
- *   4. Deterministic — same input always produces same output
- *   5. Multi-tenant safe — no global state, no side effects
+ *   3. Vertical-aware - scoring rules are loaded from vertical config files
+ *   4. Deterministic - same input always produces same output
+ *   5. Multi-tenant safe - no global state, no side effects
  */
 const logger = require('../utils/logger')
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Vertical config registry — lazy-loaded, cached after first access
+// Vertical config registry - lazy-loaded, cached after first access
 // ═════════════════════════════════════════════════════════════════════════════
 const _configCache = {}
 
@@ -34,10 +34,10 @@ function loadVerticalConfig(vertical) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// computeLeadScore — the single public API
+// computeLeadScore - the single public API
 //
-// @param  {Object} flowState  — session.flowState (collectedData, goals, handoffTriggered, etc.)
-// @param  {string} vertical   — 'school', 'realestate', etc.
+// @param  {Object} flowState  - session.flowState (collectedData, goals, handoffTriggered, etc.)
+// @param  {string} vertical   - 'school', 'realestate', etc.
 // @returns {{ score: 'hot'|'warm'|'cold', reason: string }}
 // ═════════════════════════════════════════════════════════════════════════════
 function computeLeadScore(flowState, vertical) {
@@ -65,7 +65,7 @@ function computeLeadScore(flowState, vertical) {
     return { score: 'warm', reason: warmReason }
   }
 
-  // Cold — use the vertical's cold reason generator if provided, else generic
+  // Cold - use the vertical's cold reason generator if provided, else generic
   const coldReason = typeof rules.cold === 'function'
     ? rules.cold(flowState)
     : _genericColdReason(flowState)
@@ -74,7 +74,7 @@ function computeLeadScore(flowState, vertical) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Generic fallback scoring — used when a vertical has no scoringRules
+// Generic fallback scoring - used when a vertical has no scoringRules
 // ═════════════════════════════════════════════════════════════════════════════
 function _genericScore(flowState) {
   const collected = flowState.collectedData || {}

@@ -3,7 +3,7 @@ const axios  = require('axios')
 const logger = require('../utils/logger')
 
 /**
- * transcription.service.js v4.0 — Groq Whisper audio transcription
+ * transcription.service.js v4.0 - Groq Whisper audio transcription
  *
  * Flow:
  *   1. Get media URL from Meta (using mediaId + accessToken)
@@ -19,15 +19,15 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 // Timeout for downloading audio from Meta CDN (15 seconds)
 const DOWNLOAD_TIMEOUT_MS = 15000
-// Max audio file size we'll process (25MB — Groq's limit)
+// Max audio file size we'll process (25MB - Groq's limit)
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
 /**
- * transcribeAudio — download WhatsApp voice note and transcribe via Groq Whisper
+ * transcribeAudio - download WhatsApp voice note and transcribe via Groq Whisper
  *
- * @param {string} mediaId — WhatsApp media ID from the message payload
- * @param {string} accessToken — Meta API access token for this business
- * @returns {string} — transcribed text, or failure marker
+ * @param {string} mediaId - WhatsApp media ID from the message payload
+ * @param {string} accessToken - Meta API access token for this business
+ * @returns {string} - transcribed text, or failure marker
  */
 async function transcribeAudio(mediaId, accessToken) {
   try {
@@ -82,7 +82,7 @@ async function transcribeAudio(mediaId, accessToken) {
     const transcription = await groq.audio.transcriptions.create({
       file,
       model: 'whisper-large-v3-turbo',
-      language: 'hi', // Default to Hindi — most WhatsApp voice notes in India are Hindi/Hinglish
+      language: 'hi', // Default to Hindi - most WhatsApp voice notes in India are Hindi/Hinglish
       response_format: 'text',
     })
 

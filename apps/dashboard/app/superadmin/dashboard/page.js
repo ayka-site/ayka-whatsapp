@@ -58,7 +58,7 @@ export default function SuperAdminDashboard() {
         <StatCard label="Avg Latency" value={`${s.avgLatency?.value ?? 0}ms`} loading={sL} />
       </div>
 
-      {/* Row 1 — Platform Volume + Revenue */}
+      {/* Row 1 - Platform Volume + Revenue */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Platform Volume" subtitle="Daily conversations & messages (30d)">
           <ResponsiveContainer width="100%" height={260}>
@@ -87,7 +87,7 @@ export default function SuperAdminDashboard() {
         </ChartWrapper>
       </div>
 
-      {/* Row 2 — Reseller Performance + Vertical */}
+      {/* Row 2 - Reseller Performance + Vertical */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Reseller Performance" subtitle="Leads by score this month">
           <ResponsiveContainer width="100%" height={260}>
@@ -116,7 +116,7 @@ export default function SuperAdminDashboard() {
         </ChartWrapper>
       </div>
 
-      {/* Row 3 — System Health */}
+      {/* Row 3 - System Health */}
       <div className="grid grid-cols-1 gap-6 mb-6">
         <ChartWrapper title="System Health" subtitle="API response times (ms)">
           <ResponsiveContainer width="100%" height={260}>
@@ -153,7 +153,7 @@ export default function SuperAdminDashboard() {
             {resellerArr.map(r => (
               <tr key={r._id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => router.push('/superadmin/resellers')}>
                 <td className="p-2 font-medium" style={{ color: 'var(--color-text)' }}>{r.name}</td>
-                <td className="p-2 text-xs">{r.plan?.name || '—'}</td>
+                <td className="p-2 text-xs">{r.plan?.name || '-'}</td>
                 <td className="p-2">{formatNumber(r.activeClients)}</td>
                 <td className="p-2">{formatNumber(r.leadsThisMonth)}</td>
                 <td className="p-2 font-medium" style={{ color: 'var(--color-primary)' }}>₹{formatNumber(r.revenue)}</td>

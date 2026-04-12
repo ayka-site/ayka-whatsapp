@@ -1,5 +1,5 @@
 /**
- * AyKa Chat Widget — Embeddable AI chatbot for any website
+ * AyKa Chat Widget - Embeddable AI chatbot for any website
  *
  * Usage:
  *   <script src="https://your-api.com/widget/embed/ayka-widget.js"
@@ -312,7 +312,7 @@
         </div>
         ${fields}
         <button id="ayka-info-submit">Start Chat</button>
-        <button class="ayka-skip" id="ayka-info-skip">Skip — chat anonymously</button>
+        <button class="ayka-skip" id="ayka-info-skip">Skip - chat anonymously</button>
       </div>
     `;
 

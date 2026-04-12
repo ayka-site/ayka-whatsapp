@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * seed-dashboard.js — Creates Users, Reseller, and theme configs for the dashboard.
+ * seed-dashboard.js - Creates Users, Reseller, and theme configs for the dashboard.
  *
  * Run: node scripts/seed-dashboard.js
  *
  * Creates:
  *   1. WellTechUp reseller document
- *   2. superadmin@ayka.in — role: superadmin
- *   3. admin@welltechup.com — role: reseller (WellTechUp)
- *   4. admin@santpathik.in — role: client (tied to SPV business)
+ *   2. superadmin@ayka.in - role: superadmin
+ *   3. admin@welltechup.com - role: reseller (WellTechUp)
+ *   4. admin@santpathik.in - role: client (tied to SPV business)
  */
 require('dotenv').config()
 const mongoose = require('mongoose')
@@ -221,7 +221,7 @@ async function seed() {
   for (const u of users) {
     const existing = await User.findOne({ email: u.email })
     if (existing) {
-      console.log(`ℹ️  User ${u.email} already exists — updating...`)
+      console.log(`ℹ️  User ${u.email} already exists - updating...`)
       const hash = await bcrypt.hash(u.password, 12)
       await User.updateOne({ _id: existing._id }, {
         $set: {

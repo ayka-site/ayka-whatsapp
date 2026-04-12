@@ -216,9 +216,9 @@ export default function AdminWidgetPage() {
               </div>
             </div>
 
-            {/* Security — Allowed Origins */}
+            {/* Security - Allowed Origins */}
             <div className="rounded-xl border border-white/10 p-6" style={{ background: 'var(--color-surface)' }}>
-              <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Security — Allowed Origins</h2>
+              <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Security - Allowed Origins</h2>
               <p className="text-[11px] opacity-40 mb-3" style={{ color: 'var(--color-text)' }}>
                 Enter one origin per line (e.g. https://example.com). Leave blank to allow all origins.
               </p>

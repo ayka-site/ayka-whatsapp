@@ -1,4 +1,4 @@
-# AyKa AI Platform — Complete Operations Guide
+# AyKa AI Platform - Complete Operations Guide
 
 > **Version:** 1.0 | **Last Updated:** 1 March 2026  
 > **Platform:** api.ayka.site | dashboard.ayka.site
@@ -12,8 +12,8 @@
 3. [Azure Deployment](#3-azure-deployment)
 4. [Domain & DNS Setup](#4-domain--dns-setup)
 5. [WhatsApp Meta Integration](#5-whatsapp-meta-integration)
-6. [Client Onboarding — Step by Step](#6-client-onboarding--step-by-step)
-7. [Reseller Onboarding — Step by Step](#7-reseller-onboarding--step-by-step)
+6. [Client Onboarding - Step by Step](#6-client-onboarding--step-by-step)
+7. [Reseller Onboarding - Step by Step](#7-reseller-onboarding--step-by-step)
 8. [Superadmin Operations Guide](#8-superadmin-operations-guide)
 9. [Reseller Operations Guide](#9-reseller-operations-guide)
 10. [Client Operations Guide](#10-client-operations-guide)
@@ -40,24 +40,24 @@
      ▼            ▼             ▼            ▼
 ┌──────────────────────────────────────────────────────────┐
 │              api.ayka.site (Express.js)                   │
-│  Port 3000 — Azure Container Apps                        │
+│  Port 3000 - Azure Container Apps                        │
 ├──────────────────────────────────────────────────────────┤
 │ Routes:                                                   │
-│  /webhook/whatsapp  — Meta webhook handler                │
-│  /widget/*          — Web widget public API               │
-│  /api/auth/*        — Login, JWT tokens                   │
-│  /api/client/*      — Client dashboard API (12 endpoints) │
-│  /api/admin/*       — Reseller dashboard API (25 endpoints│
-│  /api/superadmin/*  — Platform admin API (20 endpoints)   │
+│  /webhook/whatsapp  - Meta webhook handler                │
+│  /widget/*          - Web widget public API               │
+│  /api/auth/*        - Login, JWT tokens                   │
+│  /api/client/*      - Client dashboard API (12 endpoints) │
+│  /api/admin/*       - Reseller dashboard API (25 endpoints│
+│  /api/superadmin/*  - Platform admin API (20 endpoints)   │
 ├──────────────────────────────────────────────────────────┤
 │ Core Engines:                                             │
-│  conversation.engine   — WhatsApp message pipeline        │
-│  web.conversation.engine — Web widget pipeline            │
-│  flow.engine           — Goal tracking & data extraction  │
-│  scoring.engine        — Lead scoring (hot/warm/cold)     │
-│  scheduling.engine     — Visit appointment scheduling     │
-│  handoff.engine        — Human handoff notifications      │
-│  prompt.builder        — Context-aware system prompts     │
+│  conversation.engine   - WhatsApp message pipeline        │
+│  web.conversation.engine - Web widget pipeline            │
+│  flow.engine           - Goal tracking & data extraction  │
+│  scoring.engine        - Lead scoring (hot/warm/cold)     │
+│  scheduling.engine     - Visit appointment scheduling     │
+│  handoff.engine        - Human handoff notifications      │
+│  prompt.builder        - Context-aware system prompts     │
 ├──────────────────────────────────────────────────────────┤
 │ LLM: Groq (primary) → Azure OpenAI (fallback)            │
 │  Multi-key rotation, concurrency limiter, model tiering   │
@@ -344,12 +344,12 @@ az containerapp hostname bind \
 ### ⚠️ Important Notes
 - Each client business needs its OWN Phone Number ID and access token
 - Access tokens are encrypted at rest in MongoDB (AES-256)
-- The webhook URL is shared — all clients use the same endpoint
+- The webhook URL is shared - all clients use the same endpoint
 - The `resolveTenant` middleware routes messages to the correct business by Phone Number ID
 
 ---
 
-## 6. Client Onboarding — Step by Step
+## 6. Client Onboarding - Step by Step
 
 ### Prerequisites
 - [ ] Client's business name and vertical (school/realestate)
@@ -544,7 +544,7 @@ Add this code before `</body>` on the client's website:
 2. Set Callback URL: `https://api.ayka.site/webhook/whatsapp`
 3. Set Verify Token: `spv_webhook_secret_2026`
 4. Subscribe to fields: `messages`, `message_status`
-5. Send a test message to the WhatsApp number — should get AI response
+5. Send a test message to the WhatsApp number - should get AI response
 
 ### Step 7: Verify Everything Works
 
@@ -582,7 +582,7 @@ curl https://api.ayka.site/widget/config/<business-id>
 
 ---
 
-## 7. Reseller Onboarding — Step by Step
+## 7. Reseller Onboarding - Step by Step
 
 ### Step 1: Create Reseller
 
@@ -982,7 +982,7 @@ const redis = require('./src/config/redis')
 // Clear specific session
 await redis.del('session:<businessId>:<phone>')
 // Clear all sessions (use carefully!)
-// Upstash doesn't support SCAN — clear by knowing keys
+// Upstash doesn't support SCAN - clear by knowing keys
 ```
 
 ---
@@ -1016,10 +1016,10 @@ tail -100 /tmp/api.log | grep -i "error\|fail\|warn"
 | Symptom | Cause | Fix |
 |---|---|---|
 | Bot not responding | API down or Groq rate limited | Check health endpoint, check LLM stats for rate limits |
-| "Session not found" | Redis cache expired | Normal — MongoDB fallback rebuilds session automatically |
+| "Session not found" | Redis cache expired | Normal - MongoDB fallback rebuilds session automatically |
 | Widget returns 404 | Widget not enabled for business | Enable via dashboard or API |
 | Dashboard shows NaN | Stats API returning unexpected shape | Check API response format matches dashboard expectations |
-| Duplicate messages | WhatsApp webhook retry | Normal — dedup layer catches these (in-memory + Redis) |
+| Duplicate messages | WhatsApp webhook retry | Normal - dedup layer catches these (in-memory + Redis) |
 | Slow responses | LLM queue full | Increase `LLM_MAX_CONCURRENCY` or add more Groq API keys |
 | Login fails | Wrong credentials or user deactivated | Check user.isActive in DB, reset password if needed |
 | Widget CORS error | Origin not allowed | Widget CORS is permissive by default; check browser console |

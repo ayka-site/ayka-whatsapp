@@ -504,10 +504,10 @@ router.get('/activity', asyncHandler(async (req, res) => {
       activities.push({ type: 'score_upgraded', description: `${name} upgraded to Hot (${clientName})`, timestamp: c.leadScoreUpdatedAt || c.updatedAt })
     }
     if (c.flowState?.visitConfirmed) {
-      activities.push({ type: 'visit_confirmed', description: `${name} — visit confirmed (${clientName})`, timestamp: c.flowState.visitConfirmedAt || c.updatedAt })
+      activities.push({ type: 'visit_confirmed', description: `${name} - visit confirmed (${clientName})`, timestamp: c.flowState.visitConfirmedAt || c.updatedAt })
     }
     if (c.flowState?.handoffTriggered) {
-      activities.push({ type: 'handoff', description: `${name} — handoff (${clientName})`, timestamp: c.flowState.handoffAt || c.updatedAt })
+      activities.push({ type: 'handoff', description: `${name} - handoff (${clientName})`, timestamp: c.flowState.handoffAt || c.updatedAt })
     }
   }
 
@@ -589,7 +589,7 @@ router.get('/settings', asyncHandler(async (req, res) => {
 
 // ─── CLIENT MANAGEMENT ──────────────────────────────────────────
 
-// PATCH /api/admin/clients/:businessId — Update client settings (reseller can edit their own clients)
+// PATCH /api/admin/clients/:businessId - Update client settings (reseller can edit their own clients)
 router.patch('/clients/:businessId', asyncHandler(async (req, res) => {
   const resellerId = toObjectId(req.user.resellerId)
   const businessId = toObjectId(req.params.businessId)
@@ -615,7 +615,7 @@ router.patch('/clients/:businessId', asyncHandler(async (req, res) => {
   res.json(updated)
 }))
 
-// PATCH /api/admin/clients/:businessId/bot — Pause or resume a client bot
+// PATCH /api/admin/clients/:businessId/bot - Pause or resume a client bot
 router.patch('/clients/:businessId/bot', asyncHandler(async (req, res) => {
   const resellerId = toObjectId(req.user.resellerId)
   const businessId = toObjectId(req.params.businessId)
@@ -643,7 +643,7 @@ router.post('/flush-kb/:businessId', asyncHandler(async (req, res) => {
 
 // ─── WIDGET CONFIGURATION ───────────────────────────────────────
 
-// GET /api/admin/clients/:businessId/widget — Get widget config for a client
+// GET /api/admin/clients/:businessId/widget - Get widget config for a client
 router.get('/clients/:businessId/widget', asyncHandler(async (req, res) => {
   const resellerId = toObjectId(req.user.resellerId)
   const businessId = toObjectId(req.params.businessId)
@@ -656,7 +656,7 @@ router.get('/clients/:businessId/widget', asyncHandler(async (req, res) => {
   res.json(business)
 }))
 
-// PATCH /api/admin/clients/:businessId/widget — Update widget config
+// PATCH /api/admin/clients/:businessId/widget - Update widget config
 router.patch('/clients/:businessId/widget', asyncHandler(async (req, res) => {
   const resellerId = toObjectId(req.user.resellerId)
   const businessId = toObjectId(req.params.businessId)
@@ -676,7 +676,7 @@ router.patch('/clients/:businessId/widget', asyncHandler(async (req, res) => {
 
 // ─── RESELLER SELF-SETTINGS ─────────────────────────────────────
 
-// PATCH /api/admin/settings — Update own profile and theme config
+// PATCH /api/admin/settings - Update own profile and theme config
 router.patch('/settings', asyncHandler(async (req, res) => {
   const resellerId = toObjectId(req.user.resellerId)
 

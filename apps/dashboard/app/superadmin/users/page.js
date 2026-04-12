@@ -126,8 +126,8 @@ export default function SuperAdminUsers() {
                     <p className="text-[10px] opacity-40">{u.email}</p>
                   </td>
                   <td className="p-3"><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[u.role] || 'bg-gray-500 text-white'}`}>{u.role}</span></td>
-                  <td className="p-3 text-xs opacity-60">{u.resellerName || '—'}</td>
-                  <td className="p-3 text-xs opacity-60">{u.businessName || '—'}</td>
+                  <td className="p-3 text-xs opacity-60">{u.resellerName || '-'}</td>
+                  <td className="p-3 text-xs opacity-60">{u.businessName || '-'}</td>
                   <td className="p-3 text-xs opacity-50">{u.lastLoginAt ? relativeTime(u.lastLoginAt) : 'Never'}</td>
                   <td className="p-3"><Badge score={u.isActive ? 'active' : 'cancelled'} /></td>
                   <td className="p-3 text-center">
@@ -181,7 +181,7 @@ export default function SuperAdminUsers() {
                   const biz = clients.find(c => c._id === v)
                   setForm(p => ({ ...p, businessId: v, resellerId: biz?.resellerId || biz?.resellerId?._id || p.resellerId }))
                 }} placeholder="Select client business…"
-                  options={clients.filter(c => c.isActive).map(c => ({ value: c._id, label: `${c.name}${c.resellerName ? ` (${c.resellerName})` : ' — Direct'}` }))} />
+                  options={clients.filter(c => c.isActive).map(c => ({ value: c._id, label: `${c.name}${c.resellerName ? ` (${c.resellerName})` : ' - Direct'}` }))} />
                 <p className="text-[11px] opacity-50 mt-1" style={{ color: 'var(--color-text)' }}>
                   Create the client business first from the <a href="/superadmin/clients" className="underline" style={{ color: 'var(--color-primary)' }}>Clients page</a> if not listed.
                 </p>

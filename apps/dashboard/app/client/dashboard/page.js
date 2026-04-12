@@ -164,7 +164,7 @@ export default function ClientDashboard() {
                     {[...Array(24)].map((_, h) => {
                       const cell = heatmapGrid.find(c => c.day === di + 1 && c.hour === h)
                       const opacity = cell ? 0.2 + cell.intensity * 0.8 : 0.05
-                      return <div key={`${di}-${h}`} className="w-4 h-4 rounded-sm" style={{ background: `var(--color-primary)`, opacity }} title={`${day} ${h}:00 — ${cell?.count || 0} messages`} />
+                      return <div key={`${di}-${h}`} className="w-4 h-4 rounded-sm" style={{ background: `var(--color-primary)`, opacity }} title={`${day} ${h}:00 - ${cell?.count || 0} messages`} />
                     })}
                   </>
                 ))}

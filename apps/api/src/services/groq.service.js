@@ -2,10 +2,10 @@ const Groq   = require('groq-sdk')
 const logger = require('../utils/logger')
 
 /**
- * groq.service.js v5.1 — Production-grade Groq service with concurrency, multi-key, model tiering
+ * groq.service.js v5.1 - Production-grade Groq service with concurrency, multi-key, model tiering
  *
  * Features over v4.0:
- *   1. Concurrency limiter (semaphore) — prevents overwhelming the API
+ *   1. Concurrency limiter (semaphore) - prevents overwhelming the API
  *   2. Multi-key rotation (GROQ_API_KEYS comma-separated)
  *   3. Model tiering: fast model for short convos, default model for longer
  *   4. Enhanced stats (model usage, concurrency tracking)
@@ -38,7 +38,7 @@ function getNextClient() {
       return { client: groqClients[idx], keyIndex: idx }
     }
   }
-  // All keys in cooldown — force-use the one with earliest cooldown
+  // All keys in cooldown - force-use the one with earliest cooldown
   let earliest = 0
   for (let i = 1; i < keyHealth.length; i++) {
     if (keyHealth[i].cooldownUntil < keyHealth[earliest].cooldownUntil) earliest = i
@@ -130,7 +130,7 @@ function getGroqStats() {
 }
 
 /**
- * callGroq — send chat completion request
+ * callGroq - send chat completion request
  *
  * v5.1: concurrency-limited, multi-key, model-tiered
  */

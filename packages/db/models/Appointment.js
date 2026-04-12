@@ -1,5 +1,5 @@
 /**
- * Appointment model — stores confirmed visit bookings made by the bot.
+ * Appointment model - stores confirmed visit bookings made by the bot.
  *
  * Created when:
  *   1. Priya collects a preferredVisitTime from the parent
@@ -29,7 +29,7 @@ const appointmentSchema = new Schema({
   studentName:     { type: String, default: null },
   interestedClass: { type: String, default: null },
 
-  // Scheduling details — stored as strings because the bot collects
+  // Scheduling details - stored as strings because the bot collects
   // natural language ("Tuesday morning", "kal 10 baje"), not structured dates
   scheduledDate:  { type: String, default: null },  // "Tuesday", "tomorrow", "kal"
   scheduledTime:  { type: String, default: null },  // "morning", "10 AM", "dopahar"

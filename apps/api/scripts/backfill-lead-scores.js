@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * backfill-lead-scores.js — Recompute and persist lead scores for ALL existing conversations
+ * backfill-lead-scores.js - Recompute and persist lead scores for ALL existing conversations
  *
  * Safe to run multiple times (idempotent). Overwrites existing scores with fresh computation.
  * Multi-tenant: processes all businesses. Uses businessId filter on every write.
@@ -28,7 +28,7 @@ const BATCH_SIZE = 100
 
 async function main() {
   console.log('═══════════════════════════════════════════════════════')
-  console.log('  Lead Score Backfill — starting')
+  console.log('  Lead Score Backfill - starting')
   console.log('═══════════════════════════════════════════════════════\n')
 
   await mongoose.connect(MONGODB_URI)
@@ -116,7 +116,7 @@ async function main() {
 
   console.log('\n')
   console.log('═══════════════════════════════════════════════════════')
-  console.log('  Lead Score Backfill — complete')
+  console.log('  Lead Score Backfill - complete')
   console.log('═══════════════════════════════════════════════════════')
   console.log(`  Total processed: ${totalProcessed}`)
   console.log(`  Updated:         ${totalUpdated}`)

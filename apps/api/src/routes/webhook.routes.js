@@ -5,7 +5,7 @@ const resolveTenant  = require('../middleware/resolveTenant')
 const rateLimiter    = require('../middleware/rateLimiter')
 const { handleWhatsAppWebhook } = require('../webhooks/whatsapp.handler')
 
-// GET — Meta webhook verification (no auth needed)
+// GET - Meta webhook verification (no auth needed)
 router.get('/webhook/whatsapp', (req, res) => {
   const mode      = req.query['hub.mode']
   const token     = req.query['hub.verify_token']
@@ -17,7 +17,7 @@ router.get('/webhook/whatsapp', (req, res) => {
   res.sendStatus(403)
 })
 
-// POST — incoming messages (middleware chain: verify → resolve tenant → rate limit → handle)
+// POST - incoming messages (middleware chain: verify → resolve tenant → rate limit → handle)
 router.post('/webhook/whatsapp',
   verifyWebhook,
   resolveTenant,

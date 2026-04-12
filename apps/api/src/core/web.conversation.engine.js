@@ -9,11 +9,11 @@ const redis  = require('../config/redis')
 const logger = require('../utils/logger')
 
 /**
- * web.conversation.engine.js — Message processing pipeline for Web Widget
+ * web.conversation.engine.js - Message processing pipeline for Web Widget
  *
  * Mirrors conversation.engine.js but:
  *   - Sessions keyed by web:${visitorId} (not phone number)
- *   - No WhatsApp send — returns response directly
+ *   - No WhatsApp send - returns response directly
  *   - Creates contacts with source 'web_widget'
  *   - Supports visitorInfo (name, email, phone) from widget form
  */

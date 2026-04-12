@@ -1,5 +1,5 @@
 /**
- * Lead Scoring Engine — Unit Tests
+ * Lead Scoring Engine - Unit Tests
  * Tests the pure scoring function across both verticals + generic fallback
  */
 const { computeLeadScore } = require('../src/core/scoring.engine')
@@ -98,7 +98,7 @@ test('handoff = hot',
   { collectedData: {}, goals: {}, handoffTriggered: true }, 'healthcare', 'hot')
 
 // ═══════════════════════════════════════════════════════
-// 4. Edge cases — budget/timeline parsing (realestate)
+// 4. Edge cases - budget/timeline parsing (realestate)
 // ═══════════════════════════════════════════════════════
 console.log('\n── RealEstate: budget/timeline parsing edge cases ─────')
 test('budget "80,00,000" = 80L → hot with 1mo',

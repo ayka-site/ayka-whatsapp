@@ -176,10 +176,10 @@ export default function SuperAdminClients() {
                 <tr key={c._id} className="border-b border-white/5 hover:bg-white/5">
                   <td className="p-3"><p className="font-medium" style={{ color: 'var(--color-text)' }}>{c.name}</p><p className="text-[10px] opacity-40">{c.slug}</p></td>
                   <td className="p-3 text-xs opacity-60">{c.resellerName || <span className="text-yellow-400">Direct</span>}</td>
-                  <td className="p-3 text-xs capitalize" style={{ color: 'var(--color-text)' }}>{c.vertical || '—'}</td>
+                  <td className="p-3 text-xs capitalize" style={{ color: 'var(--color-text)' }}>{c.vertical || '-'}</td>
                   <td className="p-3" style={{ color: 'var(--color-text)' }}>{formatNumber(c.leads?.total || 0)}</td>
                   <td className="p-3"><span className="text-red-400 font-medium">{formatNumber(c.leads?.hot || 0)}</span></td>
-                  <td className="p-3 text-xs opacity-50">{c.lastActivity ? relativeTime(c.lastActivity) : '—'}</td>
+                  <td className="p-3 text-xs opacity-50">{c.lastActivity ? relativeTime(c.lastActivity) : '-'}</td>
                   <td className="p-3"><Badge score={c.isActive ? 'active' : 'cancelled'} /></td>
                   <td className="p-3">
                     {c.widget?.enabled
@@ -214,7 +214,7 @@ export default function SuperAdminClients() {
               const d = e.target.checked
               setForm(p => ({ ...p, isDirect: d, resellerId: d ? '' : p.resellerId }))
             }} className="rounded" />
-            Direct Client (no reseller — single bot, flat pricing)
+            Direct Client (no reseller - single bot, flat pricing)
           </label>
 
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Basic Info</h3>
@@ -263,7 +263,7 @@ export default function SuperAdminClients() {
           {form.isDirect ? (
             <>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pricing (Direct Client)</h3>
-              <p className="text-[11px] opacity-50" style={{ color: 'var(--color-text)' }}>Single bot — set total price instead of breakdown.</p>
+              <p className="text-[11px] opacity-50" style={{ color: 'var(--color-text)' }}>Single bot - set total price instead of breakdown.</p>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Total Price (₹)"><FormInput value={form.pricing?.totalPrice} onChange={v => set('pricing.totalPrice', parseInt(v) || 0)} type="number" /></FormField>
                 <FormField label="Pricing Note"><FormInput value={form.pricing?.note} onChange={v => set('pricing.note', v)} placeholder="Custom deal terms…" /></FormField>

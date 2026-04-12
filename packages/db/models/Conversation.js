@@ -61,10 +61,10 @@ const conversationSchema = new Schema({
 
   // ── Lead scoring ──
   // Stored on Conversation (not Contact) because:
-  //   1. Conversation already has vertical + flowState — the scoring inputs
+  //   1. Conversation already has vertical + flowState - the scoring inputs
   //   2. A Contact can have multiple conversations over time; each is a distinct lead interaction
   //   3. Dashboard filters need score per conversation (e.g. "show hot leads this week")
-  //   4. Backfill is trivial — iterate conversations, recompute from existing flowState
+  //   4. Backfill is trivial - iterate conversations, recompute from existing flowState
   // We store latest score only (not history). Rationale: score always moves forward
   // (cold→warm→hot) within a single conversation, so the latest is the most useful
   // for dashboard filters and reseller reports. If funnel analytics are needed later,

@@ -1,4 +1,4 @@
-// Redis client using ioredis (TCP) — self-hosted on Azure VM.
+// Redis client using ioredis (TCP) - self-hosted on Azure VM.
 // Wraps ioredis to be API-compatible with the old Upstash REST client
 // so that all consumers (session.service, rateLimiter, etc.) work unchanged.
 const Redis = require('ioredis')
@@ -39,7 +39,7 @@ const redis = {
     if (opts.px) args.push('PX', opts.px)
     if (opts.nx) args.push('NX')
     const result = await ioClient.set(...args)
-    // Upstash returns null when NX fails, ioredis returns null too — compatible
+    // Upstash returns null when NX fails, ioredis returns null too - compatible
     return result
   },
 
@@ -47,7 +47,7 @@ const redis = {
     return ioClient.del(key)
   },
 
-  // Pipeline wrapper — Upstash pipeline().cmd().cmd().exec() returns array of results
+  // Pipeline wrapper - Upstash pipeline().cmd().cmd().exec() returns array of results
   pipeline() {
     const pipe = ioClient.pipeline()
     return {

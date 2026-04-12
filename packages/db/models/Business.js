@@ -1,5 +1,5 @@
 // Mongoose schema for 'businesses' collection.
-// Fields exactly as follows — do not add extra fields:
+// Fields exactly as follows - do not add extra fields:
 // resellerId: ObjectId ref 'Reseller', required
 // name: String required
 // slug: String required unique

@@ -53,7 +53,7 @@ export function formatAppointmentPreference(scheduledAt, rawPreference) {
       return `${day}, ${datePart} • ${time}`
     }
   }
-  return rawPreference || '—'
+  return rawPreference || '-'
 }
 
 /**

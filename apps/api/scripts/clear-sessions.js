@@ -39,7 +39,7 @@ async function main() {
     console.log(`  Deleted: ${key}`)
   }
 
-  console.log('DONE — all sessions cleared, new prompt will be used')
+  console.log('DONE - all sessions cleared, new prompt will be used')
 }
 
 main().catch(e => { console.error(e); process.exit(1) })

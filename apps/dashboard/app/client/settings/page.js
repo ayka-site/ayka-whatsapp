@@ -46,14 +46,14 @@ export default function ClientSettings() {
             </div>
           ) : (
             <div className="space-y-3 text-sm">
-              <Field label="Name" value={kb.name || bot.name || '—'} />
-              <Field label="Phone" value={kb.contact || '—'} />
-              <Field label="Address" value={kb.address || '—'} />
-              <Field label="Timings" value={kb.timings || '—'} />
-              <Field label="Board" value={kb.board || '—'} />
-              <Field label="Classes" value={Array.isArray(kb.classes) ? kb.classes.join(', ') : (kb.classes || '—')} />
-              <Field label="Medium" value={Array.isArray(kb.medium) ? kb.medium.join(', ') : (kb.medium || '—')} />
-              <Field label="Facilities" value={Array.isArray(kb.facilities) ? kb.facilities.join(', ') : (kb.facilities || '—')} />
+              <Field label="Name" value={kb.name || bot.name || '-'} />
+              <Field label="Phone" value={kb.contact || '-'} />
+              <Field label="Address" value={kb.address || '-'} />
+              <Field label="Timings" value={kb.timings || '-'} />
+              <Field label="Board" value={kb.board || '-'} />
+              <Field label="Classes" value={Array.isArray(kb.classes) ? kb.classes.join(', ') : (kb.classes || '-')} />
+              <Field label="Medium" value={Array.isArray(kb.medium) ? kb.medium.join(', ') : (kb.medium || '-')} />
+              <Field label="Facilities" value={Array.isArray(kb.facilities) ? kb.facilities.join(', ') : (kb.facilities || '-')} />
               {kb.tagline && <Field label="Tagline" value={kb.tagline} />}
             </div>
           )}
@@ -68,11 +68,11 @@ export default function ClientSettings() {
             </div>
           ) : (
             <div className="space-y-3 text-sm">
-              <Field label="Business ID" value={bot._id || '—'} />
-              <Field label="Vertical" value={bot.vertical || '—'} />
-              <Field label="WhatsApp Number" value={bot.whatsappPhoneId || '—'} />
-              <Field label="Status" value={bot.isActive !== undefined ? (bot.isActive ? 'Active' : 'Inactive') : '—'} />
-              <Field label="Timezone" value={bot.timezone || '—'} />
+              <Field label="Business ID" value={bot._id || '-'} />
+              <Field label="Vertical" value={bot.vertical || '-'} />
+              <Field label="WhatsApp Number" value={bot.whatsappPhoneId || '-'} />
+              <Field label="Status" value={bot.isActive !== undefined ? (bot.isActive ? 'Active' : 'Inactive') : '-'} />
+              <Field label="Timezone" value={bot.timezone || '-'} />
               {bot.createdAt && <Field label="Onboarded" value={new Date(bot.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })} />}
             </div>
           )}

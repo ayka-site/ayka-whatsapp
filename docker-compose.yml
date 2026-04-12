@@ -1,4 +1,4 @@
-# AyKa Platform — Docker Compose for Production
+# AyKa Platform - Docker Compose for Production
 # Usage: docker compose up -d
 
 services:

@@ -7,12 +7,12 @@ const { processWebMessage } = require('../core/web.conversation.engine')
 const logger = require('../utils/logger')
 
 /**
- * widget.routes.js — Public API for embeddable web chat widget
+ * widget.routes.js - Public API for embeddable web chat widget
  *
- * Endpoints (NO JWT auth — these are public-facing):
- *   GET  /widget/config/:businessId  — widget config (theme, welcome msg, etc.)
- *   POST /widget/init                — generate unique visitorId
- *   POST /widget/message             — send message, get AI response
+ * Endpoints (NO JWT auth - these are public-facing):
+ *   GET  /widget/config/:businessId  - widget config (theme, welcome msg, etc.)
+ *   POST /widget/init                - generate unique visitorId
+ *   POST /widget/message             - send message, get AI response
  *
  * Security:
  *   - Rate limiting per visitor (20 msg/min)
@@ -165,7 +165,7 @@ setInterval(() => {
 }, 2 * 60 * 1000)
 
 // ═══════════════════════════════════════════════════════════════════
-// GET /widget/config/:businessId — Returns widget configuration (public)
+// GET /widget/config/:businessId - Returns widget configuration (public)
 // ═══════════════════════════════════════════════════════════════════
 router.get('/config/:businessId', async (req, res) => {
   try {
@@ -201,7 +201,7 @@ router.get('/config/:businessId', async (req, res) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════
-// POST /widget/init — Generate unique visitor ID
+// POST /widget/init - Generate unique visitor ID
 // ═══════════════════════════════════════════════════════════════════
 router.post('/init', async (req, res) => {
   try {
@@ -224,7 +224,7 @@ router.post('/init', async (req, res) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════
-// POST /widget/message — Send message, get AI response
+// POST /widget/message - Send message, get AI response
 // ═══════════════════════════════════════════════════════════════════
 router.post('/message', async (req, res) => {
   try {

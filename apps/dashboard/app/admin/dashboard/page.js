@@ -63,7 +63,7 @@ export default function AdminDashboard() {
         <StatCard label="Bot Uptime" value={`${v(s.botUptime) || 99.9}%`} loading={sL} />
       </div>
 
-      {/* Row 1 — Leads per Client + Portfolio Score */}
+      {/* Row 1 - Leads per Client + Portfolio Score */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Leads Per Client" subtitle="Current portfolio">
           <ResponsiveContainer width="100%" height={260}>
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
       </div>
 
-      {/* Row 2 — Platform Volume + Conversion Funnel */}
+      {/* Row 2 - Platform Volume + Conversion Funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Platform Volume" subtitle="Daily leads across all bots">
           <ResponsiveContainer width="100%" height={260}>
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
       </div>
 
-      {/* Row 3 — Monthly Growth + Top Clients */}
+      {/* Row 3 - Monthly Growth + Top Clients */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Monthly Growth" subtitle="Lead acquisition MoM">
           <ResponsiveContainer width="100%" height={260}>
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
         </ChartWrapper>
       </div>
 
-      {/* Row 4 — Messages by Day + Activity */}
+      {/* Row 4 - Messages by Day + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartWrapper title="Messages by Day" subtitle="Across all bots">
           <ResponsiveContainer width="100%" height={260}>
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
                 <td className="p-2">{formatNumber(c.totalLeads)}</td>
                 <td className="p-2">{formatNumber(c.hotLeads)}</td>
                 <td className="p-2">{formatNumber(c.visitsConfirmed)}</td>
-                <td className="p-2">{c.avgScore != null ? c.avgScore.toFixed(1) : '—'}</td>
+                <td className="p-2">{c.avgScore != null ? c.avgScore.toFixed(1) : '-'}</td>
                 <td className="p-2"><Badge score={c.isActive ? 'confirmed' : 'cancelled'} /></td>
               </tr>
             ))}

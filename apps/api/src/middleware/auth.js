@@ -7,7 +7,7 @@ if (!JWT_SECRET) {
 }
 
 /**
- * authenticateJWT — Verifies JWT from Authorization header.
+ * authenticateJWT - Verifies JWT from Authorization header.
  * Attaches req.user with { userId, role, businessId, resellerId, themeConfig }
  */
 function authenticateJWT(req, res, next) {
@@ -27,7 +27,7 @@ function authenticateJWT(req, res, next) {
 }
 
 /**
- * requireRole — Factory that returns middleware enforcing a specific role.
+ * requireRole - Factory that returns middleware enforcing a specific role.
  * Usage: requireRole('client'), requireRole('reseller'), requireRole('superadmin')
  */
 function requireRole(...roles) {
@@ -40,7 +40,7 @@ function requireRole(...roles) {
 }
 
 /**
- * enforceBusinessScope — Ensures client users can only access their own businessId.
+ * enforceBusinessScope - Ensures client users can only access their own businessId.
  * Must come after authenticateJWT.
  */
 function enforceBusinessScope(req, res, next) {
@@ -53,7 +53,7 @@ function enforceBusinessScope(req, res, next) {
 }
 
 /**
- * enforceResellerScope — Ensures reseller users can only access their own resellerId.
+ * enforceResellerScope - Ensures reseller users can only access their own resellerId.
  */
 function enforceResellerScope(req, res, next) {
   if (req.user.role === 'reseller') {
@@ -65,7 +65,7 @@ function enforceResellerScope(req, res, next) {
 }
 
 /**
- * signToken — Creates a JWT token for a user document.
+ * signToken - Creates a JWT token for a user document.
  */
 function signToken(user) {
   const payload = {

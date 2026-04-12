@@ -15,12 +15,12 @@ async function triggerHandoff(session, tenant) {
       const kb = await KnowledgeBase.findOne({ businessId: tenant.businessId }, { 'content.handoff': 1 }).lean()
       staffPhone = kb?.content?.handoff?.staffPhone || null
     } catch (kbErr) {
-      logger.warn({ kbErr }, 'Could not load KB for handoff phone — notification may be skipped')
+      logger.warn({ kbErr }, 'Could not load KB for handoff phone - notification may be skipped')
     }
   }
 
   if (!staffPhone) {
-    logger.warn({ businessId: tenant.businessId }, 'No staffPhone configured — skipping handoff notification')
+    logger.warn({ businessId: tenant.businessId }, 'No staffPhone configured - skipping handoff notification')
     return true
   }
 

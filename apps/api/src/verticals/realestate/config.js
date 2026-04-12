@@ -31,7 +31,7 @@ const realestateConfig = {
   },
   maxMessagesBeforeHandoffSuggestion: 12,
 
-  // ── Visit Scheduling (disabled — site visits handled by agents) ──
+  // ── Visit Scheduling (disabled - site visits handled by agents) ──
   scheduling: {
     enabled: false,
   },
@@ -89,7 +89,7 @@ const realestateConfig = {
   },
 }
 
-// ── Helpers — budget/timeline parsing ──
+// ── Helpers - budget/timeline parsing ──
 // Budget: "65 lakhs", "65L", "1.2 crore", "1.2 Cr", "80,00,000", "6500000"
 function _parseBudgetLakhs(raw) {
   if (!raw) return null

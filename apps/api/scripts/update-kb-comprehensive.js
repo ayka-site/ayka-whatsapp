@@ -1,11 +1,11 @@
 /**
- * COMPREHENSIVE KB UPDATE — Cross-referenced against ALL 19 PDFs
+ * COMPREHENSIVE KB UPDATE - Cross-referenced against ALL 19 PDFs
  * Sources: FEE STRUCTURE 2026-27, SCHOOL DIRECTORY, Students Strength 2025-26,
  *          Faculty Details, Alumni, Activities, General Information, MD & Principal,
  *          Vidyalaya Introduction, Achievements 1-3, Test, Office Staff, Subjects,
  *          DOC (Founder's Tribute), Society Certificate/Member List
  *
- * This script does TARGETED $set — never overwrites the entire document.
+ * This script does TARGETED $set - never overwrites the entire document.
  * Every change is logged with the PDF source.
  */
 require('dotenv').config()
@@ -26,7 +26,7 @@ async function main() {
   console.log(`KB _id: ${kb._id}\n`)
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 2: Build the $set payload — every field traced to PDF source
+  // STEP 2: Build the $set payload - every field traced to PDF source
   // ═══════════════════════════════════════════════════════════════
   const updates = {}
   const changeLog = []
@@ -37,7 +37,7 @@ async function main() {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: SCHOOL DIRECTORY.pdf (most authoritative — official CBSE format)
+  // FROM: SCHOOL DIRECTORY.pdf (most authoritative - official CBSE format)
   // ─────────────────────────────────────────────────────────────
 
   // Pin code: KB has 271902, Directory says 271802
@@ -58,23 +58,23 @@ async function main() {
   set('about.curriculum', 'NCERT', 'SCHOOL DIRECTORY')
   set('about.landmark', 'Near JNV Kirtanpur', 'SCHOOL DIRECTORY')
 
-  // Remove officePhone — not in any PDF (was "9555499715" — unverified)
+  // Remove officePhone - not in any PDF (was "9555499715" - unverified)
   // We'll set it to the verified number from the directory
   set('about.phone', '+91-9198783830', 'SCHOOL DIRECTORY')
 
   // Classrooms: KB has 75, Directory says 73
   set('infrastructure.totalClassrooms', 73, 'SCHOOL DIRECTORY')
 
-  // CCTV — new
+  // CCTV - new
   set('infrastructure.cctv', 'CCTV Camera with DVR/NVR', 'SCHOOL DIRECTORY')
 
-  // Wi-Fi — new
+  // Wi-Fi - new
   set('infrastructure.wifi', true, 'SCHOOL DIRECTORY')
 
-  // Accessibility ramps — new
+  // Accessibility ramps - new
   set('infrastructure.rampsForCWSN', true, 'SCHOOL DIRECTORY')
 
-  // Hostel: Directory says "Available For boys Only" — CRITICAL correction
+  // Hostel: Directory says "Available For boys Only" - CRITICAL correction
   set('hostel.available', true, 'SCHOOL DIRECTORY')
   set('hostel.gender', 'Boys only', 'SCHOOL DIRECTORY')
   set('hostel.summary', 'Boarding facility for boys with affordable shared dormitories, clean and hygienic mess, 24×7 security, visiting doctor, yoga, sports activities, organized educational tours and excursions', 'SCHOOL DIRECTORY + VIDYALAYA INTRODUCTION')
@@ -85,28 +85,28 @@ async function main() {
   set('transport.incharge', 'Mr. Ravikant Srivastava', 'SCHOOL DIRECTORY')
   set('transport.inchargeMobile', '7985287461', 'SCHOOL DIRECTORY')
 
-  // Vice Principal — new
+  // Vice Principal - new
   set('vicePrincipal', {
     name: 'Mr. Bhikha Ram Tripathi',
     qualification: 'M.Sc B.Ed',
     mobile: '8318600231',
   }, 'SCHOOL DIRECTORY')
 
-  // Primary Wing In-Charge — new
+  // Primary Wing In-Charge - new
   set('primaryWingIC', {
     name: 'Mrs. Neena Chhabra',
     qualification: 'M.A. B.Ed',
     mobile: '7007884235',
   }, 'SCHOOL DIRECTORY')
 
-  // Principal mobile & qualification — from Directory
+  // Principal mobile & qualification - from Directory
   set('principal.qualification', 'M.A. B.Ed', 'SCHOOL DIRECTORY')
   set('principal.mobile', '8318842325', 'SCHOOL DIRECTORY')
 
-  // Complaint Redressal Officer — new
+  // Complaint Redressal Officer - new
   set('complaintRedressal', 'Vice Principal (Mr. Bhikha Ram Tripathi)', 'SCHOOL DIRECTORY')
 
-  // Nearby locations — new (important for parents asking "school kahan hai")
+  // Nearby locations - new (important for parents asking "school kahan hai")
   set('nearbyLocations', {
     busStand: { name: 'Bahraich Bus Stand', distance: '11 KM' },
     hospital: { name: 'PHC Fakharpur', distance: '7 KM' },
@@ -116,7 +116,7 @@ async function main() {
     airport: { name: 'CCS International Airport (Lucknow)', distance: '135 KM' },
   }, 'SCHOOL DIRECTORY')
 
-  // Nearby landmarks — important for the Bahraich audience
+  // Nearby landmarks - important for the Bahraich audience
   set('nearbyLandmarks', [
     'Lord Ram Janmabhoomi Temple, Ayodhya (140 KM)',
     'Naimisharanya (130 KM)',
@@ -125,19 +125,19 @@ async function main() {
     'Katarniaghat Wildlife Sanctuary (110 KM)',
   ], 'SCHOOL DIRECTORY')
 
-  // Classes — from PG not Nursery
+  // Classes - from PG not Nursery
   set('classes.from', 'Play Group (P.G.)', 'SCHOOL DIRECTORY')
 
-  // Streams — PDFs consistently say "Humanities" not "Arts"
+  // Streams - PDFs consistently say "Humanities" not "Arts"
   set('classes.streams', ['Science', 'Commerce', 'Humanities'], 'SCHOOL DIRECTORY + SUBJECTS PDF')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: FEE STRUCTURE 2026-27.pdf — COMPLETE OVERHAUL
+  // FROM: FEE STRUCTURE 2026-27.pdf - COMPLETE OVERHAUL
   // The old KB had flat "₹1,500/month" which is WRONG for most classes
   // ─────────────────────────────────────────────────────────────
   set('fees', {
     session: '2026-27',
-    note: 'Official fee structure for academic session 2026-27. Fees are FIXED — no negotiation.',
+    note: 'Official fee structure for academic session 2026-27. Fees are FIXED - no negotiation.',
     classWise: [
       { classes: 'Play Group', tuitionPerMonth: 1600, additionalFee: 2500, annualFee: 1000 },
       { classes: 'Nursery to U.K.G', tuitionPerMonth: 1200, additionalFee: 2500, annualFee: 1000 },
@@ -196,7 +196,7 @@ async function main() {
   }, 'Students Strength (2025-26)')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: Alumni.pdf — add missing Dr. Sanjay Agarwal (#6)
+  // FROM: Alumni.pdf - add missing Dr. Sanjay Agarwal (#6)
   // + fix incomplete details for others
   // ─────────────────────────────────────────────────────────────
   set('alumni', [
@@ -214,7 +214,7 @@ async function main() {
   ], 'Alumni.pdf')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: Activities.pdf — replace summary with structured month-by-month
+  // FROM: Activities.pdf - replace summary with structured month-by-month
   // ─────────────────────────────────────────────────────────────
   set('activities', {
     summary: 'Year-round curricular and co-curricular activities for all sections (Pre-Primary to Senior Secondary). Monthly activities, competitions, sports tournaments, quiz competitions, cultural celebrations, national days, and inter-school competitions.',
@@ -284,23 +284,23 @@ async function main() {
   ], 'office staff.pdf')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: General Information.pdf — School Rules
+  // FROM: General Information.pdf - School Rules
   // ─────────────────────────────────────────────────────────────
   set('schoolRules', {
     attendance: 'Minimum 80% attendance required to appear in final examination',
     ragging: 'Ragging and bullying strictly prohibited',
     tiffin: 'Every student must bring their own tiffin daily',
     uniform: 'House uniform on prescribed days',
-    absentPolicy: 'Absent without information for 7 days — name struck off rolls',
-    prohibitedItems: 'Mobile phone, camera, knife, electronic gadgets, smart watch, perfume, pan masala, tobacco items, alcohol — strictly prohibited',
+    absentPolicy: 'Absent without information for 7 days - name struck off rolls',
+    prohibitedItems: 'Mobile phone, camera, knife, electronic gadgets, smart watch, perfume, pan masala, tobacco items, alcohol - strictly prohibited',
     leavePolicy: 'No student allowed to leave during school hours without Principal permission',
     dismissal: 'Principal may dismiss student for habitual laziness, disobedience, misconduct',
   }, 'General Information.pdf')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: DOC-20260225-WA0012..pdf — Founder's tribute
+  // FROM: DOC-20260225-WA0012..pdf - Founder's tribute
   // ─────────────────────────────────────────────────────────────
-  set('founderTribute', 'Sant Pathik Ji Maharaj — a saintly soul devoted to service and enlightenment, whose sacred inspiration laid the foundation of Sant Pathik Vidyalaya in 1987. He envisioned an institution where education would not merely impart knowledge but cultivate character, discipline, and moral strength.', 'DOC (Founder Tribute)')
+  set('founderTribute', 'Sant Pathik Ji Maharaj - a saintly soul devoted to service and enlightenment, whose sacred inspiration laid the foundation of Sant Pathik Vidyalaya in 1987. He envisioned an institution where education would not merely impart knowledge but cultivate character, discipline, and moral strength.', 'DOC (Founder Tribute)')
 
   // ─────────────────────────────────────────────────────────────
   // FROM: LIST OF SUBJECT OFFERED AT VARIOUS LEVELS 2026-27.pdf
@@ -309,7 +309,7 @@ async function main() {
   set('subjects.middle', 'English, Hindi, Mathematics, Science, Social Science, Sanskrit, Computer Education, GK, Art & Craft, Music, Physical & Health Education', 'LIST OF SUBJECTS 2026-27')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: MD & Principal.pdf — update principal message
+  // FROM: MD & Principal.pdf - update principal message
   // ─────────────────────────────────────────────────────────────
   set('principal.name', 'Mrs. Pooja Agarwal', 'MD & Principal.pdf')
   set('principal.message', 'Our vidyalaya imparts value and skill based education bringing out the best in every child. Our earnest effort is to provide a conducive learning environment so that when they go out, they brim with confidence. The essence of Sant Pathik Vidyalaya lies in its inclusiveness. Parents involvement plays a vital role in their child\'s success.', 'MD & Principal.pdf')
@@ -318,36 +318,36 @@ async function main() {
   set('about.managerMessage', 'We truly believe that our education should move from knowledge to skill and wisdom, from competition to cooperation, and from division to unity. We aim to make our students capable enough to be self-directed and self-managed individuals who can confront the challenges of life.', 'MD & Principal.pdf')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: Vidyalaya Introduction.pdf — update description
+  // FROM: Vidyalaya Introduction.pdf - update description
   // ─────────────────────────────────────────────────────────────
   set('about.description', 'Sant Pathik Vidyalaya is a CBSE-affiliated English medium co-educational Day and Boarding Senior Secondary school in Bahraich, UP. Established in 1987 by Sant Pathik Ji Maharaj, the school is managed by Shri Awadhesh Narayan Agarwal. Starting with 70-80 students, the school now has 1,410 students. Spread across 10 acres with 73 classrooms, 8 labs, smart board classrooms, STEM & Robotics lab, Sports Mini Stadium (largest in Devipatan Mandal), hostel facility for boys, and school transport with 22 buses.', 'VIDYALAYA INTRODUCTION + SCHOOL DIRECTORY + STUDENTS STRENGTH')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: Achivements 1-3.pdf — update highlights to add detail
+  // FROM: Achivements 1-3.pdf - update highlights to add detail
   // ─────────────────────────────────────────────────────────────
   set('highlights', [
-    '99.48% Class 10 result (2024) — Excellent Performance by CBSE',
-    '95.21% Class 12 result (2024) — Excellent Performance by CBSE',
-    'Student Aarav Raghuvanshi (Class V) won ₹3,20,000 on Kaun Banega Crorepati — national recognition',
-    'Vaishnavi Singh (Class XI) honored at national level by Central Vigilance Commission for essay competition — also received ₹11,000 from School Manager',
+    '99.48% Class 10 result (2024) - Excellent Performance by CBSE',
+    '95.21% Class 12 result (2024) - Excellent Performance by CBSE',
+    'Student Aarav Raghuvanshi (Class V) won ₹3,20,000 on Kaun Banega Crorepati - national recognition',
+    'Vaishnavi Singh (Class XI) honored at national level by Central Vigilance Commission for essay competition - also received ₹11,000 from School Manager',
     'Runner-up at CBSE Cluster Level in Kabaddi (U-17); 3rd, 4th, 5th in athletics',
     '75% Gold medals in District Inter-School Sports Competition (NAPS)',
     '1st position in Kabaddi, Chess, Volleyball, Shot Put, and Athletics (100m, 200m, 400m, 800m, Long Jump) at district level',
-    'Sports Mini Stadium with synthetic playgrounds — largest in Devipatan Mandal',
+    'Sports Mini Stadium with synthetic playgrounds - largest in Devipatan Mandal',
     'STEM & Robotics Lab and Smart Board digital classrooms',
     'Nearly four decades of educational excellence since 1987',
     'Hostel facility for boys with 24×7 security and mess',
     'Notable alumni in civil services (PCS), medicine (RML Hospital, KGMU), IIT BHU, SAIL, and USA',
-    '1,410 students (2025-26) — started from 70-80 students in 1987',
+    '1,410 students (2025-26) - started from 70-80 students in 1987',
     '64 qualified teachers (14 PGTs, 20 TGTs, 30 PRTs)',
     '22 buses for school transport covering Bahraich city and surrounding areas',
   ], 'Achievements 1-3 + SCHOOL DIRECTORY + STUDENTS STRENGTH')
 
-  // Update admissions status (confirm from KB — already correct)
+  // Update admissions status (confirm from KB - already correct)
   set('admissions.status', 'Open for 2026-27 session', 'FEE STRUCTURE 2026-27')
 
   // ─────────────────────────────────────────────────────────────
-  // FROM: Test.pdf — update exam schedule with more detail
+  // FROM: Test.pdf - update exam schedule with more detail
   // ─────────────────────────────────────────────────────────────
   set('examSchedule', {
     summary: 'Periodic Tests in May, August, November. Term Exams in September and February-March. Pre-Board Exams (Class X & XII) in December and January. Board Exams in February-March.',

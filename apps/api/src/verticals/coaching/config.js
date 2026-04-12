@@ -1,7 +1,7 @@
 /**
- * Coaching Vertical Config — IAP Professional & similar coaching/training institutes.
+ * Coaching Vertical Config - IAP Professional & similar coaching/training institutes.
  *
- * Persona: Riya — friendly inquiry counsellor
+ * Persona: Riya - friendly inquiry counsellor
  * Goals: collect name → phone/contact → course interest → qualification → demo suggestion
  * Escalation: fee negotiation / complaints → director
  */

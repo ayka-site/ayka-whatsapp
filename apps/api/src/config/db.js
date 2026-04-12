@@ -9,7 +9,7 @@ async function connectDB() {
     })
     logger.info('MongoDB connected')
   } catch (err) {
-    logger.error({ err }, 'MongoDB connection error — retrying in 5s')
+    logger.error({ err }, 'MongoDB connection error - retrying in 5s')
     setTimeout(connectDB, 5000)
   }
 }

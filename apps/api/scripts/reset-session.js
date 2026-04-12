@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * reset-session.js — Wipe all test data for a phone number
+ * reset-session.js - Wipe all test data for a phone number
  *
  * Usage:
  *   node scripts/reset-session.js <phone> [businessId]

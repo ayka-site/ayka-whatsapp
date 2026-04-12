@@ -1,21 +1,11 @@
-// Express app entry point.
-// require('dotenv').config() first.
-// Import validateEnv from './src/config/env' and call it immediately.
-// Import connectDB from './src/config/db' and call it.
-// Import logger from './src/utils/logger'.
-// Set up Express with:
-//   - express.json() BUT capture rawBody for webhook signature verification:
-//     app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf } }))
-//   - Mount health router at '/'
-//   - Mount webhook router at '/'
-//   - Global error handler: (err, req, res, next) => log err, return 500 { error: 'Internal server error' }
-// Listen on process.env.PORT || 3000.
-// Log 'AyKa API running on port X' on start.
-// Import routes from './src/routes/health.routes' and './src/routes/webhook.routes'.
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
+const Redis = require('ioredis')
+const { Business } = require('@ayka/db')
+const { decrypt } = require('./src/utils/encryption')
+const { sendTextMessage } = require('./src/services/whatsapp.service')
 const { validateEnv } = require('./src/config/env')
 const { connectDB } = require('./src/config/db')
 const logger = require('./src/utils/logger')
@@ -33,7 +23,7 @@ connectDB()
 
 const app = express()
 
-// CORS — dashboard origins are restricted; widget/webhook paths allow any origin
+// CORS - dashboard origins are restricted; widget/webhook paths allow any origin
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3001',
   'https://dashboard.ayka.site',
@@ -43,11 +33,6 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ]
 const CORS_ALLOW_ALL = String(process.env.CORS_ALLOW_ALL || '').trim().toLowerCase() === 'true'
 
-/**
- * normalizeOrigin - Return canonical origin or null if invalid.
- * @param {string} value - Raw origin value.
- * @returns {string|null} Canonical origin.
- */
 function normalizeOrigin(value) {
   const input = String(value || '').trim()
   if (!input) return null
@@ -58,11 +43,6 @@ function normalizeOrigin(value) {
   }
 }
 
-/**
- * parseAllowedOrigins - Build exact and wildcard origin allowlists from env + defaults.
- * Supports wildcard entries like "https://*.azurestaticapps.net".
- * @returns {{ allowAll: boolean, exact: Set<string>, wildcards: Array<{ protocol: string|null, suffix: string }> }}
- */
 function parseAllowedOrigins() {
   const envOrigins = String(process.env.ALLOWED_ORIGINS || '')
     .split(',')
@@ -95,11 +75,6 @@ function parseAllowedOrigins() {
 
 const ORIGIN_RULES = parseAllowedOrigins()
 
-/**
- * isOriginAllowed - Validate request origin against configured CORS rules.
- * @param {string} origin - Raw request Origin header.
- * @returns {boolean} True when allowed.
- */
 function isOriginAllowed(origin) {
   if (CORS_ALLOW_ALL || ORIGIN_RULES.allowAll) return true
   const normalized = normalizeOrigin(origin)
@@ -117,12 +92,6 @@ function isOriginAllowed(origin) {
   }
 }
 
-/**
- * buildCorsOptions - Resolve CORS policy per request path.
- * @param {import('express').Request} req - Incoming request.
- * @param {Function} cb - CORS callback.
- * @returns {void} Calls callback with CORS options or error.
- */
 function buildCorsOptions(req, cb) {
   const origin = req.header('Origin')
   const isPublicPath = req.path.startsWith('/widget')
@@ -130,7 +99,6 @@ function buildCorsOptions(req, cb) {
     || req.path.startsWith('/webhook/whatsapp')
     || req.path.startsWith('/assets')
 
-  // Server-to-server/webhook requests usually have no Origin header.
   if (!origin) return cb(null, { origin: true, credentials: false })
 
   if (isPublicPath) return cb(null, { origin: true, credentials: false })
@@ -142,20 +110,14 @@ app.use(cors(buildCorsOptions))
 
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf } }))
 
-// Static: serve embeddable widget JS
 app.use('/widget/embed', express.static(path.join(__dirname, '../widget/dist')))
-
-// Static: serve public assets (QR images, etc.) — no auth required, public CORS
 app.use('/assets', express.static(path.join(__dirname, 'public'), { maxAge: '7d' }))
 
-// Existing routes
 app.use('/', require('./src/routes/health.routes'))
 app.use('/', require('./src/routes/webhook.routes'))
 
-// Widget routes (public — no JWT)
 app.use('/widget', require('./src/routes/widget.routes'))
 
-// Dashboard API routes
 app.use('/api/auth', require('./src/routes/auth.routes'))
 app.use('/api/client', require('./src/routes/client.routes'))
 app.use('/api/admin', require('./src/routes/admin.routes'))
@@ -167,6 +129,82 @@ app.use((err, req, res, next) => {
   }
   logger.error(err)
   res.status(500).json({ error: 'Internal server error' })
+})
+
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
+const outboundSubscriber = new Redis(REDIS_URL)
+
+async function resolveTenantForOutbound(phoneNumberId) {
+  const redis = require('./src/config/redis')
+  const cacheKey = `tenant:${phoneNumberId}`
+  const cached = await redis.get(cacheKey)
+  if (cached?.accessToken && cached?.phoneNumberId) {
+    return cached
+  }
+
+  const business = await Business.findOne(
+    { 'whatsapp.phoneNumberId': phoneNumberId, isActive: true },
+    {
+      _id: 1,
+      vertical: 1,
+      settings: 1,
+      'whatsapp.accessToken': 1,
+      'whatsapp.phoneNumberId': 1,
+    },
+  ).lean()
+
+  if (!business?.whatsapp?.accessToken || !business?.whatsapp?.phoneNumberId) {
+    return null
+  }
+
+  const tenant = {
+    businessId: business._id.toString(),
+    vertical: business.vertical,
+    settings: business.settings,
+    accessToken: decrypt(business.whatsapp.accessToken),
+    phoneNumberId: business.whatsapp.phoneNumberId,
+  }
+
+  await redis.set(cacheKey, JSON.stringify(tenant), { ex: 600 })
+  return tenant
+}
+
+outboundSubscriber.on('error', (err) => {
+  logger.error({ err }, 'WhatsApp outbound bridge subscriber error')
+})
+
+outboundSubscriber.subscribe('ayka:whatsapp:outbound', (err) => {
+  if (err) {
+    logger.error({ err }, 'Failed to subscribe ayka:whatsapp:outbound')
+    return
+  }
+  logger.info('Subscribed to ayka:whatsapp:outbound')
+})
+
+outboundSubscriber.on('message', (channel, payload) => {
+  if (channel !== 'ayka:whatsapp:outbound') return
+
+  Promise.resolve()
+    .then(async () => {
+      const event = JSON.parse(payload)
+      if (!(event?.to && event?.text && event?.phoneNumberId)) return
+
+      const tenant = await resolveTenantForOutbound(String(event.phoneNumberId))
+      if (!tenant?.accessToken) {
+        logger.warn({ phoneNumberId: event.phoneNumberId }, 'No tenant token for outbound WhatsApp bridge message')
+        return
+      }
+
+      await sendTextMessage(
+        String(event.to),
+        String(event.text),
+        String(event.phoneNumberId),
+        tenant.accessToken,
+      )
+    })
+    .catch((err) => {
+      logger.error({ err }, 'Failed processing ayka:whatsapp:outbound message')
+    })
 })
 
 const PORT = process.env.PORT || 3000

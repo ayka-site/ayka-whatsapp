@@ -20,7 +20,7 @@ RUN npm install --ignore-scripts
 COPY apps/dashboard/ ./apps/dashboard/
 COPY packages/ ./packages/
 
-# Build-time env — the API URL the browser will call
+# Build-time env - the API URL the browser will call
 ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 

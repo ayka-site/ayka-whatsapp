@@ -18,9 +18,9 @@ export default function SuperAdminLeads() {
   const { data: resellerList } = useFetch('/api/superadmin/resellers', [])
 
   const columns = [
-    { key: 'parentName', label: 'Parent', render: r => <div><p className="font-medium" style={{ color: 'var(--color-text)' }}>{r.parentName || '—'}</p><p className="text-[10px] opacity-40">{r.phone}</p></div> },
-    { key: 'businessName', label: 'Client', render: r => <span className="text-xs">{r.businessName || '—'}</span> },
-    { key: 'resellerName', label: 'Reseller', render: r => <span className="text-xs">{r.resellerName || '—'}</span> },
+    { key: 'parentName', label: 'Parent', render: r => <div><p className="font-medium" style={{ color: 'var(--color-text)' }}>{r.parentName || '-'}</p><p className="text-[10px] opacity-40">{r.phone}</p></div> },
+    { key: 'businessName', label: 'Client', render: r => <span className="text-xs">{r.businessName || '-'}</span> },
+    { key: 'resellerName', label: 'Reseller', render: r => <span className="text-xs">{r.resellerName || '-'}</span> },
     { key: 'leadScore', label: 'Score', render: r => <Badge score={r.leadScore} /> },
     { key: 'messageCount', label: 'Msgs', render: r => r.messageCount || 0 },
     { key: 'visitConfirmed', label: 'Visit', render: r => r.visitConfirmed ? '✅' : '' },
@@ -66,12 +66,12 @@ export default function SuperAdminLeads() {
         {lead && (
           <div className="space-y-4 text-sm text-gray-800">
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Parent</p><p className="font-medium">{lead.parentName || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Parent</p><p className="font-medium">{lead.parentName || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Phone</p><p>{lead.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Client</p><p>{lead.businessName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Reseller</p><p>{lead.resellerName || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Client</p><p>{lead.businessName || '-'}</p></div>
+              <div><p className="text-xs text-gray-500">Reseller</p><p>{lead.resellerName || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Score</p><Badge score={lead.leadScore} /></div>
-              <div><p className="text-xs text-gray-500">Reason</p><p>{lead.leadScoreReason || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Reason</p><p>{lead.leadScoreReason || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Messages</p><p>{lead.messageCount}</p></div>
               <div><p className="text-xs text-gray-500">Visit</p><p>{lead.visitConfirmed ? 'Yes' : 'No'}</p></div>
             </div>

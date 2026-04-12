@@ -3,7 +3,7 @@ const { Message, Conversation } = require('@ayka/db')
 const logger = require('../utils/logger')
 
 /**
- * session.service.js v4.0 — Redis-first session management with MongoDB fallback
+ * session.service.js v4.0 - Redis-first session management with MongoDB fallback
  *
  * Architecture:
  *   Read:  Redis → (miss or failure) → MongoDB → write-back to Redis
@@ -11,7 +11,7 @@ const logger = require('../utils/logger')
  *   Clear: Redis delete
  *
  * Fixes over v3.0:
- *   1. All Redis calls wrapped in try/catch — Redis failure never crashes the bot
+ *   1. All Redis calls wrapped in try/catch - Redis failure never crashes the bot
  *   2. Stale session detection: validates conversationId still exists in MongoDB
  *   3. Proper logging via pino (no console.error)
  */
@@ -25,7 +25,7 @@ function sessionKey(businessId, phone) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// getSession — Redis-first with MongoDB fallback
+// getSession - Redis-first with MongoDB fallback
 // ═════════════════════════════════════════════════════════════════════════════
 async function getSession(businessId, phone) {
   const key = sessionKey(businessId, phone)
@@ -39,7 +39,7 @@ async function getSession(businessId, phone) {
       // Validate: if the cached conversationId no longer exists in MongoDB
       // (e.g. deleted during testing), wipe the stale Redis entry and rebuild
       if (session.conversationId) {
-        // Check for both 'active' and 'handed_off' — after handoff the conversation
+        // Check for both 'active' and 'handed_off' - after handoff the conversation
         // still exists and session data is valid. Only wipe truly deleted conversations.
         const stillValid = await Conversation.exists({
           _id: session.conversationId,
@@ -67,8 +67,8 @@ async function getSession(businessId, phone) {
       }
     }
   } catch (err) {
-    // Redis is down or returned bad data — fall through to MongoDB
-    logger.warn({ err, businessId, phone }, 'Redis getSession failed — falling back to MongoDB')
+    // Redis is down or returned bad data - fall through to MongoDB
+    logger.warn({ err, businessId, phone }, 'Redis getSession failed - falling back to MongoDB')
   }
 
   // ── Fallback: rebuild session from MongoDB ──
@@ -103,11 +103,11 @@ async function getSession(businessId, phone) {
       lastUpdatedAt: Date.now(),
     }
 
-    // Write-back to Redis (best-effort — if Redis is down, we still work)
+    // Write-back to Redis (best-effort - if Redis is down, we still work)
     try {
       await redis.set(key, JSON.stringify(session), { ex: SESSION_TTL })
     } catch (cacheErr) {
-      logger.warn({ cacheErr }, 'Redis write-back failed — continuing without cache')
+      logger.warn({ cacheErr }, 'Redis write-back failed - continuing without cache')
     }
 
     return session
@@ -118,7 +118,7 @@ async function getSession(businessId, phone) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// saveSession — write to Redis (best-effort)
+// saveSession - write to Redis (best-effort)
 // ═════════════════════════════════════════════════════════════════════════════
 async function saveSession(session) {
   const key = sessionKey(session.businessId, session.phone)
@@ -126,13 +126,13 @@ async function saveSession(session) {
     session.lastUpdatedAt = Date.now()
     await redis.set(key, JSON.stringify(session), { ex: SESSION_TTL })
   } catch (err) {
-    // Redis failure on save is non-fatal — next request will rebuild from MongoDB
-    logger.warn({ err, businessId: session.businessId }, 'Redis saveSession failed — session will rebuild from MongoDB on next request')
+    // Redis failure on save is non-fatal - next request will rebuild from MongoDB
+    logger.warn({ err, businessId: session.businessId }, 'Redis saveSession failed - session will rebuild from MongoDB on next request')
   }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// clearSession — delete from Redis (best-effort)
+// clearSession - delete from Redis (best-effort)
 // ═════════════════════════════════════════════════════════════════════════════
 async function clearSession(businessId, phone) {
   try {

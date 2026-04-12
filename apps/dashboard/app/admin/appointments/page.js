@@ -62,11 +62,11 @@ export default function AdminAppointments() {
                 {filtered.map(a => (
                   <tr key={a._id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => { setSelected(a); setDetailOpen(true) }}>
                     <td className="p-3"><p className="font-medium" style={{ color: 'var(--color-text)' }}>{a.parentName}</p><p className="text-xs opacity-40">{a.phone}</p></td>
-                    <td className="p-3 text-xs">{a.businessName || '—'}</td>
-                    <td className="p-3">{a.studentName || '—'}</td>
+                    <td className="p-3 text-xs">{a.businessName || '-'}</td>
+                    <td className="p-3">{a.studentName || '-'}</td>
                     <td className="p-3 text-xs">{formatAppointmentPreference(a.scheduledAt, a.rawPreference)}</td>
                     <td className="p-3"><Badge score={a.status} /></td>
-                    <td className="p-3 text-xs max-w-[180px] truncate">{a.documentsAdvised?.join(', ') || '—'}</td>
+                    <td className="p-3 text-xs max-w-[180px] truncate">{a.documentsAdvised?.join(', ') || '-'}</td>
                     <td className="p-3 text-xs opacity-50">{formatDate(a.createdAt)}</td>
                   </tr>
                 ))}
@@ -82,11 +82,11 @@ export default function AdminAppointments() {
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-xs text-gray-500">Parent</p><p className="font-medium">{selected.parentName}</p></div>
               <div><p className="text-xs text-gray-500">Phone</p><p>{selected.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Client</p><p>{selected.businessName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Student</p><p>{selected.studentName || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Client</p><p>{selected.businessName || '-'}</p></div>
+              <div><p className="text-xs text-gray-500">Student</p><p>{selected.studentName || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Status</p><Badge score={selected.status} /></div>
               <div><p className="text-xs text-gray-500">Preference</p><p>{formatAppointmentPreference(selected.scheduledAt, selected.rawPreference)}</p></div>
-              <div><p className="text-xs text-gray-500">Scheduled</p><p>{selected.scheduledAt ? formatDate(selected.scheduledAt) : '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Scheduled</p><p>{selected.scheduledAt ? formatDate(selected.scheduledAt) : '-'}</p></div>
             </div>
             <hr />
             <div>

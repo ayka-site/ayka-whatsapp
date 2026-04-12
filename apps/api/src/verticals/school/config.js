@@ -74,7 +74,7 @@ const schoolConfig = {
       const cd = flowState.collectedData || {}
       const known = [cd.parentName, cd.studentName, cd.interestedClass].filter(Boolean)
       if (known.length === 0) return 'No lead info collected yet'
-      return `Partial info: ${known.join(', ')} — missing ${3 - known.length} key fields`
+      return `Partial info: ${known.join(', ')} - missing ${3 - known.length} key fields`
     },
   },
 

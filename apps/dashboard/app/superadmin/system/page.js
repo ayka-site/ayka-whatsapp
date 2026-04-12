@@ -67,10 +67,10 @@ export default function SuperAdminSystem() {
               <div className="rounded-xl border border-white/10 p-6" style={{ background: 'var(--color-surface)' }}>
                 <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text)' }}>System Info</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><p className="text-xs opacity-40">Uptime</p><p style={{ color: 'var(--color-text)' }}>{health?.uptime ? `${Math.floor(health.uptime / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : '—'}</p></div>
-                  <div><p className="text-xs opacity-40">Memory</p><p style={{ color: 'var(--color-text)' }}>{health?.memory || '—'}</p></div>
-                  <div><p className="text-xs opacity-40">Node Version</p><p style={{ color: 'var(--color-text)' }}>{health?.nodeVersion || '—'}</p></div>
-                  <div><p className="text-xs opacity-40">Environment</p><p style={{ color: 'var(--color-text)' }}>{health?.env || '—'}</p></div>
+                  <div><p className="text-xs opacity-40">Uptime</p><p style={{ color: 'var(--color-text)' }}>{health?.uptime ? `${Math.floor(health.uptime / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : '-'}</p></div>
+                  <div><p className="text-xs opacity-40">Memory</p><p style={{ color: 'var(--color-text)' }}>{health?.memory || '-'}</p></div>
+                  <div><p className="text-xs opacity-40">Node Version</p><p style={{ color: 'var(--color-text)' }}>{health?.nodeVersion || '-'}</p></div>
+                  <div><p className="text-xs opacity-40">Environment</p><p style={{ color: 'var(--color-text)' }}>{health?.env || '-'}</p></div>
                 </div>
               </div>
             </>
@@ -96,7 +96,7 @@ export default function SuperAdminSystem() {
                     <td className="p-3 text-xs opacity-50">{relativeTime(err.timestamp)}</td>
                     <td className="p-3"><Badge score={err.level === 'error' ? 'cancelled' : err.level === 'warn' ? 'pending' : 'confirmed'} /></td>
                     <td className="p-3 text-xs max-w-[400px]" style={{ color: 'var(--color-text)' }}><pre className="whitespace-pre-wrap font-mono text-[11px]">{err.message}</pre></td>
-                    <td className="p-3 text-xs opacity-40">{err.source || '—'}</td>
+                    <td className="p-3 text-xs opacity-40">{err.source || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -111,9 +111,9 @@ export default function SuperAdminSystem() {
             <div className="rounded-xl border border-white/10 p-6" style={{ background: 'var(--color-surface)' }}>
               <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text)' }}>LLM Stats <span className="text-[10px] font-normal opacity-40 ml-2">(since last restart)</span></h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-xs opacity-40">Provider</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.provider || '—'}</p></div>
-                <div><p className="text-xs opacity-40">Fallback</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.fallbackProvider || '—'}</p></div>
-                <div><p className="text-xs opacity-40">Deployment</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.deployment || '—'}</p></div>
+                <div><p className="text-xs opacity-40">Provider</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.provider || '-'}</p></div>
+                <div><p className="text-xs opacity-40">Fallback</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.fallbackProvider || '-'}</p></div>
+                <div><p className="text-xs opacity-40">Deployment</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{llm.deployment || '-'}</p></div>
                 <div><p className="text-xs opacity-40">Total Calls</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(llm.totalCalls || 0)}</p></div>
               </div>
 
@@ -122,7 +122,7 @@ export default function SuperAdminSystem() {
                   <div><p className="text-xs opacity-40">Successes</p><p className="text-lg font-bold" style={{ color: '#22c55e' }}>{formatNumber(llm.successes || 0)}</p></div>
                   <div><p className="text-xs opacity-40">Failures</p><p className="text-lg font-bold" style={{ color: llm.failures > 0 ? '#ef4444' : 'var(--color-text)' }}>{formatNumber(llm.failures || 0)}</p></div>
                   <div><p className="text-xs opacity-40">Retries</p><p className="text-lg font-bold" style={{ color: llm.retries > 0 ? '#f59e0b' : 'var(--color-text)' }}>{formatNumber(llm.retries || 0)}</p></div>
-                  <div><p className="text-xs opacity-40">Tracked Since</p><p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{llm.resetAt ? relativeTime(llm.resetAt) : '—'}</p></div>
+                  <div><p className="text-xs opacity-40">Tracked Since</p><p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{llm.resetAt ? relativeTime(llm.resetAt) : '-'}</p></div>
                 </div>
               </div>
 
@@ -161,7 +161,7 @@ export default function SuperAdminSystem() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div><p className="text-xs opacity-40">Estimated Tokens Today</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(apiUsage?.groqTokensToday || 0)}</p></div>
                 <div><p className="text-xs opacity-40">Estimated Tokens Month</p><p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{formatNumber(apiUsage?.groqTokensMonth || 0)}</p></div>
-                <div><p className="text-xs opacity-40">Estimated Cost</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{apiUsage?.costEstimate || '—'}</p></div>
+                <div><p className="text-xs opacity-40">Estimated Cost</p><p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{apiUsage?.costEstimate || '-'}</p></div>
               </div>
             </div>
           )}

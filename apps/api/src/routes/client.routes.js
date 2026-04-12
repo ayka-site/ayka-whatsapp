@@ -324,10 +324,10 @@ router.get('/activity', asyncHandler(async (req, res) => {
   for (const c of recentConvos) {
     const name = c.contactId?.name || c.phone
     if (c.flowState?.handoffTriggered) {
-      activities.push({ type: 'handoff', description: `${name} — handoff triggered`, timestamp: c.flowState.handoffAt || c.updatedAt, conversationId: c._id })
+      activities.push({ type: 'handoff', description: `${name} - handoff triggered`, timestamp: c.flowState.handoffAt || c.updatedAt, conversationId: c._id })
     }
     if (c.flowState?.visitConfirmed) {
-      activities.push({ type: 'visit_confirmed', description: `${name} — visit confirmed`, timestamp: c.flowState.visitConfirmedAt || c.updatedAt, conversationId: c._id })
+      activities.push({ type: 'visit_confirmed', description: `${name} - visit confirmed`, timestamp: c.flowState.visitConfirmedAt || c.updatedAt, conversationId: c._id })
     }
     if (c.leadScore === 'hot') {
       activities.push({ type: 'score_upgraded', description: `${name} upgraded to Hot`, timestamp: c.leadScoreUpdatedAt || c.updatedAt, conversationId: c._id })

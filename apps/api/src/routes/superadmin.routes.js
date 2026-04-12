@@ -154,7 +154,7 @@ router.get('/charts/vertical-distribution', asyncHandler(async (req, res) => {
 
 // GET /api/superadmin/charts/system-health
 router.get('/charts/system-health', asyncHandler(async (req, res) => {
-  // Simulated system health data — in production, pull from monitoring
+  // Simulated system health data - in production, pull from monitoring
   const hours = parseInt(req.query.hours) || 24
   const data = []
   const now = Date.now()

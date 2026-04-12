@@ -30,9 +30,9 @@ async function rateLimiter(req, res, next) {
     req.rateLimitCount = count
     next()
   } catch (err) {
-    // Do NOT call next(err) — that propagates a 500 to Express's error handler
+    // Do NOT call next(err) - that propagates a 500 to Express's error handler
     // which returns a non-2xx to Meta and causes it to retry the webhook.
-    logger.warn({ err }, 'rateLimiter Redis error — allowing request through')
+    logger.warn({ err }, 'rateLimiter Redis error - allowing request through')
     next()
   }
 }

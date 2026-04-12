@@ -1,4 +1,4 @@
-# Azure Cost Optimization Report — AyKa AI Automation
+# Azure Cost Optimization Report - AyKa AI Automation
 **Date:** 1 March 2026  
 **Credit Balance:** $990.28 / $1,000.00 (Microsoft for Startups)  
 **Expiry:** 16 May 2026  
@@ -34,9 +34,9 @@
 ## 2. Optimization Recommendations
 
 ### ✅ Already Optimized
-- **Static Web Apps** on Free SKU — perfect for dashboards
-- **Container Apps** with autoscale (1–5 replicas) — pay-per-use
-- **No VMs** — serverless-first approach saves significantly
+- **Static Web Apps** on Free SKU - perfect for dashboards
+- **Container Apps** with autoscale (1–5 replicas) - pay-per-use
+- **No VMs** - serverless-first approach saves significantly
 
 ### 🔧 Immediate Actions (save ~$10/month)
 
@@ -67,7 +67,7 @@ az monitor log-analytics workspace update -g ayka-rg -n <workspace> --retention-
 
 Since credits expire **16 May 2026** with ~$990 remaining, you should **strategically invest** in services that improve the product:
 
-#### D. Azure OpenAI (Priority — Use $200-300)
+#### D. Azure OpenAI (Priority - Use $200-300)
 Deploy GPT-4o-mini as your Groq fallback:
 ```bash
 az cognitiveservices account create \
@@ -89,7 +89,7 @@ az cognitiveservices account deployment create \
 ```
 - **Cost:** ~$0.15/1K input tokens, ~$0.60/1K output tokens
 - **Budget:** At ~2000 tokens/conversation, $200 covers ~150K conversations as fallback
-- **Already wired** in groq.service.js v5.0 — just uncomment .env vars
+- **Already wired** in groq.service.js v5.0 - just uncomment .env vars
 
 #### E. Azure CDN for Widget JS ($5/month → Faster Loads)
 Serve `ayka-widget.js` from a CDN instead of the API server:
@@ -116,7 +116,7 @@ Set up alerts for critical thresholds:
 # Alert if response time > 5 seconds
 # Alert if memory usage > 80%
 ```
-No additional cost — included with Container Apps.
+No additional cost - included with Container Apps.
 
 ---
 

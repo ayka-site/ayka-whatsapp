@@ -3,25 +3,97 @@ const { sendTextMessage } = require('../services/whatsapp.service')
 const { Message }         = require('@ayka/db')
 const logger              = require('../utils/logger')
 
-/**
- * whatsapp.handler.js v4.0 — WhatsApp webhook entry point
- *
- * Fixes over v3.0:
- *   1. REMOVED the erroneous `module.exports = require(...)` line that clobbered exports
- *   2. Handles ALL message types (text, audio, image, document, location, contacts, interactive)
- *      — actual processing/transcription happens in conversation.engine.js
- *   3. Status updates handled gracefully (delivered, read, failed)
- *   4. Rate limit responses are language-aware
- */
-
 // Message types that conversation.engine.js knows how to handle
 const SUPPORTED_TYPES = new Set([
   'text', 'audio', 'image', 'document', 'location', 'contacts',
   'interactive', 'sticker',
 ])
 
+function parseAllowlist(value) {
+  return new Set(
+    String(value || '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean),
+  )
+}
+
+const BOS_BRIDGE_PHONE_IDS = parseAllowlist(process.env.BOS_BRIDGE_PHONE_NUMBER_IDS)
+const BOS_BRIDGE_BUSINESS_IDS = parseAllowlist(process.env.BOS_BRIDGE_BUSINESS_IDS)
+
+async function isBosBridgeEnabledForTenant(tenant) {
+  if (!tenant) return false
+
+  const redis = require('../config/redis')
+
+  try {
+    const [phoneMatch, businessMatch] = await Promise.all([
+      tenant.phoneNumberId
+        ? redis._client.sismember('ayka:whatsapp:bridge:phoneNumberIds', String(tenant.phoneNumberId))
+        : Promise.resolve(0),
+      tenant.businessId
+        ? redis._client.sismember('ayka:whatsapp:bridge:businessIds', String(tenant.businessId))
+        : Promise.resolve(0),
+    ])
+
+    if (phoneMatch === 1 || businessMatch === 1) return true
+  } catch (err) {
+    logger.warn({ err }, 'Redis bridge allowlist check failed; falling back to env allowlist')
+  }
+
+  if (BOS_BRIDGE_PHONE_IDS.size === 0 && BOS_BRIDGE_BUSINESS_IDS.size === 0) return false
+
+  if (tenant.phoneNumberId && BOS_BRIDGE_PHONE_IDS.has(String(tenant.phoneNumberId))) {
+    return true
+  }
+
+  if (tenant.businessId && BOS_BRIDGE_BUSINESS_IDS.has(String(tenant.businessId))) {
+    return true
+  }
+
+  return false
+}
+
+async function publishInboundToBos(req, msgObj, value) {
+  const redis = require('../config/redis')
+  const tenant = req.tenant
+
+  if (!tenant) return false
+  if (tenant.vertical !== 'msme') return false
+  if (msgObj.type !== 'text') return false
+  if (!isBosBridgeEnabledForTenant(tenant)) return false
+
+  const text = msgObj.text?.body?.trim()
+  if (!text) return false
+
+  try {
+    await redis._client.publish(
+      'ayka:whatsapp:inbound',
+      JSON.stringify({
+        businessId: tenant.businessId,
+        phoneNumberId: tenant.phoneNumberId,
+        waMessageId: msgObj.id,
+        from: msgObj.from,
+        text,
+        profileName: value?.contacts?.[0]?.profile?.name,
+        timestamp: msgObj.timestamp,
+      }),
+    )
+
+    logger.info(
+      { businessId: tenant.businessId, waMessageId: msgObj.id },
+      'Published inbound WhatsApp message to BOS bridge',
+    )
+
+    return true
+  } catch (err) {
+    logger.error({ err: err.message }, 'Failed to publish inbound WhatsApp message to BOS')
+    return false
+  }
+}
+
 async function handleWhatsAppWebhook(req, res) {
-  // Always respond 200 immediately — Meta retries on non-2xx
+  // Always respond 200 immediately - Meta retries on non-2xx
   res.sendStatus(200)
 
   try {
@@ -37,7 +109,7 @@ async function handleWhatsAppWebhook(req, res) {
       Message.updateOne(
         { waMessageId: status.id },
         { $set: { status: status.status } }
-      ).catch(err => logger.warn({ err, waMessageId: status.id }, 'Failed to persist WhatsApp status update')) // fire-and-forget — status updates are not critical
+      ).catch(err => logger.warn({ err, waMessageId: status.id }, 'Failed to persist WhatsApp status update')) // fire-and-forget - status updates are not critical
       return
     }
 
@@ -69,13 +141,13 @@ async function handleWhatsAppWebhook(req, res) {
 
     // Check if we support this message type
     if (!SUPPORTED_TYPES.has(msgType)) {
-      logger.info({ type: msgType }, 'Unsupported message type — skipping')
+      logger.info({ type: msgType }, 'Unsupported message type - skipping')
       return
     }
 
     // ── Rate limit check (set by rateLimiter middleware) ──
     if (req.isRateLimited) {
-      // Only send waiting message ONCE — first time rate limit triggers (count === 21)
+      // Only send waiting message ONCE - first time rate limit triggers (count === 21)
       // Subsequent rate-limited messages are silently dropped to avoid spamming
       if (req.rateLimitCount === 21) {
         const tenant = req.tenant
@@ -94,7 +166,11 @@ async function handleWhatsAppWebhook(req, res) {
       return
     }
 
-    // ── Process the message through conversation engine ──
+    // ── MSME inbound is handled by BOS connector over Redis bridge ──
+    const publishedToBos = await publishInboundToBos(req, msgObj, value)
+    if (publishedToBos) return
+
+    // ── Default path for non-MSME tenants ──
     await processMessage(req)
 
   } catch (err) {

@@ -84,11 +84,11 @@ export default function AdminClients() {
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><p className="text-xs opacity-40">Business ID</p><p className="font-mono text-xs" style={{ color: 'var(--color-text)' }}>{scopedClient._id}</p></div>
-            <div><p className="text-xs opacity-40">Vertical</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.vertical || '—'}</p></div>
+            <div><p className="text-xs opacity-40">Vertical</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.vertical || '-'}</p></div>
             <div><p className="text-xs opacity-40">Status</p><Badge score={scopedClient.isActive ? 'active' : 'paused'} /></div>
             <div><p className="text-xs opacity-40">Plan</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.subscription?.plan || 'basic'}</p></div>
-            <div><p className="text-xs opacity-40">Timezone</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.settings?.timezone || scopedClient.timezone || '—'}</p></div>
-            <div><p className="text-xs opacity-40">Handoff Phone</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.settings?.handoffPhone || '—'}</p></div>
+            <div><p className="text-xs opacity-40">Timezone</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.settings?.timezone || scopedClient.timezone || '-'}</p></div>
+            <div><p className="text-xs opacity-40">Handoff Phone</p><p style={{ color: 'var(--color-text)' }}>{scopedClient.settings?.handoffPhone || '-'}</p></div>
           </div>
         </div>
       </DashboardLayout>
@@ -119,10 +119,10 @@ export default function AdminClients() {
               {clients.map(c => (
                 <tr key={c._id} className="border-b border-white/5 hover:bg-white/5">
                   <td className="p-3 font-medium" style={{ color: 'var(--color-text)' }}>{c.name}</td>
-                  <td className="p-3 text-xs opacity-50">{c.vertical || '—'}</td>
+                  <td className="p-3 text-xs opacity-50">{c.vertical || '-'}</td>
                   <td className="p-3">{formatNumber(c.leads?.total || 0)}</td>
                   <td className="p-3"><span className="text-red-400 font-medium">{formatNumber(c.leads?.hot || 0)}</span></td>
-                  <td className="p-3 text-xs opacity-50">{c.lastActivity ? relativeTime(c.lastActivity) : '—'}</td>
+                  <td className="p-3 text-xs opacity-50">{c.lastActivity ? relativeTime(c.lastActivity) : '-'}</td>
                   <td className="p-3"><Badge score={c.isActive ? 'active' : 'paused'} /></td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-2">

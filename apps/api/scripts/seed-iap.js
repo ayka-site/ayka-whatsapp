@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * seed-iap.js — Onboard IAP Professional (Coaching vertical)
+ * seed-iap.js - Onboard IAP Professional (Coaching vertical)
  *
  * Creates:
  *   1. IAP Professional Business document
@@ -82,7 +82,7 @@ async function main() {
     if (process.env.WA_WABA_ID)         update['whatsapp.wabaId']        = waWabaId
     if (process.env.WA_VERIFY_TOKEN)    update['whatsapp.verifyToken']   = waVerifyToken
     await Business.updateOne({ _id: business._id }, { $set: update })
-    console.log(`ℹ️  Business already exists — updated: ${business.name} (${business._id})`)
+    console.log(`ℹ️  Business already exists - updated: ${business.name} (${business._id})`)
   }
 
   // ── 3. Knowledge Base ──
@@ -191,7 +191,7 @@ async function main() {
     // Admission policy
     admission: {
       minAge:        '16 years',
-      demoPolicy:    'First class is completely FREE. Walk-in directly to the institute on any Monday — no pre-booking required.',
+      demoPolicy:    'First class is completely FREE. Walk-in directly to the institute on any Monday - no pre-booking required.',
       batchStartDay: 'Monday (new batch every Monday)',
       batchSize:     '15–25 students per batch',
       documentsRequired: [
@@ -242,7 +242,7 @@ async function main() {
       },
       {
         q: 'Demo class available hai? / Is a demo class available?',
-        a: 'Haan, pehli class bilkul FREE hai. Aap seedha 43, 1st Floor, GTB Nagar, IAP Professional pe aa sakte hain. Koi booking ki zaroorat nahi — kisi bhi Monday ko aa jayein.',
+        a: 'Haan, pehli class bilkul FREE hai. Aap seedha 43, 1st Floor, GTB Nagar, IAP Professional pe aa sakte hain. Koi booking ki zaroorat nahi - kisi bhi Monday ko aa jayein.',
       },
       {
         q: 'Course kitne time ka hai? / How long is the course?',
@@ -364,11 +364,11 @@ async function main() {
     })
     console.log(`✅ Created user: ${ADMIN_EMAIL}`)
   } else {
-    console.log(`ℹ️  User ${ADMIN_EMAIL} already exists — skipping.`)
+    console.log(`ℹ️  User ${ADMIN_EMAIL} already exists - skipping.`)
   }
 
   console.log('\n════════════════════════════════════════════════════════')
-  console.log('  IAP PROFESSIONAL — ONBOARDING COMPLETE')
+  console.log('  IAP PROFESSIONAL - ONBOARDING COMPLETE')
   console.log('════════════════════════════════════════════════════════')
   console.log(`  Business ID:     ${business._id}`)
   console.log(`  KB ID:           ${kb._id}`)

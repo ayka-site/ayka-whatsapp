@@ -26,8 +26,8 @@ export default function AdminLeads() {
   }
 
   const columns = [
-    { key: 'parentName', label: 'Parent', render: r => <div><p className="font-medium" style={{ color: 'var(--color-text)' }}>{r.parentName || '—'}</p><p className="text-[10px] opacity-40">{r.phone}</p></div> },
-    { key: 'client', label: 'Client', render: r => <span className="text-xs">{r.businessName || '—'}</span> },
+    { key: 'parentName', label: 'Parent', render: r => <div><p className="font-medium" style={{ color: 'var(--color-text)' }}>{r.parentName || '-'}</p><p className="text-[10px] opacity-40">{r.phone}</p></div> },
+    { key: 'client', label: 'Client', render: r => <span className="text-xs">{r.businessName || '-'}</span> },
     { key: 'studentName', label: 'Student' },
     { key: 'interestedClass', label: 'Class' },
     { key: 'leadScore', label: 'Score', render: r => <Badge score={r.leadScore} /> },
@@ -81,13 +81,13 @@ export default function AdminLeads() {
         {lead && (
           <div className="space-y-4 text-sm text-gray-800">
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-500">Parent</p><p className="font-medium">{lead.parentName || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Parent</p><p className="font-medium">{lead.parentName || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Phone</p><p>{lead.phone}</p></div>
-              <div><p className="text-xs text-gray-500">Student</p><p>{lead.studentName || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Class</p><p>{lead.interestedClass || '—'}</p></div>
-              <div><p className="text-xs text-gray-500">Client</p><p>{lead.businessName || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Student</p><p>{lead.studentName || '-'}</p></div>
+              <div><p className="text-xs text-gray-500">Class</p><p>{lead.interestedClass || '-'}</p></div>
+              <div><p className="text-xs text-gray-500">Client</p><p>{lead.businessName || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Score</p><Badge score={lead.leadScore} /></div>
-              <div><p className="text-xs text-gray-500">Reason</p><p>{lead.leadScoreReason || '—'}</p></div>
+              <div><p className="text-xs text-gray-500">Reason</p><p>{lead.leadScoreReason || '-'}</p></div>
               <div><p className="text-xs text-gray-500">Messages</p><p>{lead.messageCount}</p></div>
               <div><p className="text-xs text-gray-500">Visit</p><p>{lead.visitConfirmed ? 'Yes' : 'No'}</p></div>
               <div><p className="text-xs text-gray-500">Handoff</p><p>{lead.handoffTriggered ? 'Yes' : 'No'}</p></div>

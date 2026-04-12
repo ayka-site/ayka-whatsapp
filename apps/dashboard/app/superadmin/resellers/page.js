@@ -202,7 +202,7 @@ export default function SuperAdminResellers() {
         </div>
       </SlideOver>
 
-      {/* Detail View — text forced to white for dark bg */}
+      {/* Detail View - text forced to white for dark bg */}
       <SlideOver open={detailOpen} onClose={() => setDetailOpen(false)} title="Reseller Details">
         {selected && (
           <div className="space-y-4 text-sm">
@@ -210,7 +210,7 @@ export default function SuperAdminResellers() {
               <div><p className="text-xs text-gray-400">Name</p><p className="font-medium text-white">{selected.name}</p></div>
               <div><p className="text-xs text-gray-400">Slug</p><p className="text-white">{selected.slug}</p></div>
               <div><p className="text-xs text-gray-400">Email</p><p className="text-white">{selected.email}</p></div>
-              <div><p className="text-xs text-gray-400">Phone</p><p className="text-white">{selected.phone || '—'}</p></div>
+              <div><p className="text-xs text-gray-400">Phone</p><p className="text-white">{selected.phone || '-'}</p></div>
             </div>
             <hr className="border-white/10" />
             <h3 className="font-semibold text-xs text-gray-400 uppercase">Custom Pricing</h3>
@@ -231,7 +231,7 @@ export default function SuperAdminResellers() {
             <hr className="border-white/10" />
             <h3 className="font-semibold text-xs text-gray-400 uppercase">Theme Preview</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-xs text-gray-400">Brand</p><p className="text-white">{selected.themeConfig?.brandName || '—'}</p></div>
+              <div><p className="text-xs text-gray-400">Brand</p><p className="text-white">{selected.themeConfig?.brandName || '-'}</p></div>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-gray-400">Colors</p>
                 <span className="w-4 h-4 rounded-full border border-white/20" style={{ background: selected.themeConfig?.primaryColor }} />

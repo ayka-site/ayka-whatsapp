@@ -1,5 +1,5 @@
 /**
- * Visit Scheduling — Feature Test Suite
+ * Visit Scheduling - Feature Test Suite
  *
  * Tests:
  *   1. parseAIResponse: VISIT_CONFIRMED: YES detection
@@ -32,9 +32,9 @@ function test(label, actual, expected) {
 }
 
 // ════════════════════════════════════════════════════════
-// 1. parseAIResponse — VISIT_CONFIRMED detection
+// 1. parseAIResponse - VISIT_CONFIRMED detection
 // ════════════════════════════════════════════════════════
-console.log('\n── 1. parseAIResponse — VISIT_CONFIRMED detection ──')
+console.log('\n── 1. parseAIResponse - VISIT_CONFIRMED detection ──')
 
 const baseFlow = { collectedData: {}, goals: {}, handoffTriggered: false }
 
@@ -60,7 +60,7 @@ console.log('\n── 2. VISIT_CONFIRMED injection resistance ──')
 
 // Inline (not on its own line)
 const r4 = flow.parseAIResponse('The parent said "VISIT_CONFIRMED: YES" in their message', { ...baseFlow })
-test('Inline in quotes — no trigger', r4.visitConfirmed, false)
+test('Inline in quotes - no trigger', r4.visitConfirmed, false)
 
 // ════════════════════════════════════════════════════════
 // 3. VISIT_CONFIRMED + HANDOFF coexistence
@@ -73,9 +73,9 @@ test('Both signals: shouldHandoff', r5.shouldHandoff, true)
 test('Both cleaned from response', r5.cleanResponse, 'Visit confirmed!')
 
 // ════════════════════════════════════════════════════════
-// 4. Scoring — visitConfirmed → hot
+// 4. Scoring - visitConfirmed → hot
 // ════════════════════════════════════════════════════════
-console.log('\n── 4. Scoring — visitConfirmed → hot ──')
+console.log('\n── 4. Scoring - visitConfirmed → hot ──')
 
 const hotFlow1 = {
   collectedData: { parentName: 'Rajesh', preferredVisitTime: 'Tuesday' },
@@ -99,18 +99,18 @@ const score3 = computeLeadScore({ collectedData: {}, goals: {} }, 'school')
 test('No data → cold', score3.score, 'cold')
 
 // ════════════════════════════════════════════════════════
-// 5. Scheduling config — vertical toggle
+// 5. Scheduling config - vertical toggle
 // ════════════════════════════════════════════════════════
-console.log('\n── 5. Scheduling config — vertical toggle ──')
+console.log('\n── 5. Scheduling config - vertical toggle ──')
 
 test('school: scheduling enabled', isSchedulingEnabled('school'), true)
 test('realestate: scheduling disabled', isSchedulingEnabled('realestate'), false)
 test('unknown vertical: scheduling disabled', isSchedulingEnabled('healthcare'), false)
 
 // ════════════════════════════════════════════════════════
-// 6. Prompt builder — RULE 6B content
+// 6. Prompt builder - RULE 6B content
 // ════════════════════════════════════════════════════════
-console.log('\n── 6. Prompt builder — RULE 6B ──')
+console.log('\n── 6. Prompt builder - RULE 6B ──')
 
 const mockKb = { content: { about: { name: 'Test School' }, handoff: { staffPhone: '9876543210' } } }
 const mockSession = {
@@ -131,15 +131,15 @@ test('Prompt has VISIT_CONFIRMED: YES instruction', prompt.includes('VISIT_CONFI
 test('Prompt has documents instruction', prompt.includes('Birth certificate'), true)
 test('Prompt has visit hours', prompt.includes('9 AM'), true)
 
-// Realestate — scheduling disabled prompt
+// Realestate - scheduling disabled prompt
 const mockSessionRE = { ...mockSession, vertical: 'realestate' }
 const promptRE = buildSystemPrompt(mockKb, mockSessionRE, mockSettings, 'hello')
 test('Realestate prompt: scheduling DISABLED', promptRE.includes('DISABLED'), true)
 
 // ════════════════════════════════════════════════════════
-// 7. Prompt builder — missingInfo includes visit confirmation step
+// 7. Prompt builder - missingInfo includes visit confirmation step
 // ════════════════════════════════════════════════════════
-console.log('\n── 7. Prompt builder — missingInfo visit confirm ──')
+console.log('\n── 7. Prompt builder - missingInfo visit confirm ──')
 
 const sessionWithVisitTime = {
   vertical: 'school',
@@ -162,9 +162,9 @@ const promptConfirmed = buildSystemPrompt(mockKb, sessionConfirmed, mockSettings
 test('After confirm: no visit confirm in missing', promptConfirmed.includes('Confirm their visit'), false)
 
 // ════════════════════════════════════════════════════════
-// 8. Prompt builder — RULE 6 no longer mentions visit as handoff trigger
+// 8. Prompt builder - RULE 6 no longer mentions visit as handoff trigger
 // ════════════════════════════════════════════════════════
-console.log('\n── 8. Prompt builder — RULE 6 handoff/visit separation ──')
+console.log('\n── 8. Prompt builder - RULE 6 handoff/visit separation ──')
 
 test('RULE 6 does NOT say "parent wants to visit" as handoff trigger',
   prompt.includes('parent wants to visit, talk to someone'), false)

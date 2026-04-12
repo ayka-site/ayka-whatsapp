@@ -43,7 +43,7 @@ function parseAIResponse(rawResponse, flowState) {
   }
 
   let cleanResponse    = rawResponse
-  let updatedFlowState = JSON.parse(JSON.stringify(flowState)) // deep clone — never mutate original
+  let updatedFlowState = JSON.parse(JSON.stringify(flowState)) // deep clone - never mutate original
   let shouldHandoff    = false
 
   const parseNameMarker = (label) => {
@@ -68,7 +68,7 @@ function parseAIResponse(rawResponse, flowState) {
       .trim()
   }
 
-  // Require HANDOFF: YES to appear on its own line — prevents embedded/quoted triggers
+  // Require HANDOFF: YES to appear on its own line - prevents embedded/quoted triggers
   if (/(^|\n)\s*HANDOFF\s*:\s*YES\s*($|\n)/i.test(cleanResponse)) {
     shouldHandoff = true
     updatedFlowState.handoffTriggered = true
@@ -76,7 +76,7 @@ function parseAIResponse(rawResponse, flowState) {
     cleanResponse = cleanResponse.replace(/(^|\n)\s*HANDOFF\s*:\s*YES\s*/gi, '').trim()
   }
 
-  // Detect VISIT_CONFIRMED: YYYY-MM-DD HH:MM signal — LLM resolved the actual visit datetime
+  // Detect VISIT_CONFIRMED: YYYY-MM-DD HH:MM signal - LLM resolved the actual visit datetime
   let visitConfirmed = false
   let visitDateTime  = null  // e.g. "2026-03-10 10:00"
   const visitMatch = cleanResponse.match(/(^|\n)\s*VISIT_CONFIRMED\s*:\s*(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})\s*($|\n)/im)
@@ -277,7 +277,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
       updated.visitConfirmedAt = null
       updated.collectedData.preferredVisitTime = null
       updated.goals.visitSuggested = true // keep this true so bot asks for new time
-      logger.info?.({ phone: updated.phone }, 'Rescheduling requested — visit state reset')
+      logger.info?.({ phone: updated.phone }, 'Rescheduling requested - visit state reset')
     }
   }
 
@@ -287,7 +287,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   }
 
   // ── Mark info shared if AI response contains actual school facts ──
-  // Not just any long response — must contain real KB content indicators
+  // Not just any long response - must contain real KB content indicators
   if (!updated.goals.infoShared && aiResponse.length > 30) {
     const FACT_INDICATORS = /\b(₹|rupee|fee|fees|फीस|class\s*\d|nursery|hostel|होस्टल|admission|दाखिला|dakhila|daakhila|timing|\d\s*(?:am|pm|baje)|result|\d+\.\d+%|campus|infrastructure|lab|library|transport|bus|cbse|board|\bscience\b|\bcommerce\b|\barts\b|sports|hostel|smart\s*board|stem|robotics|tinkering)\b/i
     if (FACT_INDICATORS.test(aiResponse)) {
@@ -300,7 +300,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     updated.goals.visitSuggested = true
   }
 
-  // Profanity/slur blocklist — reject these as names entirely
+  // Profanity/slur blocklist - reject these as names entirely
   const PROFANITY_BLOCKLIST = new Set([
     'nigga', 'nigger', 'fuck', 'shit', 'bitch', 'ass', 'dick', 'pussy',
     'bastard', 'whore', 'slut', 'cunt', 'faggot', 'retard', 'chutiya',
@@ -352,13 +352,13 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   const hasExplicitNameStatement = /\b(mera\s+naam|mera\s+name|my\s+name\s+is|i\s+am|i'm|this\s+is|main\s+hoon)\b/i.test(userMessage) || /मेरा\s+नाम/.test(userMessage)
   if (!updated.collectedData.parentName || hasExplicitNameStatement) {
     const namePatterns = [
-      // Capture up to 3 words — run on cleanedForNames (periods stripped from honorifics)
+      // Capture up to 3 words - run on cleanedForNames (periods stripped from honorifics)
       // Handles both "mera naam" (Hindi) and "mera name" (Hinglish English spelling)
       /(?:i am|i'm|this is|my name is|mera naam|mera name|main hoon)\s+([A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){0,2})/i,
       /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\s+(?:here|speaking|bol raha|bol rahi)/i,
     ]
 
-    // Helper: validate a name candidate — not profanity, not too short
+    // Helper: validate a name candidate - not profanity, not too short
     const isValidName = (name) => {
       if (!isLikelyHumanName(name)) return false
       const words = name.toLowerCase().split(/\s+/)
@@ -435,7 +435,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     // Devanagari explicit name patterns: "मेरा नाम रमेश है" / "मैं रमेश हूँ"
     // Allow override only for "मेरा नाम" (explicit correction), NOT "मैं X" alone
     if (!updated.collectedData.parentName || /मेरा\s+नाम/.test(userMessage)) {
-      // Common Hindi stop words that appear after a name — must be excluded from capture
+      // Common Hindi stop words that appear after a name - must be excluded from capture
       const HINDI_STOP = new Set(['है', 'हैं', 'हूँ', 'हूं', 'हु', 'से', 'का', 'की', 'के', 'और', 'भी', 'तो', 'ने', 'पर', 'में', 'को'])
       const devNameMatch = userMessage.match(/(?:मेरा\s+नाम|मैं)\s+(?:है\s+)?([\u0900-\u097F]+(?:\s+[\u0900-\u097F]+){0,2})/)
       if (devNameMatch?.[1]) {
@@ -472,7 +472,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
       }
     }
 
-    // Priority 0B: Devanagari digit patterns — "कक्षा 10", "क्लास 5", "कक्षा २०" (with Devanagari digits)
+    // Priority 0B: Devanagari digit patterns - "कक्षा 10", "क्लास 5", "कक्षा २०" (with Devanagari digits)
     if (!updated.collectedData.interestedClass) {
       const devClassMatch = userMessage.match(/(?:कक्षा|क्लास|श्रेणी)\s*([\u0966-\u096F0-9]{1,2})/)
       if (devClassMatch) {
@@ -483,7 +483,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
       }
     }
 
-    // Priority 0C: Devanagari number words — "दसवीं कक्षा", "पाँचवीं में"
+    // Priority 0C: Devanagari number words - "दसवीं कक्षा", "पाँचवीं में"
     if (!updated.collectedData.interestedClass) {
       for (const [numWord, num] of Object.entries(DEVANAGARI_NUMBER_MAP)) {
         if (userMessage.includes(numWord)) {
@@ -494,7 +494,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     }
 
     if (!updated.collectedData.interestedClass) {
-      // Tier 1: Enrollment-specific context — most reliable
+      // Tier 1: Enrollment-specific context - most reliable
       const enrollmentPatterns = [
         /\b(?:admission|enrol(?:l(?:ment)?)?|join|seeking|want|need|looking)\s+(?:for|in|into)?\s*(?:class|grade|std|standard)?\s*([1-9]|1[0-2])\b/i,
         /\b(?:class|grade|std|standard|kaksha)\s*([1-9]|1[0-2])\s+(?:admission|enrol|join)/i,
@@ -507,7 +507,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
       // Tier 2 guard: skip if message context is possessive or "currently studying"
       // e.g. "class 5 ke teacher" | "mein padhta hai" | "currently in 8th grade"
-      // BUT NOT "class 10 ke liye admission" — "ke liye" means "for" (enrollment intent)
+      // BUT NOT "class 10 ke liye admission" - "ke liye" means "for" (enrollment intent)
       const isPossessiveOrCurrent =
         /mein\s+(?:padhta|padhti)\b|currently\s+in\b|\b(?:is|was|are|were)\s+in\s+(?:class|grade)?\s*\d|class\s*\d+\s*ke\s+(?!liye\b)/i
         .test(userMessage)
@@ -526,7 +526,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
         if (match) { rawClass = (match[1] || match[0]).trim(); break }
       }
       if (!rawClass && !isPossessiveOrCurrent) {
-        // Use LAST match across all tier-2 patterns—last class mentioned tends to be the target
+        // Use LAST match across all tier-2 patterns-last class mentioned tends to be the target
         // e.g. "currently in class 3, want class 7" → picks 7 (though 3 hits tier-2, 7 hits tier-1)
         // e.g. "class 3 aur class 7 mein daakhila" → picks 7 (last)
         let lastPos  = -1
@@ -551,7 +551,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     }
   }
 
-  // Budget extraction REMOVED in v4.0 — fees are fixed per school, never ask budget.
+  // Budget extraction REMOVED in v4.0 - fees are fixed per school, never ask budget.
   // The budget field was a false-positive magnet (school codes, years, PINs all matched).
 
   // ── Extract priorities / preferences ──
@@ -614,7 +614,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
 
   if (!updated.collectedData.studentName) {
     const studentPatterns = [
-      // English: "my son/daughter NAME" — up to 3 words captured
+      // English: "my son/daughter NAME" - up to 3 words captured
       /\bmy\s+(?:son|daughter|child|beta|beti|bachcha)(?:'s name)?\s+(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
       // Hindi possessive with mera/meri prefix: "meri beti Sneha"
       /\b(?:mera|meri|hamara|hamari|mere|hamare)\s+(?:beta|beti|bacha|bachcha|bachchi|bache|bacche)\s+(?:ka\s+naam\s+|ki\s+naam\s+)?(?:hai\s+)?(?:is\s+)?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){0,2})\b/i,
@@ -705,7 +705,7 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
     const immediateNowPattern = /\b(abhi|right\s*now|now|immediately|turant|isi\s*waqt)\b/i
     const validTimePattern = /\b(morning|afternoon|subah|dopahar|(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:am|pm|baje)|(?:0?[1-9]|1[0-2]):[0-5]\d(?:\s*(?:tk|tak))?)\b/i
 
-    // BLOCK explicit invalid times — night/evening/Sunday/out-of-window clock terms.
+    // BLOCK explicit invalid times - night/evening/Sunday/out-of-window clock terms.
     const todayPattern = /\b(today|aaj)\b/i
     const asksForImmediateNow = immediateNowPattern.test(userLc)
     const asksForToday = todayPattern.test(userLc)

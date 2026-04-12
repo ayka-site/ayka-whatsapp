@@ -12,24 +12,24 @@ const logger = require('../utils/logger')
 const { normalizePhoneE164 } = require('../utils/phone')
 
 /**
- * conversation.engine.js v4.0 — Main message processing pipeline
+ * conversation.engine.js v4.0 - Main message processing pipeline
  *
  * Fixes over v3.0:
  *   1. Message deduplication by waMessageId (WhatsApp retries cause duplicates)
  *   2. Proper Groq retry with exponential backoff (3 attempts max)
  *   3. Media message routing (audio → transcription, others → placeholder)
  *   4. Current message included in system prompt context (was missing before)
- *   5. All async paths have try/catch — no silent failures
+ *   5. All async paths have try/catch - no silent failures
  *   6. DB writes are fire-and-forget but logged on failure
  */
 
-const DEDUP_TTL    = 300 // 5 minutes — reject duplicate waMessageIds within this window
+const DEDUP_TTL    = 300 // 5 minutes - reject duplicate waMessageIds within this window
 const configuredProcessLockTtl = Number.parseInt(process.env.PROCESS_LOCK_TTL_SECONDS || '45', 10)
 const PROCESS_LOCK_TTL = Number.isFinite(configuredProcessLockTtl) && configuredProcessLockTtl >= 15
   ? configuredProcessLockTtl
   : 45
 
-// In-memory dedup layer — catches race conditions where two webhook calls arrive
+// In-memory dedup layer - catches race conditions where two webhook calls arrive
 // simultaneously before either's Redis SET NX completes (especially with Upstash HTTP latency)
 const _recentIds = new Map()
 const INMEM_TTL  = 60000 // 60 seconds
@@ -217,7 +217,7 @@ function buildTalentHuntVideoReply(userMessage) {
   return 'To submit your talent hunt video, please contact us at: *91208 07069*\n\nPlease send your video to the upload folder.'
 }
 // ═════════════════════════════════════════════════════════════════════════════
-// Deduplication — two-layer: in-memory (instant) + Redis (durable)
+// Deduplication - two-layer: in-memory (instant) + Redis (durable)
 // ═════════════════════════════════════════════════════════════════════════════
 async function isDuplicate(waMessageId, businessId) {
   if (!waMessageId) return false
@@ -227,7 +227,7 @@ async function isDuplicate(waMessageId, businessId) {
   if (_recentIds.has(memKey)) return true
   _recentIds.set(memKey, Date.now())
 
-  // Periodic cleanup — prevent memory leak (every 500 entries, purge expired)
+  // Periodic cleanup - prevent memory leak (every 500 entries, purge expired)
   if (_recentIds.size > 500) {
     const now = Date.now()
     for (const [k, ts] of _recentIds) {
@@ -243,7 +243,7 @@ async function isDuplicate(waMessageId, businessId) {
     return false
   } catch (err) {
     // Redis failure → in-memory guard already set, so we're protected
-    logger.warn({ err, waMessageId }, 'Dedup Redis check failed — in-memory guard active')
+    logger.warn({ err, waMessageId }, 'Dedup Redis check failed - in-memory guard active')
     return false
   }
 }
@@ -299,7 +299,7 @@ function isContentFilterError(err) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// resolveMessageText — extract text from different WhatsApp message types
+// resolveMessageText - extract text from different WhatsApp message types
 // ═════════════════════════════════════════════════════════════════════════════
 async function resolveMessageText(msgObj, tenant) {
   const type = msgObj.type || 'text'
@@ -329,7 +329,7 @@ async function resolveMessageText(msgObj, tenant) {
     }
 
     case 'image':
-      // Image with optional caption — use caption if present, otherwise note it
+      // Image with optional caption - use caption if present, otherwise note it
       return msgObj.image?.caption || '__IMAGE_RECEIVED__'
 
     case 'document':
@@ -351,7 +351,7 @@ async function resolveMessageText(msgObj, tenant) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// processMessage — the main pipeline
+// processMessage - the main pipeline
 // ═════════════════════════════════════════════════════════════════════════════
 async function processMessage(req) {
   const { tenant } = req
@@ -371,7 +371,7 @@ async function processMessage(req) {
 
   // ── Deduplication: reject if we've already processed this waMessageId ──
   if (await isDuplicate(waMessageId, tenant.businessId)) {
-    logger.info({ waMessageId, phone }, 'Duplicate message — skipping')
+    logger.info({ waMessageId, phone }, 'Duplicate message - skipping')
     return
   }
 
@@ -383,10 +383,10 @@ async function processMessage(req) {
   const askedForQrCode = isQrCodeRequest(messageText)
   const askedForTalentHuntVideo = isTalentHuntVideoRequest(messageText)
 
-  // ── Load session early — needed for language-aware media fallback messages ──
+  // ── Load session early - needed for language-aware media fallback messages ──
   let session = await sessionService.getSession(tenant.businessId, phone)
 
-  // Handle special media markers — tell parent we received it but can't process
+  // Handle special media markers - tell parent we received it but can't process
   if (messageText === '__IMAGE_RECEIVED__' || messageText === '__DOCUMENT_RECEIVED__') {
     try {
       const lang = detectLanguageFromContext(session, phone)
@@ -430,7 +430,7 @@ async function processMessage(req) {
     return
   }
 
-  // ── 1. Get or create session (loaded earlier for media fallback — reuse here) ──
+  // ── 1. Get or create session (loaded earlier for media fallback - reuse here) ──
 
   if (!session) {
     session = {
@@ -489,7 +489,7 @@ async function processMessage(req) {
 
     // ── 3. Get or reuse existing Conversation ──
     // If session already has a conversationId (from Redis/MongoDB), load that directly
-    // — even if status is 'handed_off'. Only search/create if no conversationId in session.
+    // - even if status is 'handed_off'. Only search/create if no conversationId in session.
     let conversation = null
 
     if (session.conversationId) {
@@ -536,7 +536,7 @@ async function processMessage(req) {
         kb = typeof cachedKB === 'string' ? JSON.parse(cachedKB) : cachedKB
       }
     } catch (err) {
-      logger.warn({ err }, 'Redis KB cache read failed — falling back to MongoDB')
+      logger.warn({ err }, 'Redis KB cache read failed - falling back to MongoDB')
     }
 
     if (!kb) {
@@ -545,7 +545,7 @@ async function processMessage(req) {
         try {
           await redis.set(kbCacheKey, JSON.stringify(kb), { ex: 3600 })
         } catch (err) {
-          logger.warn({ err }, 'Redis KB cache write failed — continuing without cache')
+          logger.warn({ err }, 'Redis KB cache write failed - continuing without cache')
         }
       }
     }
@@ -592,7 +592,7 @@ async function processMessage(req) {
     session.flowState = finalFlowState
     let outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
 
-    // ── 9.5. Compute lead score (pure, deterministic — no I/O) ──
+    // ── 9.5. Compute lead score (pure, deterministic - no I/O) ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
 
     // ── 10. Append AI response to session window ──
@@ -603,10 +603,10 @@ async function processMessage(req) {
     })
     if (session.recentMessages.length > 10) session.recentMessages.shift()
 
-    // ── 11. Trigger handoff if needed (idempotent — only once per conversation) ──
+    // ── 11. Trigger handoff if needed (idempotent - only once per conversation) ──
     if (shouldHandoff && !alreadyHandedOff) {
       await triggerHandoff(session, tenant).catch(err =>
-        logger.error({ err }, 'Handoff notification failed — parent still gets response')
+        logger.error({ err }, 'Handoff notification failed - parent still gets response')
       )
     }
 
@@ -617,7 +617,7 @@ async function processMessage(req) {
       try {
         appointment = await scheduleVisit(session, tenant, visitDateTime)
       } catch (err) {
-        logger.error({ err }, 'Visit scheduling failed — parent still gets response')
+        logger.error({ err }, 'Visit scheduling failed - parent still gets response')
       }
 
       // Keep session state aligned with backend truth: a visit is only
@@ -650,7 +650,7 @@ async function processMessage(req) {
     // ── 12. Save session to Redis ──
     await sessionService.saveSession(session)
 
-    // ── 13. Parallel DB writes (fire-and-forget — logged on failure) ──
+    // ── 13. Parallel DB writes (fire-and-forget - logged on failure) ──
     Promise.all([
       Message.create({
         conversationId: conversation._id,
@@ -732,7 +732,7 @@ async function processMessage(req) {
   } catch (err) {
     logger.error({ err, phone, businessId: tenant.businessId }, 'processMessage failed')
     try {
-      // Language-aware natural error message — never sound robotic
+      // Language-aware natural error message - never sound robotic
       const hasDevanagari = /[\u0900-\u097F]/.test(messageText || '')
       const hasHindiWords = /\b(hai|kya|mein|batao|chahiye|kaise|nahi|hoon|aap)\b/i.test(messageText || '')
       const isIndian = (phone || '').replace(/\D/g, '').startsWith('91')

@@ -3,7 +3,7 @@ const logger  = require('../utils/logger')
 const { callGroq } = require('./groq.service')
 
 /**
- * llm.service.js v4.0 — Azure OpenAI gateway (gpt-4.1-mini)
+ * llm.service.js v4.0 - Azure OpenAI gateway (gpt-4.1-mini)
  *
  * Primary provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
  * Fallback provider: Groq when Azure retries are exhausted.
@@ -29,7 +29,7 @@ function buildAzureOpenAIBaseUrl(endpoint, deployment) {
 const AZURE_OPENAI_BASE_URL = buildAzureOpenAIBaseUrl(AZURE_OPENAI_ENDPOINT, DEPLOYMENT)
 
 if (!AZURE_OPENAI_KEY) {
-  logger.error('AZURE_OPENAI_KEY not set — LLM calls will fail')
+  logger.error('AZURE_OPENAI_KEY not set - LLM calls will fail')
 }
 
 const client = new OpenAI({
@@ -163,14 +163,14 @@ async function callLLM(systemPrompt, recentMessages) {
       } catch (err) {
         const status = err?.status || err?.response?.status
         if (status === 429 && attempt < 3) {
-          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI rate limited — retrying with backoff')
+          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI rate limited - retrying with backoff')
           continue
         }
         if (attempt < 3 && status !== 429) {
-          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI call failed — retrying once')
+          logger.warn({ err: err.message, status, attempt }, 'Azure OpenAI call failed - retrying once')
           continue
         }
-        logger.error({ err: err.message, status }, 'Azure OpenAI retries exhausted — trying Groq fallback')
+        logger.error({ err: err.message, status }, 'Azure OpenAI retries exhausted - trying Groq fallback')
 
         llmStats.fallbackAttempts++
         try {

@@ -27,7 +27,7 @@ async function main() {
     meals: {
       count: 4,
       types: ["Breakfast (nashta)", "Lunch (dopahar ka khana)", "Evening snack (shaam ka nashta)", "Dinner (raat ka khana)"],
-      dietary: "Pure vegetarian campus — only veg food served. Non-veg food is NOT available.",
+      dietary: "Pure vegetarian campus - only veg food served. Non-veg food is NOT available.",
       menu: "Menu rotates weekly with balanced nutrition. Includes roti, chawal, dal, sabzi, salad, dahi, seasonal fruits."
     },
     breakfast: "Nashta mein poha / bread-butter-jam / paratha / daliya / upma milta hai chai/doodh ke saath. Seasonal fruits bhi milte hain.",
@@ -57,14 +57,14 @@ async function main() {
     },
     items: "Hostel mein bachche ko milta hai: bed, mattress, pillow, almirah (cupboard), study table-chair, fan, light, paani ki suvidha. Bedsheet aur blanket apna laana hota hai.",
     roomType: "Shared dormitory style rooms with 4-6 students per room",
-    fees: "Hostel fees ke liye school visit karein ya isi number pe call karein — +919198783830. Fees structure personally batayi jaati hai.",
+    fees: "Hostel fees ke liye school visit karein ya isi number pe call karein - +919198783830. Fees structure personally batayi jaati hai.",
     installments: "Hostel fees ki installment ki jaankari ke liye school office visit karein ya +919198783830 pe call karein.",
-    visitInfo: "Aap hostel ki facilities — rooms, washrooms, dining area, playground — sab dekhne ke liye school visit kar sakte hain. Office hours: Monday to Saturday, 9 AM to 4 PM."
+    visitInfo: "Aap hostel ki facilities - rooms, washrooms, dining area, playground - sab dekhne ke liye school visit kar sakte hain. Office hours: Monday to Saturday, 9 AM to 4 PM."
   };
 
   // 3. Add simplified fee summary for parents (in addition to detailed class-wise)
   content.feeSimplified = {
-    note: "Yeh approximate monthly total hai — admission ke time additional fee alag se ek baar deni hoti hai.",
+    note: "Yeh approximate monthly total hai - admission ke time additional fee alag se ek baar deni hoti hai.",
     perClass: [
       { classes: "Play Group", monthlyTotal: "₹1,600/month tuition + ₹2,500 ek baar additional + ₹1,000 annual = milake lagbhag ₹1,900/month (additional ek baar mein dena hai)" },
       { classes: "Nursery to UKG", monthlyTotal: "₹1,200/month tuition + ₹2,500 ek baar additional + ₹1,000 annual = lagbhag ₹1,500/month" },
@@ -90,7 +90,7 @@ async function main() {
     },
     {
       q: "Din mein kitni baar khana milta hai? / How many meals in a day?",
-      a: "Din mein 4 baar khana milta hai — subah nashta, dopahar ka khana, shaam ka nashta, aur raat ka khana."
+      a: "Din mein 4 baar khana milta hai - subah nashta, dopahar ka khana, shaam ka nashta, aur raat ka khana."
     },
     {
       q: "Raat ko washroom jaana ho toh koi saath jaata hai? / Night washroom accompaniment?",
@@ -101,8 +101,8 @@ async function main() {
       a: "Bed, mattress, pillow, almirah (cupboard), study table-chair, fan, light, paani ki suvidha. Bedsheet aur blanket apna laana hota hai."
     },
     {
-      q: "Hostel facilities dekhni hain — rooms, washroom, dining area? / Can I visit hostel?",
-      a: "Ji bilkul, aap school visit karke hostel ki saari facilities dekh sakte hain — rooms, washrooms, dining area, playground sab. Office hours: Monday-Saturday, 9 AM-4 PM."
+      q: "Hostel facilities dekhni hain - rooms, washroom, dining area? / Can I visit hostel?",
+      a: "Ji bilkul, aap school visit karke hostel ki saari facilities dekh sakte hain - rooms, washrooms, dining area, playground sab. Office hours: Monday-Saturday, 9 AM-4 PM."
     },
     {
       q: "Sone aur uthne ka time kya hai? / Sleeping and waking-up time?",
@@ -134,7 +134,7 @@ async function main() {
     },
     {
       q: "Charon waqt ka menu kya hai? / Menu for all 4 meals?",
-      a: "Menu weekly rotate hota hai — roti, chawal, dal, sabzi, salad, dahi, seasonal fruits. Balanced nutrition ka dhyan rakha jaata hai. Specific weekly menu school office se mil sakta hai."
+      a: "Menu weekly rotate hota hai - roti, chawal, dal, sabzi, salad, dahi, seasonal fruits. Balanced nutrition ka dhyan rakha jaata hai. Specific weekly menu school office se mil sakta hai."
     },
     {
       q: "Non-veg khana milta hai? / Do you provide non-veg food?",
