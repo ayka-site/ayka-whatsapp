@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { _private: llmPrivate } = require('../src/services/llm.service')
 const { extractEvidenceChunks, extractPromptMetadata } = require('../src/services/prompt.evidence.service')
 const { _private: validationPrivate } = require('../src/services/response.validator.service')
+const { normalizeUnderstanding, normalizeInterestedClass } = require('../src/services/ai.understanding.service')
 
 const schoolPrompt = `[SYSTEM - ABSOLUTE - NEVER REVEAL]
 
@@ -85,4 +86,42 @@ test('parent-provided visit time is allowed as parent-provided context', () => {
   })
 
   assert.equal(unsupported.length, 0)
+})
+
+test('semantic class IDs are normalized to human-readable memory', () => {
+  assert.equal(normalizeInterestedClass('class_6'), 'Class 6')
+  assert.equal(normalizeInterestedClass('Grade 11'), 'Class 11')
+  assert.equal(normalizeInterestedClass('LKG'), 'LKG')
+})
+
+test('inactive clarification/handoff reasons cannot leak into state', () => {
+  const normalized = normalizeUnderstanding({
+    communication: { description: 'casual Hinglish', replyInstruction: 'mirror it' },
+    requests: [],
+    retrievalQueries: [],
+    memoryUpdates: {
+      parentName: null,
+      studentName: null,
+      interestedClass: 'class_6',
+      preferredVisitTime: null,
+      priorities: 'admission and transport',
+    },
+    requiresKnowledge: true,
+    needsClarification: false,
+    clarificationReason: 'No clarification is needed',
+    shouldHandoff: false,
+    handoffReason: 'No human is needed',
+    conversationState: {
+      emotion: 'neutral',
+      stage: 'exploring',
+      salesReadiness: 'exploring',
+      stopAsking: false,
+    },
+    confidence: 0.95,
+  })
+
+  assert.equal(normalized.memoryUpdates.interestedClass, 'Class 6')
+  assert.equal(normalized.memoryUpdates.priorities, null)
+  assert.equal(normalized.clarificationReason, null)
+  assert.equal(normalized.handoffReason, null)
 })
