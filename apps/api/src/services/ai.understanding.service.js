@@ -34,13 +34,12 @@ const understandingSchema = {
     communication: {
       type: 'object',
       additionalProperties: false,
-      required: ['languageStyle', 'tone', 'formality', 'brevity', 'replyInstruction'],
+      required: ['languageStyle', 'tone', 'formality', 'brevity'],
       properties: {
         languageStyle: { type: 'string' },
         tone: { type: 'string' },
         formality: { type: 'string' },
         brevity: { type: 'string' },
-        replyInstruction: { type: 'string' },
       },
     },
     requests: {
@@ -171,6 +170,14 @@ function cleanStyleField(value, maxLength = 100) {
   return text.slice(0, maxLength)
 }
 
+function buildReplyInstruction(script) {
+  const scriptInstruction = script === 'script not established from the message'
+    ? 'This turn does not establish a writing script, so preserve the established conversation script.'
+    : `Use ${script}, matching the latest parent message; do not switch scripts unless the parent does.`
+
+  return `Mirror the parent's language mix, tone, formality and brevity naturally. ${scriptInstruction}`
+}
+
 /**
  * Normalize semantic output before it can influence memory or generation.
  * This is structural normalization only; it never tries to infer user intent
@@ -191,7 +198,7 @@ function normalizeUnderstanding(data = {}, currentMessage = '') {
 
   normalized.communication = {
     description: styleParts.join(', '),
-    replyInstruction: cleanStyleField(rawCommunication.replyInstruction, 300),
+    replyInstruction: buildReplyInstruction(script),
   }
   normalized.requests = Array.isArray(normalized.requests) ? normalized.requests : []
   normalized.retrievalQueries = Array.isArray(normalized.retrievalQueries) ? normalized.retrievalQueries : []
@@ -248,7 +255,7 @@ Important operating rules:
    - Do NOT infer or report the writing script; the backend determines script mechanically from the actual characters.
    - communication.languageStyle describes only the language/code-switching pattern in a few words. It must NOT summarize the request or mention requested topics.
    - communication.tone describes only tone, communication.formality only formality, and communication.brevity only the parent's preferred response length/style.
-   - communication.replyInstruction tells the receptionist HOW to phrase the reply naturally. It must NOT tell it what facts to retrieve or what topics to answer.
+   - The backend constructs the final reply-style instruction from these fields and the observed script. Do not output a reply instruction yourself.
 2. A message can contain several distinct requests. Capture EVERY meaningful information need as its own requests item. Do not merge independent questions merely because they share the same person, class, date, subject or conversation context. Preserve the structure of what the parent actually asked instead of mapping it to a predefined intent taxonomy.
 3. Write retrievalQueries as semantic questions or phrases that would locate the required evidence in a school knowledge base. Create enough independent queries to cover every distinct request that depends on verified school information. Include implied meaning or useful paraphrases where they improve retrieval, but never invent answers.
 4. requiresKnowledge is true whenever any requested answer depends on a fact that is not contained in the parent's current message or authoritative memory and therefore must come from verified school evidence. It is false only when the current turn can be handled without retrieving school facts.
