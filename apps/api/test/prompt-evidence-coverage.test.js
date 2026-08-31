@@ -28,6 +28,30 @@ test('compatibility prompt retrieval preserves separate semantic needs', () => {
   ])
 })
 
+test('compatibility prompt retrieval fills missing expansion slots from semantic requests', () => {
+  const queries = _private.buildPromptSemanticQueries(
+    'three independent parent questions',
+    {
+      requests: [
+        { need: 'hostel availability for son', entities: [] },
+        { need: 'number of meals per day', entities: [] },
+        { need: 'school closing time', entities: [] },
+      ],
+      retrievalQueries: [
+        'boys hostel availability',
+        'daily hostel meal frequency',
+      ],
+      shouldHandoff: false,
+    }
+  )
+
+  assert.deepEqual(queries, [
+    'boys hostel availability',
+    'daily hostel meal frequency',
+    'school closing time',
+  ])
+})
+
 test('explicit handoff adds one contact grounding query without collapsing other needs', () => {
   const queries = _private.buildPromptSemanticQueries(
     'Please ask someone to call me and also share the document requirements.',
