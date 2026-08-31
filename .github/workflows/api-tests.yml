@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'apps/api/**'
-      - 'packages/**'
+      - 'packages/db/**'
       - 'infra/docker/Dockerfile'
       - 'package.json'
       - 'package-lock.json'
@@ -14,7 +14,7 @@ on:
       - spv-ai-receptionist-v2
     paths:
       - 'apps/api/**'
-      - 'packages/**'
+      - 'packages/db/**'
       - 'infra/docker/Dockerfile'
       - 'package.json'
       - 'package-lock.json'
@@ -40,5 +40,8 @@ jobs:
       - name: Run API tests
         run: npm test --workspace @ayka/api
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit API production dependencies
+        run: npm audit --workspace @ayka/api --omit=dev --audit-level=high
+
+      - name: Verify production API image builds
+        run: docker build -f infra/docker/Dockerfile -t ayka-api-ci .
