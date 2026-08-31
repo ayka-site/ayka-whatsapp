@@ -92,10 +92,12 @@ test('parent-provided visit time is allowed as parent-provided context', () => {
   assert.equal(unsupported.length, 0)
 })
 
-test('semantic class IDs are normalized to human-readable memory', () => {
+test('semantic class IDs are normalized to human-readable memory across class formats', () => {
   assert.equal(normalizeInterestedClass('class_6'), 'Class 6')
   assert.equal(normalizeInterestedClass('Grade 11'), 'Class 11')
+  assert.equal(normalizeInterestedClass('std-3'), 'Class 3')
   assert.equal(normalizeInterestedClass('LKG'), 'LKG')
+  assert.equal(normalizeInterestedClass('UKG'), 'UKG')
 })
 
 test('inactive clarification/handoff reasons cannot leak into state', () => {
@@ -105,7 +107,6 @@ test('inactive clarification/handoff reasons cannot leak into state', () => {
       tone: 'friendly',
       formality: 'informal',
       brevity: 'short WhatsApp phrasing',
-      replyInstruction: 'mirror it',
     },
     requests: [],
     retrievalQueries: [],
@@ -114,7 +115,7 @@ test('inactive clarification/handoff reasons cannot leak into state', () => {
       studentName: null,
       interestedClass: 'class_6',
       preferredVisitTime: null,
-      priorities: 'admission and transport',
+      priorities: 'location close to home',
     },
     requiresKnowledge: true,
     needsClarification: false,
@@ -128,7 +129,7 @@ test('inactive clarification/handoff reasons cannot leak into state', () => {
       stopAsking: false,
     },
     confidence: 0.95,
-  }, 'class 6 admission chahiye')
+  }, 'next session ke liye class 6 dekh raha hoon')
 
   assert.equal(normalized.memoryUpdates.interestedClass, 'Class 6')
   assert.equal(normalized.memoryUpdates.priorities, null)
@@ -136,27 +137,27 @@ test('inactive clarification/handoff reasons cannot leak into state', () => {
   assert.equal(normalized.handoffReason, null)
 })
 
-test('message script is detected mechanically rather than trusted to the model', () => {
-  assert.equal(detectMessageScript('fees bhi bata do and bus facility?'), 'Latin script')
-  assert.equal(detectMessageScript('फीस और बस की जानकारी चाहिए'), 'Devanagari script')
-  assert.equal(detectMessageScript('fees बताइए'), 'mixed Latin and Devanagari script')
+test('message script is detected mechanically across unrelated messages', () => {
+  assert.equal(detectMessageScript('Can I speak to someone tomorrow?'), 'Latin script')
+  assert.equal(detectMessageScript('कल स्कूल खुला है क्या?'), 'Devanagari script')
+  assert.equal(detectMessageScript('कल meeting hai?'), 'mixed Latin and Devanagari script')
+  assert.equal(detectMessageScript('12345?!'), 'script not established from the message')
 })
 
-test('retrieval queries force knowledge retrieval and arbitrary state labels are contained', () => {
+test('backend reply instruction follows observed script rather than model prose', () => {
   const normalized = normalizeUnderstanding({
     communication: {
       languageStyle: 'casual Hinglish',
-      tone: 'neutral',
+      tone: 'friendly',
       formality: 'informal',
       brevity: 'concise',
-      replyInstruction: 'Reply naturally and briefly.',
     },
-    requests: [{ need: 'transport information', entities: ['Class 6'] }],
-    retrievalQueries: ['Class 6 transport availability'],
+    requests: [],
+    retrievalQueries: [],
     memoryUpdates: {
       parentName: null,
       studentName: null,
-      interestedClass: 'Class 6',
+      interestedClass: null,
       preferredVisitTime: null,
       priorities: null,
     },
@@ -167,15 +168,131 @@ test('retrieval queries force knowledge retrieval and arbitrary state labels are
     handoffReason: null,
     conversationState: {
       emotion: 'neutral',
-      stage: 'doorBeamedIn',
+      stage: 'initial_inquiry',
+      salesReadiness: 'unknown',
+      stopAsking: false,
+    },
+    confidence: 0.9,
+  }, 'can you share the timings please?')
+
+  assert.match(normalized.communication.description, /Latin script/)
+  assert.match(normalized.communication.replyInstruction, /Use Latin script/)
+  assert.doesNotMatch(normalized.communication.replyInstruction, /Devanagari/)
+})
+
+test('retrieval queries force knowledge retrieval and arbitrary state labels are contained', () => {
+  const normalized = normalizeUnderstanding({
+    communication: {
+      languageStyle: 'formal English',
+      tone: 'neutral',
+      formality: 'formal',
+      brevity: 'concise',
+    },
+    requests: [{ need: 'Saturday school hours', entities: [] }],
+    retrievalQueries: ['verified Saturday school operating hours'],
+    memoryUpdates: {
+      parentName: null,
+      studentName: null,
+      interestedClass: null,
+      preferredVisitTime: null,
+      priorities: null,
+    },
+    requiresKnowledge: false,
+    needsClarification: false,
+    clarificationReason: null,
+    shouldHandoff: false,
+    handoffReason: null,
+    conversationState: {
+      emotion: 'neutral',
+      stage: 'made_up_stage',
       salesReadiness: 'definitely_maybe',
       stopAsking: false,
     },
     confidence: 0.9,
-  }, 'bus facility ka kya scene hai?')
+  }, 'What time does the school close on Saturday?')
 
   assert.equal(normalized.requiresKnowledge, true)
   assert.match(normalized.communication.description, /Latin script/)
   assert.equal(normalized.conversationState.stage, 'other')
   assert.equal(normalized.conversationState.salesReadiness, 'unknown')
+})
+
+test('normalization preserves multiple distinct semantic needs without collapsing them', () => {
+  const normalized = normalizeUnderstanding({
+    communication: {
+      languageStyle: 'casual Hinglish',
+      tone: 'neutral',
+      formality: 'informal',
+      brevity: 'concise',
+    },
+    requests: [
+      { need: 'school timing information', entities: [] },
+      { need: 'uniform policy information', entities: [] },
+      { need: 'computer lab availability', entities: [] },
+    ],
+    retrievalQueries: [
+      'verified school opening and closing timings',
+      'school uniform rules and requirements',
+      'computer lab availability and access',
+    ],
+    memoryUpdates: {
+      parentName: null,
+      studentName: null,
+      interestedClass: null,
+      preferredVisitTime: null,
+      priorities: null,
+    },
+    requiresKnowledge: true,
+    needsClarification: false,
+    clarificationReason: null,
+    shouldHandoff: false,
+    handoffReason: null,
+    conversationState: {
+      emotion: 'neutral',
+      stage: 'information_gathering',
+      salesReadiness: 'unknown',
+      stopAsking: false,
+    },
+    confidence: 0.9,
+  }, 'timing, uniform rule aur computer lab ke bare me bataiye')
+
+  assert.equal(normalized.requests.length, 3)
+  assert.equal(normalized.retrievalQueries.length, 3)
+  assert.equal(normalized.requiresKnowledge, true)
+})
+
+test('knowledge-free conversational turns stay knowledge-free when retrieval is unnecessary', () => {
+  const normalized = normalizeUnderstanding({
+    communication: {
+      languageStyle: 'English',
+      tone: 'friendly',
+      formality: 'neutral',
+      brevity: 'very short',
+    },
+    requests: [],
+    retrievalQueries: [],
+    memoryUpdates: {
+      parentName: null,
+      studentName: null,
+      interestedClass: null,
+      preferredVisitTime: null,
+      priorities: null,
+    },
+    requiresKnowledge: false,
+    needsClarification: false,
+    clarificationReason: null,
+    shouldHandoff: false,
+    handoffReason: null,
+    conversationState: {
+      emotion: 'positive',
+      stage: 'other',
+      salesReadiness: 'unknown',
+      stopAsking: false,
+    },
+    confidence: 0.98,
+  }, 'Thanks!')
+
+  assert.equal(normalized.requiresKnowledge, false)
+  assert.equal(normalized.requests.length, 0)
+  assert.equal(normalized.retrievalQueries.length, 0)
 })
