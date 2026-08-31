@@ -19,8 +19,6 @@
     "dotenv": "^17.3.1"
   },
   "overrides": {
-    "express": {
-      "path-to-regexp": "0.1.13"
-    }
+    "path-to-regexp": "0.1.13"
   }
 }
