@@ -183,13 +183,17 @@ function cleanQuery(value) {
 }
 
 /**
- * Build one semantic query slot per information need. The understanding model's
- * retrievalQueries are useful semantic expansions, but they are not allowed to
- * reduce coverage: if it emits fewer queries than requests, the corresponding
- * request.need becomes the fallback query for each missing slot.
+ * Build exactly one semantic query slot per information need whenever the
+ * understanding layer supplied requests.
  *
- * This is structural coverage, not topic routing. The backend never inspects
- * words such as fees/hostel/transport to decide meaning.
+ * retrievalQueries are optional model-written expansions. They may be paired
+ * positionally with requests only when both arrays have the same length. If the
+ * counts differ, positional meaning is ambiguous (one request may have been
+ * split into several expansions, or several requests may have been collapsed),
+ * so we discard the expansions for this turn and use each request.need itself.
+ *
+ * This is a structural fail-safe, not topic routing. No words or languages are
+ * inspected to infer meaning, and no extra provider call is required.
  */
 function buildSemanticQueries({ message, understanding, session }) {
   const explicitQueries = (understanding?.retrievalQueries || [])
@@ -201,14 +205,21 @@ function buildSemanticQueries({ message, understanding, session }) {
     ? understanding.requests.slice(0, 8)
     : []
 
-  const slotCount = Math.min(8, Math.max(explicitQueries.length, requests.length))
   const bases = []
 
-  for (let index = 0; index < slotCount; index += 1) {
-    const explicit = explicitQueries[index]
-    const requestNeed = cleanQuery(requests[index]?.need)
-    const base = explicit || requestNeed
-    if (base) bases.push({ base, requestIndex: index })
+  if (requests.length > 0) {
+    const expansionsAligned = explicitQueries.length === requests.length
+
+    for (let index = 0; index < requests.length; index += 1) {
+      const requestNeed = cleanQuery(requests[index]?.need)
+      const explicit = expansionsAligned ? explicitQueries[index] : ''
+      const base = explicit || requestNeed
+      if (base) bases.push({ base, requestIndex: index })
+    }
+  } else {
+    for (const explicit of explicitQueries) {
+      bases.push({ base: explicit, requestIndex: -1 })
+    }
   }
 
   if (!bases.length) {
