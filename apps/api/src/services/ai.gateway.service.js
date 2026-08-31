@@ -468,6 +468,9 @@ async function embedTexts(input, { model = EMBEDDING_MODEL } = {}) {
   const cleaned = values.map(value => String(value || '').trim()).filter(Boolean)
   if (!cleaned.length) return []
 
+  // Embedding requests are real provider calls too. Count them in totalCalls so
+  // aggregate telemetry cannot under-report traffic or spend.
+  stats.totalCalls += 1
   stats.embeddingCalls += 1
   await acquireSemaphore()
   stats.peakConcurrency = Math.max(stats.peakConcurrency, activeCalls)
@@ -483,13 +486,16 @@ async function embedTexts(input, { model = EMBEDDING_MODEL } = {}) {
       return client.embeddings.create(body)
     })
 
-    stats.successes += 1
+    // Record billable usage before validating shape, just as chat completions do.
+    // A malformed provider response must still remain visible in cost telemetry.
     recordUsage(response)
 
     const rows = [...(response?.data || [])].sort((a, b) => a.index - b.index)
     if (rows.length !== cleaned.length) {
       throw new Error(`Embedding response count mismatch: expected ${cleaned.length}, got ${rows.length}`)
     }
+
+    stats.successes += 1
     return rows.map(row => row.embedding)
   } catch (error) {
     stats.failures += 1
