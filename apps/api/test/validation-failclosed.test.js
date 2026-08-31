@@ -16,7 +16,7 @@ test('json-object structured mode receives an explicit schema instruction', () =
   assert.match(prompt, /"required":\["safe"\]/)
 })
 
-test('validator plain-text JSON is parsed without response_format dependency', () => {
+test('historical plain-text validator JSON remains parseable for compatibility', () => {
   const parsed = validation.parseValidationJson(`\n\`\`\`json\n{
     "safe": true,
     "approvedReply": "Verified reply",
@@ -30,6 +30,7 @@ test('validator plain-text JSON is parsed without response_format dependency', (
   assert.equal(parsed.safe, true)
   assert.equal(parsed.approvedReply, 'Verified reply')
   assert.match(validation.validationOutputContract(), /coveredRequestIndexes/)
+  assert.deepEqual(validation.validationSchema.required.includes('approvedReply'), true)
 })
 
 test('validator payload accounts for every parent request exactly once', () => {
@@ -73,20 +74,7 @@ test('validator rejects incomplete or overlapping request coverage', () => {
   }, 1), /both covered and unresolved/i)
 })
 
-test('transient validation failure never silently creates CRM handoff', () => {
-  const failure = validation.buildFailureResult('Validation service failed', ['Validation unavailable'])
-  const markers = receptionist.buildCompatibilityMarkers({
-    confidence: 0.9,
-    memoryUpdates: {},
-    shouldHandoff: false,
-  })
-
-  assert.equal(failure.failed, true)
-  assert.equal(failure.needsHuman, false)
-  assert.deepEqual(markers, [])
-})
-
-test('human confirmation metadata is separate from CRM handoff action', () => {
+test('normal semantic handoff remains an explicit CRM action', () => {
   assert.deepEqual(
     receptionist.buildCompatibilityMarkers({
       confidence: 0.9,
@@ -106,7 +94,46 @@ test('human confirmation metadata is separate from CRM handoff action', () => {
   )
 })
 
-test('receptionist prompt requires direct evidence and forbids plausible expansion', () => {
+test('fail-closed parent copy performs the handoff it promises', () => {
+  const latin = receptionist.buildFailClosedHandoff('Please tell me the fee')
+  const dev = receptionist.buildFailClosedHandoff('कृपया फीस बताइए')
+
+  assert.match(latin, /connecting you with/i)
+  assert.match(dev, /कनेक्ट कर रही हूँ/)
+  assert.match(latin, /\nHANDOFF: YES$/)
+  assert.match(dev, /\nHANDOFF: YES$/)
+  assert.doesNotMatch(latin, /please call|contact the school/i)
+})
+
+test('lead context progresses from cold to warm to hot without message-count rules', () => {
+  const cold = receptionist.buildLeadContext({ memory: '' }, {
+    requests: [{ need: 'fees' }],
+    memoryUpdates: {},
+    conversationState: { salesReadiness: 'unknown', stage: 'initial_inquiry' },
+    shouldHandoff: false,
+  })
+  assert.equal(cold.temperature, 'cold')
+  assert.equal(cold.nextMissingField, 'target admission class')
+
+  const warm = receptionist.buildLeadContext({ memory: '' }, {
+    requests: [{ need: 'Class 6 fees' }],
+    memoryUpdates: { interestedClass: 'Class 6' },
+    conversationState: { salesReadiness: 'medium', stage: 'information_gathering' },
+    shouldHandoff: false,
+  })
+  assert.equal(warm.temperature, 'warm')
+  assert.equal(warm.nextMissingField, "student's name")
+
+  const hot = receptionist.buildLeadContext({ memory: 'Class interested: Class 6' }, {
+    requests: [{ need: 'speak to admissions' }],
+    memoryUpdates: {},
+    conversationState: { salesReadiness: 'high', stage: 'handoff' },
+    shouldHandoff: true,
+  })
+  assert.equal(hot.temperature, 'hot')
+})
+
+test('receptionist prompt answers first, qualifies once and handles real handoff naturally', () => {
   const prompt = receptionist.buildReceptionistSystemPrompt({
     metadata: {
       agentName: 'Riya',
@@ -116,27 +143,23 @@ test('receptionist prompt requires direct evidence and forbids plausible expansi
     },
     understanding: {
       requests: [{ need: 'hostel meals', entities: [] }],
+      memoryUpdates: {},
       communication: { replyInstruction: 'Use Devanagari script.' },
-      conversationState: {},
+      conversationState: { salesReadiness: 'medium', stage: 'information_gathering' },
+      shouldHandoff: false,
     },
     evidence: '[E1] Four meals are provided each day.',
   })
 
+  assert.match(prompt, /Answer the parent's actual question first/i)
+  assert.match(prompt, /ask at most ONE short natural question/i)
+  assert.match(prompt, /offer to help schedule a school visit/i)
+  assert.match(prompt, /being connected|connecting the parent/i)
   assert.match(prompt, /State supported facts directly/i)
   assert.match(prompt, /meal count does not establish menu items/i)
   assert.match(prompt, /No emojis/i)
   assert.match(prompt, /one asterisk on each side/i)
   assert.match(prompt, /Do not use Markdown double-asterisk bold/i)
-})
-
-test('safe recovery is deterministic, fact-free and does not promise future work', () => {
-  const dev = receptionist.buildSafeRecovery('कृपया फीस बताइए', { validationFailure: true })
-  const latin = receptionist.buildSafeRecovery('Please tell me the fee', { validationFailure: true })
-
-  assert.match(dev, /पुष्टि/)
-  assert.match(latin, /safely verify/i)
-  assert.doesNotMatch(latin, /I will|I’ll|later|soon|get back/i)
-  assert.doesNotMatch(dev, /बाद में|जल्द|मैं.*बताऊँ/)
 })
 
 test('generated control markers are stripped from visible prose but visit marker is parsed', () => {
