@@ -28,7 +28,7 @@ test('compatibility prompt retrieval preserves separate semantic needs', () => {
   ])
 })
 
-test('compatibility prompt retrieval fills missing expansion slots from semantic requests', () => {
+test('compatibility prompt retrieval falls back to request needs when expansion count is short', () => {
   const queries = _private.buildPromptSemanticQueries(
     'three independent parent questions',
     {
@@ -46,10 +46,38 @@ test('compatibility prompt retrieval fills missing expansion slots from semantic
   )
 
   assert.deepEqual(queries, [
-    'boys hostel availability',
-    'daily hostel meal frequency',
+    'hostel availability for son',
+    'number of meals per day',
     'school closing time',
   ])
+})
+
+test('compatibility prompt retrieval ignores extra expansions rather than shifting entities', () => {
+  const queries = _private.buildPromptSemanticQueries(
+    'three independent parent questions',
+    {
+      requests: [
+        { need: 'hostel availability for child', entities: ['hostel', 'child'] },
+        { need: 'hostel food arrangement', entities: ['hostel', 'food'] },
+        { need: 'school closing time', entities: ['school', 'closing time'] },
+      ],
+      retrievalQueries: [
+        'is boarding available',
+        'can this student stay in boarding',
+        'what meals are served',
+        'when does school close',
+      ],
+      shouldHandoff: false,
+    }
+  )
+
+  assert.equal(queries.length, 3)
+  assert.match(queries[0], /^hostel availability for child/)
+  assert.match(queries[0], /Relevant entities: hostel, child/)
+  assert.match(queries[1], /^hostel food arrangement/)
+  assert.match(queries[1], /Relevant entities: hostel, food/)
+  assert.match(queries[2], /^school closing time/)
+  assert.match(queries[2], /Relevant entities: school, closing time/)
 })
 
 test('explicit handoff adds one contact grounding query without collapsing other needs', () => {
