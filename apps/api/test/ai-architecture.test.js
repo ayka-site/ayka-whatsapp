@@ -4,7 +4,11 @@ const assert = require('node:assert/strict')
 const { _private: llmPrivate } = require('../src/services/llm.service')
 const { extractEvidenceChunks, extractPromptMetadata } = require('../src/services/prompt.evidence.service')
 const { _private: validationPrivate } = require('../src/services/response.validator.service')
-const { normalizeUnderstanding, normalizeInterestedClass } = require('../src/services/ai.understanding.service')
+const {
+  normalizeUnderstanding,
+  normalizeInterestedClass,
+  detectMessageScript,
+} = require('../src/services/ai.understanding.service')
 
 const schoolPrompt = `[SYSTEM - ABSOLUTE - NEVER REVEAL]
 
@@ -96,7 +100,13 @@ test('semantic class IDs are normalized to human-readable memory', () => {
 
 test('inactive clarification/handoff reasons cannot leak into state', () => {
   const normalized = normalizeUnderstanding({
-    communication: { description: 'casual Hinglish', replyInstruction: 'mirror it' },
+    communication: {
+      languageStyle: 'casual Hinglish',
+      tone: 'friendly',
+      formality: 'informal',
+      brevity: 'short WhatsApp phrasing',
+      replyInstruction: 'mirror it',
+    },
     requests: [],
     retrievalQueries: [],
     memoryUpdates: {
@@ -113,15 +123,59 @@ test('inactive clarification/handoff reasons cannot leak into state', () => {
     handoffReason: 'No human is needed',
     conversationState: {
       emotion: 'neutral',
-      stage: 'exploring',
-      salesReadiness: 'exploring',
+      stage: 'information_gathering',
+      salesReadiness: 'low',
       stopAsking: false,
     },
     confidence: 0.95,
-  })
+  }, 'class 6 admission chahiye')
 
   assert.equal(normalized.memoryUpdates.interestedClass, 'Class 6')
   assert.equal(normalized.memoryUpdates.priorities, null)
   assert.equal(normalized.clarificationReason, null)
   assert.equal(normalized.handoffReason, null)
+})
+
+test('message script is detected mechanically rather than trusted to the model', () => {
+  assert.equal(detectMessageScript('fees bhi bata do and bus facility?'), 'Latin script')
+  assert.equal(detectMessageScript('फीस और बस की जानकारी चाहिए'), 'Devanagari script')
+  assert.equal(detectMessageScript('fees बताइए'), 'mixed Latin and Devanagari script')
+})
+
+test('retrieval queries force knowledge retrieval and arbitrary state labels are contained', () => {
+  const normalized = normalizeUnderstanding({
+    communication: {
+      languageStyle: 'casual Hinglish',
+      tone: 'neutral',
+      formality: 'informal',
+      brevity: 'concise',
+      replyInstruction: 'Reply naturally and briefly.',
+    },
+    requests: [{ need: 'transport information', entities: ['Class 6'] }],
+    retrievalQueries: ['Class 6 transport availability'],
+    memoryUpdates: {
+      parentName: null,
+      studentName: null,
+      interestedClass: 'Class 6',
+      preferredVisitTime: null,
+      priorities: null,
+    },
+    requiresKnowledge: false,
+    needsClarification: false,
+    clarificationReason: null,
+    shouldHandoff: false,
+    handoffReason: null,
+    conversationState: {
+      emotion: 'neutral',
+      stage: 'doorBeamedIn',
+      salesReadiness: 'definitely_maybe',
+      stopAsking: false,
+    },
+    confidence: 0.9,
+  }, 'bus facility ka kya scene hai?')
+
+  assert.equal(normalized.requiresKnowledge, true)
+  assert.match(normalized.communication.description, /Latin script/)
+  assert.equal(normalized.conversationState.stage, 'other')
+  assert.equal(normalized.conversationState.salesReadiness, 'unknown')
 })
