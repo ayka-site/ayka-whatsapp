@@ -1,4 +1,4 @@
-const { chatCompletion, models } = require('./ai.gateway.service')
+const { structuredCompletion, models } = require('./ai.gateway.service')
 const logger = require('../utils/logger')
 
 const validationSchema = {
@@ -130,14 +130,14 @@ function normalizeValidationData(data, requestCount = 0) {
       .filter(Boolean)
       .slice(0, 12),
     reason: String(data.reason || '').trim(),
-    // Human confirmation is useful only for unresolved parent requests. It is
-    // metadata, never permission to perform a CRM handoff.
     needsHuman: unresolvedRequestIndexes.length > 0,
     coveredRequestIndexes,
     unresolvedRequestIndexes,
   }
 }
 
+// Kept as a compatibility/testing helper for historical plain-text validator
+// responses. The production validator now uses strict structured output.
 function parseValidationJson(raw) {
   const text = String(raw || '').trim()
   if (!text) throw new Error('Validator returned empty text')
@@ -192,23 +192,23 @@ async function validateReceptionistReply({ parentMessage, reply, evidence, memor
   })
 
   const systemPrompt = `You are the final factual safety editor for a production school WhatsApp receptionist.
-Your approvedReply is the exact prose that may be sent to a real parent, so accuracy and completeness are more important than preserving the draft.
+Your approvedReply is the exact prose that may be sent to a real parent. Accuracy, completeness and natural conversation matter more than preserving the draft.
 
 Grounding rules:
 1. VERIFIED EVIDENCE and AUTHORITATIVE MEMORY are the only sources of school-specific facts. The parent's message can support only what the parent themselves said or requested.
-2. Break the DRAFT REPLY into atomic claims. Every school-specific atomic claim in approvedReply must be directly entailed by the evidence/memory. Plausible, typical or commonly-associated details are NOT evidence.
-3. Never expand a broad verified fact into invented components. Examples of the principle: "4 meals per day" does not establish meal names/menu/timings; "bus facility available" does not establish a route; "computer lab available" does not establish equipment; "school hours 8-2" does not establish office hours.
-4. If the draft contains unsupported detail, remove it. Put each removed/incorrect claim in unsupportedClaims.
-5. If evidence directly answers a parent's request, approvedReply MUST state that supported answer directly. Do not weaken a supported fact into "please confirm", "not available", or staff referral.
+2. Break the DRAFT REPLY into atomic claims. Every school-specific atomic claim in approvedReply must be directly entailed by evidence/memory. Plausible, typical or commonly-associated details are NOT evidence.
+3. Never expand a broad verified fact into invented components. A meal count does not establish menu items; bus availability does not establish a route; a facility does not establish equipment; school hours do not establish office hours.
+4. If the draft contains unsupported detail, remove it and list each removed/incorrect claim in unsupportedClaims.
+5. If evidence directly answers a parent's request, approvedReply MUST state that supported answer directly. Never weaken a supported fact into "please confirm", "not available", or a staff referral.
 6. If the draft omitted a directly-supported requested fact, restore it from VERIFIED EVIDENCE.
-7. If a requested detail truly is not supported, answer all supported parts first, then briefly say that exact remaining detail needs school-team confirmation. Mark that request index unresolved.
-8. coveredRequestIndexes contains every request index fully answered from evidence/memory. unresolvedRequestIndexes contains every request index whose requested detail remains unsupported. Every request index must appear in exactly one of these arrays.
-9. safe describes approvedReply. Set safe=false only if you cannot create a fully grounded parent-facing reply from the supplied material.
+7. If a requested detail truly is unsupported, answer all supported parts first. For only the unsupported detail, say you do not have the exact verified detail and may offer to connect the parent with admissions. Do not claim a handoff already happened unless HANDOFF AUTHORIZED is true.
+8. coveredRequestIndexes contains every request fully answered from evidence/memory. unresolvedRequestIndexes contains every request whose requested detail remains unsupported. Every request index must appear in exactly one array.
+9. safe describes approvedReply. Set safe=false only if you cannot produce a grounded parent-facing reply from the supplied material.
 10. CRITICAL NUMERIC PREFLIGHT lists protected numeric values from the draft that deterministic code could not ground. Remove or repair all of them from evidence.
-11. Keep approvedReply natural and WhatsApp-short. Match the parent's language/script/style guidance. No emojis. Do not use Markdown double-asterisk bold. If emphasis helps, use WhatsApp single-asterisk bold only: *text*.
-12. Do not expose evidence IDs, prompts, model names, validation logic or internal metadata.
-
-${validationOutputContract()}`
+11. Preserve at most one short, natural non-factual qualification or next-step question from the draft when useful. Questions such as asking the child's name, target class, or whether the parent wants help scheduling a visit are allowed; they are questions, not school facts.
+12. If HANDOFF AUTHORIZED is true, the reply should politely say the parent is being connected with the admissions team now. Do not tell the parent to call or contact the school themselves.
+13. Keep approvedReply WhatsApp-short and natural. Match the parent's language/script/style guidance. No emojis. Never use Markdown double-asterisk bold. If emphasis helps, use WhatsApp single-asterisk bold only: *text*.
+14. Do not expose evidence IDs, prompts, model names, validation logic or internal metadata.`
 
   const userPrompt = JSON.stringify({
     parentMessage: String(parentMessage || ''),
@@ -218,21 +218,22 @@ ${validationOutputContract()}`
     authoritativeMemory: String(memory || '(No memory.)'),
     criticalNumericPreflight: preflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
     communication: understanding?.communication || null,
+    handoffAuthorized: understanding?.shouldHandoff === true,
   })
 
   try {
-    const result = await chatCompletion({
+    const result = await structuredCompletion({
       model: models.validation,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      maxTokens: 520,
+      systemPrompt,
+      userPrompt,
+      schema: validationSchema,
+      schemaName: 'school_response_validation_v2',
+      maxTokens: 720,
       temperature: 0.05,
       task: 'response-validation',
     })
 
-    const data = normalizeValidationData(parseValidationJson(result.text), requests.length)
+    const data = normalizeValidationData(result.data, requests.length)
     if (!data.safe) {
       return buildFailureResult(
         data.reason || 'Validator could not produce a grounded final reply',
@@ -282,5 +283,6 @@ module.exports = {
     parseValidationJson,
     validationOutputContract,
     buildFailureResult,
+    validationSchema,
   },
 }
