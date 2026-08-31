@@ -198,10 +198,43 @@ function statusOf(error) {
   return Number(error?.status || error?.statusCode || error?.response?.status || 0)
 }
 
+function errorText(error) {
+  const parts = [
+    error?.message,
+    error?.error?.message,
+    error?.response?.data?.error?.message,
+    typeof error?.response?.data === 'string' ? error.response.data : '',
+  ]
+  return parts.filter(Boolean).join(' ').toLowerCase()
+}
+
 function isRetryable(error) {
   const status = statusOf(error)
   if (!status) return true
   return [408, 409, 425, 429, 500, 502, 503, 504].includes(status)
+}
+
+/**
+ * Only downgrade strict JSON Schema to JSON-object mode when the provider is
+ * actually rejecting the response-format capability. A missing/unavailable
+ * model (404), auth problem or billing error must propagate immediately rather
+ * than wasting a second API request.
+ */
+function isStructuredFormatUnsupported(error) {
+  const status = statusOf(error)
+  if (![400, 422].includes(status)) return false
+
+  const text = errorText(error)
+  return [
+    'response_format',
+    'response format',
+    'json_schema',
+    'json schema',
+    'structured output',
+    'structured outputs',
+    'schema is not supported',
+    'unsupported parameter',
+  ].some(fragment => text.includes(fragment))
 }
 
 async function withRetry(label, operation) {
@@ -365,11 +398,13 @@ async function structuredCompletion({
     })
     return { ...result, data: parseJsonContent(result.text) }
   } catch (error) {
-    const status = statusOf(error)
     // Some low-cost models/providers support JSON mode but not strict JSON
-    // schema. We degrade only the formatting mechanism, not the task model.
-    if (![400, 404, 422].includes(status)) throw error
+    // schema. Downgrade only for an actual format/schema-capability rejection.
+    // Model unavailability, auth and billing failures must not consume another
+    // request pretending to be a response-format fallback.
+    if (!isStructuredFormatUnsupported(error)) throw error
 
+    const status = statusOf(error)
     logger.warn({ task, model, status }, 'Strict structured output unsupported; retrying with JSON object mode')
 
     const schemaInstruction = [
