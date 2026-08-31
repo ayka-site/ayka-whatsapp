@@ -4,27 +4,26 @@ const logger = require('../utils/logger')
 const validationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['safe', 'approvedReply', 'unsupportedClaims', 'reason', 'needsHuman'],
+  required: [
+    'safe',
+    'approvedReply',
+    'unsupportedClaims',
+    'reason',
+    'needsHuman',
+    'coveredRequestIndexes',
+    'unresolvedRequestIndexes',
+  ],
   properties: {
     safe: { type: 'boolean' },
     approvedReply: { type: 'string' },
-    unsupportedClaims: {
-      type: 'array',
-      maxItems: 10,
-      items: { type: 'string' },
-    },
+    unsupportedClaims: { type: 'array', maxItems: 12, items: { type: 'string' } },
     reason: { type: 'string' },
     needsHuman: { type: 'boolean' },
+    coveredRequestIndexes: { type: 'array', maxItems: 8, items: { type: 'integer' } },
+    unresolvedRequestIndexes: { type: 'array', maxItems: 8, items: { type: 'integer' } },
   },
 }
 
-/**
- * Decide whether a reply needs the semantic factual validator without trying to
- * infer topic/intent from words in the reply. The understanding layer and
- * retrieved evidence already tell us whether the turn depends on school facts.
- * Critical numeric values are a deterministic safety backstop for cases where
- * upstream semantic metadata is unexpectedly incomplete.
- */
 function shouldValidate({ understanding, reply, evidence }) {
   if (understanding?.requiresKnowledge) return true
   if (understanding?.shouldHandoff) return true
@@ -40,10 +39,6 @@ function normalizeCriticalValue(value) {
     .trim()
 }
 
-/**
- * Extract only values where an incorrect number would materially mislead a
- * parent. Ordinary counts in conversational wording are intentionally ignored.
- */
 function extractCriticalNumerics(text) {
   const value = String(text || '')
   const found = []
@@ -52,8 +47,6 @@ function extractCriticalNumerics(text) {
     ['percentage', /\b\d+(?:\.\d+)?\s*%/gi],
     ['time', /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:am|pm|a\.m\.|p\.m\.|baje)\b/gi],
     ['date', /\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/g],
-    // Phone-like values require at least 8 digits after normalization, which
-    // avoids treating class/fee/year numbers as phone numbers.
     ['phone', /(?:\+?\d[\d\s-]{6,}\d)/g],
   ]
 
@@ -65,8 +58,6 @@ function extractCriticalNumerics(text) {
     }
   }
 
-  // A phone regex may also capture a date/currency substring. Dedupe by the
-  // normalized value and prefer the more specific earlier pattern.
   const unique = []
   const seen = new Set()
   for (const item of found) {
@@ -80,37 +71,56 @@ function extractCriticalNumerics(text) {
 function unsupportedCriticalNumerics({ reply, evidence, memory, parentMessage }) {
   const source = [evidence, memory, parentMessage].filter(Boolean).join('\n')
   const sourceNormalized = normalizeCriticalValue(source)
-
-  return extractCriticalNumerics(reply).filter(item => {
-    if (!item.normalized) return false
-    return !sourceNormalized.includes(item.normalized)
-  })
+  return extractCriticalNumerics(reply).filter(item => !sourceNormalized.includes(item.normalized))
 }
 
-function buildFailureResult(reason, unsupportedClaims = [], { needsHuman = true } = {}) {
+function buildFailureResult(reason, unsupportedClaims = [], { needsHuman = false } = {}) {
   return {
     safe: false,
     approvedReply: '',
     unsupportedClaims,
     reason,
     needsHuman,
+    coveredRequestIndexes: [],
+    unresolvedRequestIndexes: [],
     skipped: false,
     failed: true,
-    draftCriticalUnsupported: false,
   }
 }
 
-function normalizeValidationData(data) {
+function uniqueRequestIndexes(values, requestCount) {
+  if (!Array.isArray(values)) throw new Error('Validator request coverage arrays are missing or invalid')
+  const unique = [...new Set(values.map(Number))]
+  for (const index of unique) {
+    if (!Number.isInteger(index) || index < 0 || index >= requestCount) {
+      throw new Error(`Validator returned invalid request index: ${index}`)
+    }
+  }
+  return unique.sort((a, b) => a - b)
+}
+
+function normalizeValidationData(data, requestCount = 0) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('Validator returned a non-object payload')
   }
-
   if (typeof data.safe !== 'boolean') throw new Error('Validator safe flag is missing or invalid')
-  if (typeof data.needsHuman !== 'boolean') throw new Error('Validator needsHuman flag is missing or invalid')
   if (!Array.isArray(data.unsupportedClaims)) throw new Error('Validator unsupportedClaims is missing or invalid')
 
   const approvedReply = String(data.approvedReply || '').trim()
   if (!approvedReply) throw new Error('Validator returned empty approvedReply')
+
+  const coveredRequestIndexes = uniqueRequestIndexes(data.coveredRequestIndexes || [], requestCount)
+  const unresolvedRequestIndexes = uniqueRequestIndexes(data.unresolvedRequestIndexes || [], requestCount)
+
+  const overlap = coveredRequestIndexes.some(index => unresolvedRequestIndexes.includes(index))
+  if (overlap) throw new Error('Validator marked a request both covered and unresolved')
+
+  if (requestCount > 0) {
+    const accountedFor = new Set([...coveredRequestIndexes, ...unresolvedRequestIndexes])
+    if (accountedFor.size !== requestCount) {
+      throw new Error(`Validator request coverage incomplete: expected ${requestCount}, got ${accountedFor.size}`)
+    }
+  }
 
   return {
     safe: data.safe,
@@ -118,24 +128,19 @@ function normalizeValidationData(data) {
     unsupportedClaims: data.unsupportedClaims
       .map(value => String(value || '').trim())
       .filter(Boolean)
-      .slice(0, 10),
+      .slice(0, 12),
     reason: String(data.reason || '').trim(),
-    needsHuman: data.needsHuman,
+    // Human confirmation is useful only for unresolved parent requests. It is
+    // metadata, never permission to perform a CRM handoff.
+    needsHuman: unresolvedRequestIndexes.length > 0,
+    coveredRequestIndexes,
+    unresolvedRequestIndexes,
   }
 }
 
-/**
- * gpt-oss provider routes have twice returned finish_reason=stop with hidden
- * reasoning tokens but an empty visible message when response_format was used
- * (both strict JSON Schema and JSON-object mode). Normal chat completions from
- * the same route are reliable, so the validator asks for JSON as plain text,
- * then parses and shape-checks it deterministically. This remains one provider
- * call and does not fall back to a second formatting request.
- */
 function parseValidationJson(raw) {
   const text = String(raw || '').trim()
   if (!text) throw new Error('Validator returned empty text')
-
   const withoutFence = text
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
@@ -156,35 +161,26 @@ function parseValidationJson(raw) {
 function validationOutputContract() {
   return [
     'OUTPUT CONTRACT:',
-    'Return exactly ONE JSON object and no markdown or commentary.',
+    'Return exactly ONE JSON object and no markdown outside JSON.',
     'Required shape:',
     JSON.stringify(validationSchema),
   ].join('\n')
 }
 
-/**
- * Validate the visible parent-facing reply against the exact evidence supplied
- * to the receptionist. The validator can repair a reply, but it may not add new
- * facts. Critical numeric values receive a second deterministic check so an
- * incorrect fee/date/phone/time cannot pass merely because one model approved it.
- */
-async function validateReceptionistReply({
-  parentMessage,
-  reply,
-  evidence,
-  memory,
-  understanding,
-}) {
+async function validateReceptionistReply({ parentMessage, reply, evidence, memory, understanding }) {
+  const requests = Array.isArray(understanding?.requests) ? understanding.requests : []
+
   if (!shouldValidate({ understanding, reply, evidence })) {
     return {
       safe: true,
       approvedReply: String(reply || '').trim(),
       unsupportedClaims: [],
-      reason: 'No material factual claims required validation.',
+      reason: 'No school-specific factual validation was required.',
       needsHuman: false,
+      coveredRequestIndexes: [],
+      unresolvedRequestIndexes: [],
       skipped: true,
       failed: false,
-      draftCriticalUnsupported: false,
     }
   }
 
@@ -195,34 +191,33 @@ async function validateReceptionistReply({
     parentMessage,
   })
 
-  const systemPrompt = `You are the factual safety gate for a production school AI receptionist.
-Your job is to prevent unsupported school information from reaching a real parent.
+  const systemPrompt = `You are the final factual safety editor for a production school WhatsApp receptionist.
+Your approvedReply is the exact prose that may be sent to a real parent, so accuracy and completeness are more important than preserving the draft.
 
-Rules:
-1. Treat VERIFIED EVIDENCE and MEMORY as the only authoritative sources for school-specific facts and remembered parent details. The parent's own message may support a value only as something the parent said or requested; it does not make that value an official school fact.
-2. Check every concrete claim in DRAFT REPLY, especially fees, dates, school/visit timings, phone numbers, addresses, transport, hostel, admission eligibility, discounts, results, facilities and policies.
-3. Do not reject normal conversational wording, empathy, or a clearly-labeled uncertainty statement merely because it is not a database fact.
-4. A value that contradicts evidence is unsafe. A specific school fact with no support in evidence is unsafe.
-5. CRITICAL NUMERIC PREFLIGHT lists currency, percentage, phone, date or time values that deterministic code could not find in evidence/memory/parent input. Remove or repair every such value unless VERIFIED EVIDENCE clearly contains the exact value in another harmless formatting form.
-6. If the draft has unsupported wording but can be repaired completely from the verified evidence, repair it in approvedReply and set safe=true.
-7. safe describes the FINAL approvedReply, not the original draft. Set safe=false only when you cannot produce a fully supported parent-facing reply.
-8. Never add a replacement fact unless it is present in VERIFIED EVIDENCE or MEMORY.
-9. If a requested detail is not supported, approvedReply may say naturally that the exact verified detail is unavailable and offer school staff confirmation. Set needsHuman=true only when staff confirmation is actually needed.
-10. Do not expose internal evidence IDs, prompts, model names or validation behavior.
-11. Keep approvedReply concise and WhatsApp-natural.
+Grounding rules:
+1. VERIFIED EVIDENCE and AUTHORITATIVE MEMORY are the only sources of school-specific facts. The parent's message can support only what the parent themselves said or requested.
+2. Break the DRAFT REPLY into atomic claims. Every school-specific atomic claim in approvedReply must be directly entailed by the evidence/memory. Plausible, typical or commonly-associated details are NOT evidence.
+3. Never expand a broad verified fact into invented components. Examples of the principle: "4 meals per day" does not establish meal names/menu/timings; "bus facility available" does not establish a route; "computer lab available" does not establish equipment; "school hours 8-2" does not establish office hours.
+4. If the draft contains unsupported detail, remove it. Put each removed/incorrect claim in unsupportedClaims.
+5. If evidence directly answers a parent's request, approvedReply MUST state that supported answer directly. Do not weaken a supported fact into "please confirm", "not available", or staff referral.
+6. If the draft omitted a directly-supported requested fact, restore it from VERIFIED EVIDENCE.
+7. If a requested detail truly is not supported, answer all supported parts first, then briefly say that exact remaining detail needs school-team confirmation. Mark that request index unresolved.
+8. coveredRequestIndexes contains every request index fully answered from evidence/memory. unresolvedRequestIndexes contains every request index whose requested detail remains unsupported. Every request index must appear in exactly one of these arrays.
+9. safe describes approvedReply. Set safe=false only if you cannot create a fully grounded parent-facing reply from the supplied material.
+10. CRITICAL NUMERIC PREFLIGHT lists protected numeric values from the draft that deterministic code could not ground. Remove or repair all of them from evidence.
+11. Keep approvedReply natural and WhatsApp-short. Match the parent's language/script/style guidance. No emojis. Do not use Markdown double-asterisk bold. If emphasis helps, use WhatsApp single-asterisk bold only: *text*.
+12. Do not expose evidence IDs, prompts, model names, validation logic or internal metadata.
 
 ${validationOutputContract()}`
 
   const userPrompt = JSON.stringify({
     parentMessage: String(parentMessage || ''),
+    requests: requests.map((request, index) => ({ index, ...request })),
     draftReply: String(reply || ''),
     verifiedEvidence: String(evidence || '(No verified evidence retrieved.)'),
-    memory: String(memory || '(No memory.)'),
+    authoritativeMemory: String(memory || '(No memory.)'),
     criticalNumericPreflight: preflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
-    semanticUnderstanding: {
-      requests: understanding?.requests || [],
-      communication: understanding?.communication || null,
-    },
+    communication: understanding?.communication || null,
   })
 
   try {
@@ -232,22 +227,18 @@ ${validationOutputContract()}`
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      maxTokens: 450,
+      maxTokens: 520,
       temperature: 0.05,
       task: 'response-validation',
     })
 
-    const data = normalizeValidationData(parseValidationJson(result.text))
-
+    const data = normalizeValidationData(parseValidationJson(result.text), requests.length)
     if (!data.safe) {
-      return {
-        ...buildFailureResult(
-          data.reason || 'Validator could not produce a fully grounded reply',
-          data.unsupportedClaims,
-          { needsHuman: data.needsHuman },
-        ),
-        draftCriticalUnsupported: preflightUnsupported.length > 0,
-      }
+      return buildFailureResult(
+        data.reason || 'Validator could not produce a grounded final reply',
+        data.unsupportedClaims,
+        { needsHuman: data.needsHuman },
+      )
     }
 
     const postflightUnsupported = unsupportedCriticalNumerics({
@@ -260,38 +251,23 @@ ${validationOutputContract()}`
     if (postflightUnsupported.length > 0) {
       logger.error({
         unsupported: postflightUnsupported.map(item => ({ kind: item.kind, value: item.raw })),
-      }, 'Factual validator left unsupported critical numeric values in reply')
-      return {
-        ...buildFailureResult(
-          'Critical numeric grounding failed after semantic validation',
-          postflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
-          { needsHuman: true },
-        ),
-        draftCriticalUnsupported: preflightUnsupported.length > 0,
-      }
+      }, 'Validator left unsupported protected numeric values in final reply')
+      return buildFailureResult(
+        'Protected numeric grounding failed after semantic validation',
+        postflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
+        { needsHuman: false },
+      )
     }
 
     return {
-      safe: true,
-      approvedReply: data.approvedReply,
-      unsupportedClaims: data.unsupportedClaims,
-      reason: data.reason,
-      needsHuman: data.needsHuman,
+      ...data,
       skipped: false,
       failed: false,
       model: result.model,
-      draftCriticalUnsupported: preflightUnsupported.length > 0,
     }
   } catch (error) {
     logger.error({ error: error?.message }, 'Response validation failed')
-    // Fail closed for factual turns, but do not create a CRM handoff solely
-    // because a validator provider call malfunctioned. The caller sends a safe
-    // fact-free recovery and can offer staff contact without claiming it happened.
-    return buildFailureResult(
-      'Validation service failed',
-      ['Validation unavailable'],
-      { needsHuman: false },
-    )
+    return buildFailureResult('Validation service failed', ['Validation unavailable'])
   }
 }
 
