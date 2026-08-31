@@ -107,6 +107,8 @@ const stats = {
   completionTokens: 0,
   cachedTokens: 0,
   reasoningTokens: 0,
+  cost: 0,
+  upstreamInferenceCost: 0,
   modelUsage: {},
   peakConcurrency: 0,
   resetAt: new Date(),
@@ -126,11 +128,15 @@ function recordUsage(response) {
     usage.output_tokens_details?.reasoning_tokens ||
     0
   )
+  const cost = Number(usage.cost || 0)
+  const upstreamInferenceCost = Number(usage.cost_details?.upstream_inference_cost || 0)
 
   stats.promptTokens += Number.isFinite(prompt) ? prompt : 0
   stats.completionTokens += Number.isFinite(completion) ? completion : 0
   stats.cachedTokens += Number.isFinite(cached) ? cached : 0
   stats.reasoningTokens += Number.isFinite(reasoning) ? reasoning : 0
+  stats.cost += Number.isFinite(cost) ? cost : 0
+  stats.upstreamInferenceCost += Number.isFinite(upstreamInferenceCost) ? upstreamInferenceCost : 0
 
   const model = response?.model || 'unknown'
   stats.modelUsage[model] = (stats.modelUsage[model] || 0) + 1
@@ -344,11 +350,29 @@ async function chatCompletion({
       return client.chat.completions.create(body)
     })
 
-    const content = normalizeMessageContent(response?.choices?.[0]?.message?.content)
-    if (!content) throw new Error(`${task} returned an empty completion`)
+    // Usage is billable even when a provider returns no final content. Record
+    // it before validating the completion so failed/empty generations remain
+    // visible in cost telemetry.
+    recordUsage(response)
+
+    const choice = response?.choices?.[0] || {}
+    const content = normalizeMessageContent(choice?.message?.content)
+    if (!content) {
+      const usage = response?.usage || {}
+      const completionTokens = Number(usage.completion_tokens || usage.output_tokens || 0)
+      const reasoningTokens = Number(
+        usage.completion_tokens_details?.reasoning_tokens ||
+        usage.output_tokens_details?.reasoning_tokens ||
+        0
+      )
+      const finishReason = choice?.finish_reason || 'unknown'
+      throw new Error(
+        `${task} returned an empty completion ` +
+        `(finish_reason=${finishReason}, completion_tokens=${completionTokens}, reasoning_tokens=${reasoningTokens})`
+      )
+    }
 
     stats.successes += 1
-    recordUsage(response)
 
     return {
       text: content,
