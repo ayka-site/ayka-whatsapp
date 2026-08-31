@@ -307,6 +307,15 @@ function parseJsonContent(raw) {
   }
 }
 
+function buildSchemaInstruction(systemPrompt, schema) {
+  return [
+    systemPrompt,
+    '',
+    'Return ONLY one JSON object matching this JSON Schema. No markdown and no commentary.',
+    JSON.stringify(schema),
+  ].join('\n')
+}
+
 function addModelControls(body, temperature) {
   // GPT-5.6 Luna on OpenRouter exposes reasoning controls but not temperature.
   // We therefore do not send sampling temperature by default. It can be enabled
@@ -399,8 +408,28 @@ async function structuredCompletion({
   temperature = 0.15,
   fallbackModels,
   task = 'structured',
+  strictSchema = true,
 }) {
   stats.structuredCalls += 1
+
+  // Some provider/model combinations are more reliable in JSON-object mode
+  // than strict JSON Schema mode. Callers can opt into that mode directly so a
+  // known-sensitive task does not burn a second provider call on fallback.
+  if (!strictSchema) {
+    const result = await chatCompletion({
+      model,
+      messages: [
+        { role: 'system', content: buildSchemaInstruction(systemPrompt, schema) },
+        { role: 'user', content: userPrompt },
+      ],
+      maxTokens,
+      temperature,
+      responseFormat: { type: 'json_object' },
+      fallbackModels,
+      task,
+    })
+    return { ...result, data: parseJsonContent(result.text) }
+  }
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -437,17 +466,10 @@ async function structuredCompletion({
     const status = statusOf(error)
     logger.warn({ task, model, status }, 'Strict structured output unsupported; retrying with JSON object mode')
 
-    const schemaInstruction = [
-      systemPrompt,
-      '',
-      'Return ONLY one JSON object matching this JSON Schema. No markdown and no commentary.',
-      JSON.stringify(schema),
-    ].join('\n')
-
     const result = await chatCompletion({
       model,
       messages: [
-        { role: 'system', content: schemaInstruction },
+        { role: 'system', content: buildSchemaInstruction(systemPrompt, schema) },
         { role: 'user', content: userPrompt },
       ],
       maxTokens,
@@ -518,4 +540,8 @@ module.exports = {
     embedding: EMBEDDING_MODEL,
   },
   provider: PROVIDER,
+  _private: {
+    buildSchemaInstruction,
+    parseJsonContent,
+  },
 }
