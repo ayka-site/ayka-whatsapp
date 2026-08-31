@@ -105,6 +105,33 @@ test('fail-closed parent copy performs the handoff it promises', () => {
   assert.doesNotMatch(latin, /please call|contact the school/i)
 })
 
+test('any unresolved parent request now triggers a real admissions handoff', () => {
+  assert.equal(receptionist.validationNeedsHandoff({
+    safe: true,
+    failed: false,
+    needsHuman: true,
+    unresolvedRequestIndexes: [0],
+  }), true)
+
+  assert.equal(receptionist.validationNeedsHandoff({
+    safe: true,
+    failed: false,
+    needsHuman: false,
+    unresolvedRequestIndexes: [],
+  }), false)
+
+  const devNotice = receptionist.buildHandoffNotice('हॉस्टल की जानकारी बताइए', {
+    communication: { languageStyle: 'Hindi' },
+  })
+  const hinglishNotice = receptionist.buildHandoffNotice('Hostel ka exact scene kya hai?', {
+    communication: { languageStyle: 'Roman Hindi / Hinglish' },
+  })
+
+  assert.match(devNotice, /कनेक्ट कर रही हूँ/)
+  assert.match(hinglishNotice, /connect kar rahi hoon/i)
+  assert.doesNotMatch(devNotice, /contact|call/i)
+})
+
 test('lead context progresses from cold to warm to hot without message-count rules', () => {
   const cold = receptionist.buildLeadContext({ memory: '' }, {
     requests: [{ need: 'fees' }],
@@ -154,7 +181,7 @@ test('receptionist prompt answers first, qualifies once and handles real handoff
   assert.match(prompt, /Answer the parent's actual question first/i)
   assert.match(prompt, /ask at most ONE short natural question/i)
   assert.match(prompt, /offer to help schedule a school visit/i)
-  assert.match(prompt, /being connected|connecting the parent/i)
+  assert.match(prompt, /being connected|connecting the parent|connect the parent/i)
   assert.match(prompt, /State supported facts directly/i)
   assert.match(prompt, /meal count does not establish menu items/i)
   assert.match(prompt, /No emojis/i)
