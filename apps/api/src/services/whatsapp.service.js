@@ -1,4 +1,3 @@
-const axios = require('axios')
 const logger = require('../utils/logger')
 const { toWhatsAppRecipient } = require('../utils/phone')
 
@@ -13,14 +12,6 @@ const REQUEST_TIMEOUT_MS = Math.max(
 
 function normalizeRecipient(to) {
   return toWhatsAppRecipient(to)
-}
-
-function summarizeAxiosError(err) {
-  return {
-    message: err?.message,
-    status: err?.response?.status,
-    data: err?.response?.data,
-  }
 }
 
 function resolvePublicMediaUrl(imageUrl) {
@@ -51,12 +42,46 @@ function messageUrl(phoneNumberId) {
   return `${GRAPH_BASE_URL}/${encodeURIComponent(id)}/messages`
 }
 
-function requestConfig(accessToken) {
+async function parseResponseBody(response) {
+  const text = await response.text()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch (_) {
+    return text
+  }
+}
+
+async function graphRequest(url, accessToken, body) {
   const token = String(accessToken || '').trim()
   if (!token) throw new Error('WhatsApp access token is missing')
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+
+  const data = await parseResponseBody(response)
+  if (!response.ok) {
+    const error = new Error(`WhatsApp Graph API request failed with HTTP ${response.status}`)
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+  return data
+}
+
+function summarizeRequestError(err) {
   return {
-    headers: { Authorization: `Bearer ${token}` },
-    timeout: REQUEST_TIMEOUT_MS,
+    message: err?.message,
+    status: err?.status,
+    data: err?.data,
+    name: err?.name,
   }
 }
 
@@ -66,19 +91,14 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
     const body = String(text || '').trim()
     if (!body) throw new Error('WhatsApp text body is empty')
 
-    const response = await axios.post(
-      messageUrl(phoneNumberId),
-      {
-        messaging_product: 'whatsapp',
-        to: recipient,
-        type: 'text',
-        text: { body },
-      },
-      requestConfig(accessToken),
-    )
-    return response.data
+    return await graphRequest(messageUrl(phoneNumberId), accessToken, {
+      messaging_product: 'whatsapp',
+      to: recipient,
+      type: 'text',
+      text: { body },
+    })
   } catch (err) {
-    logger.error({ err: summarizeAxiosError(err), to }, 'Failed to send text message')
+    logger.error({ err: summarizeRequestError(err), to }, 'Failed to send text message')
     throw err
   }
 }
@@ -90,19 +110,15 @@ async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToke
     const image = { link: publicImageUrl }
     if (caption && String(caption).trim()) image.caption = String(caption).trim()
 
-    const response = await axios.post(
-      messageUrl(phoneNumberId),
-      {
-        messaging_product: 'whatsapp',
-        to: recipient,
-        type: 'image',
-        image,
-      },
-      requestConfig(accessToken),
-    )
-    return { ...response.data, resolvedMediaUrl: publicImageUrl }
+    const data = await graphRequest(messageUrl(phoneNumberId), accessToken, {
+      messaging_product: 'whatsapp',
+      to: recipient,
+      type: 'image',
+      image,
+    })
+    return { ...data, resolvedMediaUrl: publicImageUrl }
   } catch (err) {
-    logger.error({ err: summarizeAxiosError(err), to, imageUrl }, 'Failed to send image message')
+    logger.error({ err: summarizeRequestError(err), to, imageUrl }, 'Failed to send image message')
     throw err
   }
 }
@@ -118,41 +134,31 @@ async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, acce
       },
     }))
 
-    const response = await axios.post(
-      messageUrl(phoneNumberId),
-      {
-        messaging_product: 'whatsapp',
-        to: recipient,
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          body: { text: String(bodyText || '').slice(0, 1024) },
-          action: { buttons: normalizedButtons },
-        },
+    return await graphRequest(messageUrl(phoneNumberId), accessToken, {
+      messaging_product: 'whatsapp',
+      to: recipient,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: { text: String(bodyText || '').slice(0, 1024) },
+        action: { buttons: normalizedButtons },
       },
-      requestConfig(accessToken),
-    )
-    return response.data
+    })
   } catch (err) {
-    logger.error({ err: summarizeAxiosError(err), to }, 'Failed to send interactive buttons')
+    logger.error({ err: summarizeRequestError(err), to }, 'Failed to send interactive buttons')
     throw err
   }
 }
 
 async function markAsRead(waMessageId, phoneNumberId, accessToken) {
   try {
-    const response = await axios.post(
-      messageUrl(phoneNumberId),
-      {
-        messaging_product: 'whatsapp',
-        status: 'read',
-        message_id: waMessageId,
-      },
-      requestConfig(accessToken),
-    )
-    return response.data
+    return await graphRequest(messageUrl(phoneNumberId), accessToken, {
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: waMessageId,
+    })
   } catch (err) {
-    logger.error({ err: summarizeAxiosError(err), waMessageId }, 'Failed to mark message as read')
+    logger.error({ err: summarizeRequestError(err), waMessageId }, 'Failed to mark message as read')
     throw err
   }
 }
@@ -165,6 +171,7 @@ module.exports = {
   _private: {
     messageUrl,
     resolvePublicMediaUrl,
+    graphRequest,
     GRAPH_API_VERSION,
   },
 }
