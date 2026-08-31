@@ -7,43 +7,30 @@ function stripEmoji(value) {
 }
 
 function normalizeWhatsAppBold(value) {
-  let text = String(value || '')
-
-  // WhatsApp uses one asterisk on each side for bold. Convert common Markdown
-  // variants before collapsing any leftover repeated asterisks.
-  text = text
+  return String(value || '')
     .replace(/\*{3}([^*\n]+?)\*{3}/g, '*$1*')
     .replace(/\*{2}([^*\n]+?)\*{2}/g, '*$1*')
     .replace(/__([^_\n]+?)__/g, '*$1*')
     .replace(/^\s*#{1,6}\s+/gm, '')
     .replace(/\*{2,}/g, '*')
-
-  return text
 }
 
 function formatParentReply(value) {
-  let text = String(value || '')
-    .replace(/\r\n/g, '\n')
-
-  text = stripEmoji(text)
-  text = normalizeWhatsAppBold(text)
+  let text = String(value || '').replace(/\r\n/g, '\n')
+  text = normalizeWhatsAppBold(stripEmoji(text))
 
   text = text
     .split('\n')
     .filter(line => !CONTROL_MARKER.test(line.trim()))
-    .map(line => line.replace(/[ \t]+$/g, ''))
+    .map(line => line.trim())
     .join('\n')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
-  // WhatsApp Cloud API text messages have a finite body size. Parent-facing AI
-  // replies should never approach this in normal operation; this is a final
-  // transport guard, not a response-length strategy.
-  if (text.length > 3900) {
-    text = `${text.slice(0, 3897).trimEnd()}...`
-  }
-
+  // Parent-facing AI messages should remain far below WhatsApp's transport
+  // ceiling. This is only a last-resort transport guard.
+  if (text.length > 3900) text = `${text.slice(0, 3897).trimEnd()}...`
   return text
 }
 
