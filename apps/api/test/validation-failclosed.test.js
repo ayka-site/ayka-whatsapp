@@ -68,7 +68,15 @@ test('transient validator failure does not automatically create a CRM handoff', 
   assert.deepEqual(markers, [])
 })
 
-test('real semantic or validator human need still creates handoff marker', () => {
+test('human confirmation need does not silently perform a CRM handoff', () => {
+  assert.deepEqual(
+    receptionistPrivate.buildCompatibilityMarkers(
+      { confidence: 0.9, memoryUpdates: {}, shouldHandoff: false },
+      { needsHuman: true },
+    ),
+    [],
+  )
+
   assert.deepEqual(
     receptionistPrivate.buildCompatibilityMarkers(
       { confidence: 0.9, memoryUpdates: {}, shouldHandoff: true },
@@ -76,14 +84,55 @@ test('real semantic or validator human need still creates handoff marker', () =>
     ),
     ['HANDOFF: YES'],
   )
+})
 
-  assert.deepEqual(
-    receptionistPrivate.buildCompatibilityMarkers(
-      { confidence: 0.9, memoryUpdates: {}, shouldHandoff: false },
-      { needsHuman: true },
-    ),
-    ['HANDOFF: YES'],
+test('safe validator with no unsupported claims cannot downgrade a supported draft', () => {
+  const draft = 'लड़कों के लिए हॉस्टल उपलब्ध है। दिन में 4 बार भोजन मिलता है।'
+  const selected = receptionistPrivate.selectValidatedReply(draft, {
+    safe: true,
+    failed: false,
+    approvedReply: 'हॉस्टल की पुष्टि स्कूल टीम से करनी होगी।',
+    unsupportedClaims: [],
+    needsHuman: true,
+  })
+
+  assert.equal(selected, draft)
+})
+
+test('validator repair is used when unsupported claims were actually found', () => {
+  const selected = receptionistPrivate.selectValidatedReply(
+    'दिन में 5 बार भोजन मिलता है।',
+    {
+      safe: true,
+      failed: false,
+      approvedReply: 'दिन में 4 बार भोजन मिलता है।',
+      unsupportedClaims: ['दिन में 5 बार भोजन मिलता है'],
+      needsHuman: false,
+    },
   )
+
+  assert.equal(selected, 'दिन में 4 बार भोजन मिलता है।')
+})
+
+test('receptionist prompt answers directly when verified evidence supports the request', () => {
+  const prompt = receptionistPrivate.buildReceptionistSystemPrompt({
+    metadata: {
+      agentName: 'Riya',
+      organizationName: 'Demo Vidyalaya',
+      today: '31 August 2026',
+      memory: '(none)',
+    },
+    understanding: {
+      requests: [{ need: 'hostel availability', entities: [] }],
+      communication: { replyInstruction: 'Use Devanagari script.' },
+      conversationState: {},
+    },
+    evidence: '[E1] Boys hostel is available.',
+  })
+
+  assert.match(prompt, /state that verified fact directly/i)
+  assert.match(prompt, /Do NOT weaken a supported fact/i)
+  assert.match(prompt, /Do not imply that a handoff has already been performed/i)
 })
 
 test('safe recovery forbids unscheduled future promises and fake handoff claims', () => {
