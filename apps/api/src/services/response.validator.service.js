@@ -96,6 +96,7 @@ function buildFailureResult(reason, unsupportedClaims = [], { needsHuman = true 
     needsHuman,
     skipped: false,
     failed: true,
+    draftCriticalUnsupported: false,
   }
 }
 
@@ -183,6 +184,7 @@ async function validateReceptionistReply({
       needsHuman: false,
       skipped: true,
       failed: false,
+      draftCriticalUnsupported: false,
     }
   }
 
@@ -238,11 +240,14 @@ ${validationOutputContract()}`
     const data = normalizeValidationData(parseValidationJson(result.text))
 
     if (!data.safe) {
-      return buildFailureResult(
-        data.reason || 'Validator could not produce a fully grounded reply',
-        data.unsupportedClaims,
-        { needsHuman: data.needsHuman },
-      )
+      return {
+        ...buildFailureResult(
+          data.reason || 'Validator could not produce a fully grounded reply',
+          data.unsupportedClaims,
+          { needsHuman: data.needsHuman },
+        ),
+        draftCriticalUnsupported: preflightUnsupported.length > 0,
+      }
     }
 
     const postflightUnsupported = unsupportedCriticalNumerics({
@@ -256,11 +261,14 @@ ${validationOutputContract()}`
       logger.error({
         unsupported: postflightUnsupported.map(item => ({ kind: item.kind, value: item.raw })),
       }, 'Factual validator left unsupported critical numeric values in reply')
-      return buildFailureResult(
-        'Critical numeric grounding failed after semantic validation',
-        postflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
-        { needsHuman: true },
-      )
+      return {
+        ...buildFailureResult(
+          'Critical numeric grounding failed after semantic validation',
+          postflightUnsupported.map(item => `${item.kind}: ${item.raw}`),
+          { needsHuman: true },
+        ),
+        draftCriticalUnsupported: preflightUnsupported.length > 0,
+      }
     }
 
     return {
@@ -272,6 +280,7 @@ ${validationOutputContract()}`
       skipped: false,
       failed: false,
       model: result.model,
+      draftCriticalUnsupported: preflightUnsupported.length > 0,
     }
   } catch (error) {
     logger.error({ error: error?.message }, 'Response validation failed')
