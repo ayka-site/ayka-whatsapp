@@ -1,31 +1,16 @@
-// Write three async functions using axios for WhatsApp Cloud API v21.0:
-
-// 1. sendTextMessage(to, text, phoneNumberId, accessToken)
-//    POST https://graph.facebook.com/v21.0/{phoneNumberId}/messages
-//    Bearer auth with accessToken
-//    Body: { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }
-//    Return response.data
-
-// 2. sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, accessToken)
-//    buttons is array of { id, title } max 3 items
-//    Build the interactive button message body per WhatsApp Cloud API spec
-//    Return response.data
-
-// 3. markAsRead(waMessageId, phoneNumberId, accessToken)
-//    POST same URL, body: { messaging_product: 'whatsapp', status: 'read', message_id: waMessageId }
-//    Return response.data
-
-// Add try/catch on all three. On error log error.response?.data and throw.
-// Export all three functions.
-const axios  = require('axios')
+const axios = require('axios')
 const logger = require('../utils/logger')
 const { toWhatsAppRecipient } = require('../utils/phone')
 
-/**
- * normalizeRecipient - Ensure recipient value is valid for WhatsApp Cloud API.
- * @param {string} to - Raw recipient (E.164 or digits).
- * @returns {string} Digits-only WhatsApp recipient.
- */
+const GRAPH_API_VERSION = String(process.env.WHATSAPP_GRAPH_API_VERSION || 'v25.0')
+  .trim()
+  .replace(/^\/+|\/+$/g, '')
+const GRAPH_BASE_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`
+const REQUEST_TIMEOUT_MS = Math.max(
+  5000,
+  Number.parseInt(process.env.WHATSAPP_REQUEST_TIMEOUT_MS || '15000', 10) || 15000,
+)
+
 function normalizeRecipient(to) {
   return toWhatsAppRecipient(to)
 }
@@ -54,26 +39,42 @@ function resolvePublicMediaUrl(imageUrl) {
   ).replace(/\/+$/, '')
 
   if (!publicBase) {
-    throw new Error('WhatsApp media URL points to localhost. Set WHATSAPP_MEDIA_BASE_URL to your ngrok/API public URL.')
+    throw new Error('WhatsApp media URL points to localhost and no public media base URL is configured')
   }
 
   return `${publicBase}${parsed.pathname}${parsed.search}`
 }
 
+function messageUrl(phoneNumberId) {
+  const id = String(phoneNumberId || '').trim()
+  if (!id) throw new Error('WhatsApp phoneNumberId is missing')
+  return `${GRAPH_BASE_URL}/${encodeURIComponent(id)}/messages`
+}
+
+function requestConfig(accessToken) {
+  const token = String(accessToken || '').trim()
+  if (!token) throw new Error('WhatsApp access token is missing')
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+    timeout: REQUEST_TIMEOUT_MS,
+  }
+}
+
 async function sendTextMessage(to, text, phoneNumberId, accessToken) {
   try {
     const recipient = normalizeRecipient(to)
+    const body = String(text || '').trim()
+    if (!body) throw new Error('WhatsApp text body is empty')
+
     const response = await axios.post(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      messageUrl(phoneNumberId),
       {
         messaging_product: 'whatsapp',
         to: recipient,
         type: 'text',
-        text: { body: text }
+        text: { body },
       },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      requestConfig(accessToken),
     )
     return response.data
   } catch (err) {
@@ -90,16 +91,14 @@ async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToke
     if (caption && String(caption).trim()) image.caption = String(caption).trim()
 
     const response = await axios.post(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      messageUrl(phoneNumberId),
       {
         messaging_product: 'whatsapp',
         to: recipient,
         type: 'image',
         image,
       },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      requestConfig(accessToken),
     )
     return { ...response.data, resolvedMediaUrl: publicImageUrl }
   } catch (err) {
@@ -111,17 +110,27 @@ async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToke
 async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, accessToken) {
   try {
     const recipient = normalizeRecipient(to)
+    const normalizedButtons = (buttons || []).slice(0, 3).map(button => ({
+      type: 'reply',
+      reply: {
+        id: String(button.id || '').slice(0, 256),
+        title: String(button.title || '').slice(0, 20),
+      },
+    }))
+
     const response = await axios.post(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      messageUrl(phoneNumberId),
       {
         messaging_product: 'whatsapp',
         to: recipient,
         type: 'interactive',
-        interactive: { type: 'button', body: { text: bodyText }, action: { buttons } }
+        interactive: {
+          type: 'button',
+          body: { text: String(bodyText || '').slice(0, 1024) },
+          action: { buttons: normalizedButtons },
+        },
       },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      requestConfig(accessToken),
     )
     return response.data
   } catch (err) {
@@ -133,15 +142,13 @@ async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, acce
 async function markAsRead(waMessageId, phoneNumberId, accessToken) {
   try {
     const response = await axios.post(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      messageUrl(phoneNumberId),
       {
         messaging_product: 'whatsapp',
         status: 'read',
-        message_id: waMessageId
+        message_id: waMessageId,
       },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      requestConfig(accessToken),
     )
     return response.data
   } catch (err) {
@@ -150,4 +157,14 @@ async function markAsRead(waMessageId, phoneNumberId, accessToken) {
   }
 }
 
-module.exports = { sendTextMessage, sendImageMessage, sendInteractiveButtons, markAsRead }
+module.exports = {
+  sendTextMessage,
+  sendImageMessage,
+  sendInteractiveButtons,
+  markAsRead,
+  _private: {
+    messageUrl,
+    resolvePublicMediaUrl,
+    GRAPH_API_VERSION,
+  },
+}
