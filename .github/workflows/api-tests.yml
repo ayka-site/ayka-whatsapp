@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/api/**'
       - 'packages/**'
+      - 'infra/docker/Dockerfile'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/api-tests.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'apps/api/**'
       - 'packages/**'
+      - 'infra/docker/Dockerfile'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/api-tests.yml'
@@ -29,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
@@ -37,3 +39,6 @@ jobs:
 
       - name: Run API tests
         run: npm test --workspace @ayka/api
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
