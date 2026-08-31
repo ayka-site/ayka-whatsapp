@@ -32,6 +32,29 @@ test('semantic retrieval keeps distinct model-planned queries separate', () => {
   assert.equal(queries.some(query => query.includes('तीन अलग चीज़ों')), false)
 })
 
+test('semantic requests retain coverage when the model emits fewer retrieval expansions', () => {
+  const queries = retrievalPrivate.buildSemanticQueries({
+    message: 'multi-part parent question',
+    understanding: {
+      retrievalQueries: [
+        'boys hostel availability',
+        'daily hostel meal frequency',
+      ],
+      requests: [
+        { need: 'hostel availability for son', entities: [] },
+        { need: 'number of meals per day', entities: [] },
+        { need: 'school closing time', entities: [] },
+      ],
+    },
+    session: { flowState: { collectedData: {} } },
+  })
+
+  assert.equal(queries.length, 3)
+  assert.equal(queries[0], 'boys hostel availability')
+  assert.equal(queries[1], 'daily hostel meal frequency')
+  assert.equal(queries[2], 'school closing time')
+})
+
 test('coverage retrieval does not pad top-K with unrelated school facts', () => {
   const scored = [
     {
