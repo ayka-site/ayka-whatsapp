@@ -18,12 +18,18 @@ const validationSchema = {
   },
 }
 
-function shouldValidate({ understanding, reply }) {
+/**
+ * Decide whether a reply needs the semantic factual validator without trying to
+ * infer topic/intent from words in the reply. The understanding layer and
+ * retrieved evidence already tell us whether the turn depends on school facts.
+ * Critical numeric values are a deterministic safety backstop for cases where
+ * upstream semantic metadata is unexpectedly incomplete.
+ */
+function shouldValidate({ understanding, reply, evidence }) {
   if (understanding?.requiresKnowledge) return true
   if (understanding?.shouldHandoff) return true
-  if (/₹|\b\d{2,}\b|\b(?:am|pm)\b|%|phone|contact|fee|fees|admission|hostel|transport|result|timing|address/i.test(String(reply || ''))) {
-    return true
-  }
+  if (String(evidence || '').trim()) return true
+  if (extractCriticalNumerics(reply).length > 0) return true
   return false
 }
 
@@ -168,7 +174,7 @@ async function validateReceptionistReply({
   memory,
   understanding,
 }) {
-  if (!shouldValidate({ understanding, reply })) {
+  if (!shouldValidate({ understanding, reply, evidence })) {
     return {
       safe: true,
       approvedReply: String(reply || '').trim(),
