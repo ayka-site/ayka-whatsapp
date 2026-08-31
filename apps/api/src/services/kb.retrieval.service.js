@@ -183,9 +183,13 @@ function cleanQuery(value) {
 }
 
 /**
- * Build one semantic query per information need. This intentionally does not
- * inspect topic words. The understanding model supplies free-form retrieval
- * queries; the backend only adds structured entity/memory context.
+ * Build one semantic query slot per information need. The understanding model's
+ * retrievalQueries are useful semantic expansions, but they are not allowed to
+ * reduce coverage: if it emits fewer queries than requests, the corresponding
+ * request.need becomes the fallback query for each missing slot.
+ *
+ * This is structural coverage, not topic routing. The backend never inspects
+ * words such as fees/hostel/transport to decide meaning.
  */
 function buildSemanticQueries({ message, understanding, session }) {
   const explicitQueries = (understanding?.retrievalQueries || [])
@@ -193,22 +197,31 @@ function buildSemanticQueries({ message, understanding, session }) {
     .filter(Boolean)
     .slice(0, 8)
 
-  const requests = Array.isArray(understanding?.requests) ? understanding.requests : []
-  const bases = explicitQueries.length
-    ? explicitQueries
-    : requests.map(request => cleanQuery(request?.need)).filter(Boolean).slice(0, 8)
+  const requests = Array.isArray(understanding?.requests)
+    ? understanding.requests.slice(0, 8)
+    : []
+
+  const slotCount = Math.min(8, Math.max(explicitQueries.length, requests.length))
+  const bases = []
+
+  for (let index = 0; index < slotCount; index += 1) {
+    const explicit = explicitQueries[index]
+    const requestNeed = cleanQuery(requests[index]?.need)
+    const base = explicit || requestNeed
+    if (base) bases.push({ base, requestIndex: index })
+  }
 
   if (!bases.length) {
     const raw = cleanQuery(message)
-    if (raw) bases.push(raw)
+    if (raw) bases.push({ base: raw, requestIndex: -1 })
   }
 
   const memory = session?.flowState?.collectedData || {}
   const targetClass = cleanQuery(memory.interestedClass)
 
-  const queries = bases.map((base, index) => {
+  return bases.map(({ base, requestIndex }) => {
     const parts = [base]
-    const request = requests[index]
+    const request = requestIndex >= 0 ? requests[requestIndex] : null
     const entities = Array.isArray(request?.entities)
       ? request.entities.map(cleanQuery).filter(Boolean)
       : []
@@ -216,9 +229,7 @@ function buildSemanticQueries({ message, understanding, session }) {
     if (entities.length) parts.push(`Relevant entities: ${entities.join(', ')}`)
     if (targetClass) parts.push(`Target admission class: ${targetClass}`)
     return parts.join('\n')
-  })
-
-  return [...new Set(queries.filter(Boolean))].slice(0, 8)
+  }).slice(0, 8)
 }
 
 function scoreChunksAgainstQueries(chunks, queryVectors) {
