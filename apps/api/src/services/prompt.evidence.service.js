@@ -1,5 +1,6 @@
 const crypto = require('crypto')
 const { embedTexts } = require('./ai.gateway.service')
+const { _private: retrievalPrivate } = require('./kb.retrieval.service')
 const logger = require('../utils/logger')
 
 const cache = new Map()
@@ -79,21 +80,6 @@ function extractPromptMetadata(systemPrompt) {
   }
 }
 
-function cosine(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || !a.length) return -1
-  let dot = 0
-  let aa = 0
-  let bb = 0
-  for (let i = 0; i < a.length; i += 1) {
-    const av = Number(a[i] || 0)
-    const bv = Number(b[i] || 0)
-    dot += av * bv
-    aa += av * av
-    bb += bv * bv
-  }
-  return aa && bb ? dot / (Math.sqrt(aa) * Math.sqrt(bb)) : -1
-}
-
 async function buildIndex(systemPrompt) {
   const chunks = extractEvidenceChunks(systemPrompt)
   const key = hash(chunks.map(chunk => chunk.text).join('\n'))
@@ -121,19 +107,27 @@ async function buildIndex(systemPrompt) {
   return index
 }
 
-function buildQuery(message, understanding) {
-  const parts = [String(message || '').trim()]
-  for (const request of understanding?.requests || []) {
-    if (request?.need) parts.push(request.need)
-    for (const entity of request?.entities || []) parts.push(entity)
-  }
-  for (const query of understanding?.retrievalQueries || []) parts.push(query)
+/**
+ * The compatibility prompt path uses the same semantic coverage strategy as
+ * the structured-KB retriever. We keep individual model-planned retrieval
+ * queries separate rather than concatenating them into one broad query.
+ *
+ * Human handoff is an action boundary, not a semantic topic classification, so
+ * when it is explicitly requested we add one deterministic contact-information
+ * query to ensure the receptionist can ground staff contact details.
+ */
+function buildPromptSemanticQueries(message, understanding) {
+  const queries = retrievalPrivate.buildSemanticQueries({
+    message,
+    understanding,
+    session: { flowState: { collectedData: {} } },
+  })
 
   if (understanding?.shouldHandoff) {
-    parts.push('admissions staff contact phone working hours human handoff')
+    queries.push('school staff contact information and contact hours')
   }
 
-  return [...new Set(parts.map(value => String(value || '').trim()).filter(Boolean))].join('\n')
+  return [...new Set(queries.map(value => String(value || '').trim()).filter(Boolean))].slice(0, 8)
 }
 
 async function retrievePromptEvidence({ systemPrompt, message, understanding }) {
@@ -145,25 +139,37 @@ async function retrievePromptEvidence({ systemPrompt, message, understanding }) 
     const index = await buildIndex(systemPrompt)
     if (!index.chunks.length) return { text: '', sources: [], failed: false, skipped: false }
 
-    const query = buildQuery(message, understanding)
-    const [queryVector] = await embedTexts([query])
-    const ranked = index.chunks
-      .map(chunk => ({ ...chunk, score: cosine(queryVector, chunk.vector) }))
-      .sort((a, b) => b.score - a.score)
-
-    const topK = Math.min(14, Math.max(4, Number.parseInt(process.env.KB_RETRIEVAL_TOP_K || '8', 10) || 8))
-    const maxChars = Math.max(1800, Number.parseInt(process.env.KB_RETRIEVAL_MAX_CHARS || '6500', 10) || 6500)
-    const minScore = Number.parseFloat(process.env.KB_RETRIEVAL_MIN_SCORE || '0.18')
-
-    const selected = []
-    let chars = 0
-    for (const item of ranked) {
-      if (selected.length >= topK) break
-      if (Number.isFinite(minScore) && item.score < minScore && selected.length >= 3) break
-      if (chars + item.text.length > maxChars && selected.length >= 3) break
-      selected.push(item)
-      chars += item.text.length
+    const semanticQueries = buildPromptSemanticQueries(message, understanding)
+    if (!semanticQueries.length) {
+      return { text: '', sources: [], failed: false, skipped: false, queries: [], query: '' }
     }
+
+    // Embed all information needs in one provider request. The KB index itself
+    // is cached separately, so warm turns pay only for this small query batch.
+    const queryVectors = await embedTexts(semanticQueries)
+    const scoreableChunks = index.chunks.map(chunk => ({
+      ...chunk,
+      embedding: chunk.vector,
+    }))
+    const scored = retrievalPrivate.scoreChunksAgainstQueries(scoreableChunks, queryVectors)
+
+    const requestedTopK = Number.parseInt(process.env.KB_RETRIEVAL_TOP_K || '8', 10) || 8
+    const topK = Math.min(14, Math.max(1, requestedTopK))
+    const parsedMinimumScore = Number.parseFloat(process.env.KB_RETRIEVAL_MIN_SCORE || '0.18')
+    const minimumScore = Number.isFinite(parsedMinimumScore) ? parsedMinimumScore : 0.18
+    const maxChars = Math.max(1500, Number.parseInt(process.env.KB_RETRIEVAL_MAX_CHARS || '6500', 10) || 6500)
+    const parsedSupport = Number.parseInt(process.env.KB_RETRIEVAL_SUPPORT_PER_QUERY || '0', 10)
+    const supportPerQuery = Math.min(2, Math.max(0, Number.isFinite(parsedSupport) ? parsedSupport : 0))
+    const parsedGap = Number.parseFloat(process.env.KB_RETRIEVAL_SUPPORT_GAP || '0.06')
+    const supportGap = Number.isFinite(parsedGap) ? Math.min(0.2, Math.max(0, parsedGap)) : 0.06
+
+    const selected = retrievalPrivate.selectEvidenceForQueries(scored, semanticQueries.length, {
+      topK,
+      minimumScore,
+      maxChars,
+      supportPerQuery,
+      supportGap,
+    })
 
     return {
       text: selected.map((item, indexValue) => `[E${indexValue + 1}] ${item.text}`).join('\n'),
@@ -171,11 +177,13 @@ async function retrievePromptEvidence({ systemPrompt, message, understanding }) 
         id: `E${indexValue + 1}`,
         sourceId: item.id,
         score: Number(item.score.toFixed(4)),
+        matchedQueries: item.matchedQueryIndexes.map(queryIndex => semanticQueries[queryIndex]),
         text: item.text,
       })),
       failed: false,
       skipped: false,
-      query,
+      queries: semanticQueries,
+      query: semanticQueries.join('\n'),
     }
   } catch (error) {
     logger.error({ error: error?.message }, 'Prompt evidence retrieval failed')
@@ -187,4 +195,7 @@ module.exports = {
   retrievePromptEvidence,
   extractPromptMetadata,
   extractEvidenceChunks,
+  _private: {
+    buildPromptSemanticQueries,
+  },
 }
