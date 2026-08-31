@@ -54,9 +54,13 @@ function splitFacts(section, prefix) {
  */
 function suppressShadowedLegacyFeeChunks(chunks) {
   const values = Array.isArray(chunks) ? chunks : []
-  const hasStructuredClassWiseFees = values.some(chunk =>
-    /^KNOWN FACT:\s*Fees\s*\([^)]*class-wise[^)]*\):/i.test(String(chunk?.text || ''))
-  )
+  const hasStructuredClassWiseFees = values.some(chunk => {
+    const text = String(chunk?.text || '')
+    if (!/^KNOWN FACT:\s*Fees\s*\(/i.test(text)) return false
+    if (/^KNOWN FACT:\s*Fees\s*\(SIMPLE TOTALS\b/i.test(text)) return false
+    const heading = text.split('\n', 1)[0]
+    return /\bclass-wise\b/i.test(heading)
+  })
 
   if (!hasStructuredClassWiseFees) return values
 
