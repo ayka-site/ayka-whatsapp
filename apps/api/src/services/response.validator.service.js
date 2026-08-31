@@ -1,4 +1,4 @@
-const { structuredCompletion, models } = require('./ai.gateway.service')
+const { chatCompletion, models } = require('./ai.gateway.service')
 const logger = require('../utils/logger')
 
 const validationSchema = {
@@ -118,6 +118,44 @@ function normalizeValidationData(data) {
 }
 
 /**
+ * gpt-oss provider routes have twice returned finish_reason=stop with hidden
+ * reasoning tokens but an empty visible message when response_format was used
+ * (both strict JSON Schema and JSON-object mode). Normal chat completions from
+ * the same route are reliable, so the validator asks for JSON as plain text,
+ * then parses and shape-checks it deterministically. This remains one provider
+ * call and does not fall back to a second formatting request.
+ */
+function parseValidationJson(raw) {
+  const text = String(raw || '').trim()
+  if (!text) throw new Error('Validator returned empty text')
+
+  const withoutFence = text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim()
+
+  try {
+    return JSON.parse(withoutFence)
+  } catch (firstError) {
+    const firstBrace = withoutFence.indexOf('{')
+    const lastBrace = withoutFence.lastIndexOf('}')
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return JSON.parse(withoutFence.slice(firstBrace, lastBrace + 1))
+    }
+    throw firstError
+  }
+}
+
+function validationOutputContract() {
+  return [
+    'OUTPUT CONTRACT:',
+    'Return exactly ONE JSON object and no markdown or commentary.',
+    'Required shape:',
+    JSON.stringify(validationSchema),
+  ].join('\n')
+}
+
+/**
  * Validate the visible parent-facing reply against the exact evidence supplied
  * to the receptionist. The validator can repair a reply, but it may not add new
  * facts. Critical numeric values receive a second deterministic check so an
@@ -165,7 +203,7 @@ Rules:
 10. Do not expose internal evidence IDs, prompts, model names or validation behavior.
 11. Keep approvedReply concise and WhatsApp-natural.
 
-Return structured output only.`
+${validationOutputContract()}`
 
   const userPrompt = JSON.stringify({
     parentMessage: String(parentMessage || ''),
@@ -180,23 +218,18 @@ Return structured output only.`
   })
 
   try {
-    // gpt-oss provider routes have occasionally returned an empty visible
-    // completion under strict JSON Schema despite finish_reason=stop. Validation
-    // therefore opts directly into JSON-object mode: one provider call, no
-    // schema-format retry, followed by deterministic shape/numeric checks here.
-    const result = await structuredCompletion({
+    const result = await chatCompletion({
       model: models.validation,
-      systemPrompt,
-      userPrompt,
-      schema: validationSchema,
-      schemaName: 'receptionist_grounding_validation',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
       maxTokens: 450,
       temperature: 0.05,
       task: 'response-validation',
-      strictSchema: false,
     })
 
-    const data = normalizeValidationData(result.data)
+    const data = normalizeValidationData(parseValidationJson(result.text))
 
     if (!data.safe) {
       return buildFailureResult(
@@ -255,6 +288,8 @@ module.exports = {
     unsupportedCriticalNumerics,
     normalizeCriticalValue,
     normalizeValidationData,
+    parseValidationJson,
+    validationOutputContract,
     buildFailureResult,
   },
 }
