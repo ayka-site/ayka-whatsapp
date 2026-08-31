@@ -7,8 +7,9 @@ const logger = require('../utils/logger')
  *
  * The school KB is converted into small path-labelled evidence chunks. Chunk
  * embeddings are computed once per KB revision per process and reused. Each
- * parent turn embeds only the semantic query produced by the understanding
- * model, then retrieves the closest verified KB chunks.
+ * parent turn embeds the semantic retrieval queries produced by the
+ * understanding model in one batch, then retrieves evidence per information
+ * need instead of filling a global top-K with loosely related chunks.
  */
 
 const kbIndexCache = new Map()
@@ -177,24 +178,126 @@ async function buildIndex(kb) {
   return indexed
 }
 
-function buildSemanticQuery({ message, understanding, session }) {
-  const parts = [String(message || '').trim()]
+function cleanQuery(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
 
-  for (const query of understanding?.retrievalQueries || []) {
-    if (query) parts.push(String(query).trim())
-  }
+/**
+ * Build one semantic query per information need. This intentionally does not
+ * inspect topic words. The understanding model supplies free-form retrieval
+ * queries; the backend only adds structured entity/memory context.
+ */
+function buildSemanticQueries({ message, understanding, session }) {
+  const explicitQueries = (understanding?.retrievalQueries || [])
+    .map(cleanQuery)
+    .filter(Boolean)
+    .slice(0, 8)
 
-  for (const request of understanding?.requests || []) {
-    if (request?.need) parts.push(String(request.need).trim())
-    if (Array.isArray(request?.entities) && request.entities.length) {
-      parts.push(request.entities.join(' '))
-    }
+  const requests = Array.isArray(understanding?.requests) ? understanding.requests : []
+  const bases = explicitQueries.length
+    ? explicitQueries
+    : requests.map(request => cleanQuery(request?.need)).filter(Boolean).slice(0, 8)
+
+  if (!bases.length) {
+    const raw = cleanQuery(message)
+    if (raw) bases.push(raw)
   }
 
   const memory = session?.flowState?.collectedData || {}
-  if (memory.interestedClass) parts.push(`Target admission class: ${memory.interestedClass}`)
+  const targetClass = cleanQuery(memory.interestedClass)
 
-  return [...new Set(parts.filter(Boolean))].join('\n')
+  const queries = bases.map((base, index) => {
+    const parts = [base]
+    const request = requests[index]
+    const entities = Array.isArray(request?.entities)
+      ? request.entities.map(cleanQuery).filter(Boolean)
+      : []
+
+    if (entities.length) parts.push(`Relevant entities: ${entities.join(', ')}`)
+    if (targetClass) parts.push(`Target admission class: ${targetClass}`)
+    return parts.join('\n')
+  })
+
+  return [...new Set(queries.filter(Boolean))].slice(0, 8)
+}
+
+function scoreChunksAgainstQueries(chunks, queryVectors) {
+  return chunks.map(chunk => {
+    const queryScores = queryVectors.map(vector => cosineSimilarity(vector, chunk.embedding))
+    const finiteScores = queryScores.filter(Number.isFinite)
+    const score = finiteScores.length ? Math.max(...finiteScores) : -1
+    return { ...chunk, queryScores, score }
+  })
+}
+
+/**
+ * Select coverage, not filler. By default we take the strongest evidence chunk
+ * for each semantic query and stop. We never pad the result merely to reach
+ * top-K, because unrelated but vaguely school-like chunks increase generation
+ * risk. Optional support-per-query can be enabled later after evaluation.
+ */
+function selectEvidenceForQueries(scored, queryCount, {
+  topK = 8,
+  minimumScore = 0.18,
+  maxChars = 6500,
+  supportPerQuery = 0,
+  supportGap = 0.06,
+} = {}) {
+  if (!Array.isArray(scored) || !scored.length || queryCount <= 0) return []
+
+  const selectedById = new Map()
+  let usedChars = 0
+
+  function addCandidate(candidate, queryIndex) {
+    if (!candidate || candidate.score < minimumScore) return false
+
+    const existing = selectedById.get(candidate.id)
+    if (existing) {
+      if (!existing.matchedQueryIndexes.includes(queryIndex)) {
+        existing.matchedQueryIndexes.push(queryIndex)
+      }
+      return true
+    }
+
+    if (selectedById.size >= topK) return false
+    if (usedChars + candidate.text.length > maxChars && selectedById.size > 0) return false
+
+    const row = {
+      ...candidate,
+      matchedQueryIndexes: [queryIndex],
+    }
+    selectedById.set(candidate.id, row)
+    usedChars += candidate.text.length
+    return true
+  }
+
+  for (let queryIndex = 0; queryIndex < queryCount; queryIndex += 1) {
+    const ranked = scored
+      .filter(candidate => Number.isFinite(candidate.queryScores?.[queryIndex]))
+      .sort((a, b) => b.queryScores[queryIndex] - a.queryScores[queryIndex])
+
+    const best = ranked[0]
+    if (!best || best.queryScores[queryIndex] < minimumScore) continue
+
+    const coverageCandidate = {
+      ...best,
+      score: best.queryScores[queryIndex],
+    }
+    addCandidate(coverageCandidate, queryIndex)
+
+    if (supportPerQuery <= 0) continue
+
+    const floor = Math.max(minimumScore, best.queryScores[queryIndex] - supportGap)
+    let supportAdded = 0
+    for (const candidate of ranked.slice(1)) {
+      if (supportAdded >= supportPerQuery || selectedById.size >= topK) break
+      const queryScore = candidate.queryScores[queryIndex]
+      if (!Number.isFinite(queryScore) || queryScore < floor) break
+      if (addCandidate({ ...candidate, score: queryScore }, queryIndex)) supportAdded += 1
+    }
+  }
+
+  return [...selectedById.values()].sort((a, b) => b.score - a.score)
 }
 
 /**
@@ -220,31 +323,32 @@ async function retrieveKnowledge({ kb, message, understanding, session }) {
       return { evidenceText: '', sources: [], semantic: true, skipped: false, failed: false }
     }
 
-    const semanticQuery = buildSemanticQuery({ message, understanding, session })
-    const [queryVector] = await embedTexts([semanticQuery])
+    const semanticQueries = buildSemanticQueries({ message, understanding, session })
+    if (!semanticQueries.length) {
+      return { evidenceText: '', sources: [], semantic: true, skipped: false, failed: false, queries: [] }
+    }
 
-    const scored = index.chunks
-      .map(chunk => ({
-        ...chunk,
-        score: cosineSimilarity(queryVector, chunk.embedding),
-      }))
-      .filter(item => Number.isFinite(item.score))
-      .sort((a, b) => b.score - a.score)
+    // All need-specific query embeddings are sent in one provider request.
+    const queryVectors = await embedTexts(semanticQueries)
+    const scored = scoreChunksAgainstQueries(index.chunks, queryVectors)
 
     const requestedTopK = Number.parseInt(process.env.KB_RETRIEVAL_TOP_K || '8', 10) || 8
-    const topK = Math.min(14, Math.max(4, requestedTopK))
-    const minimumScore = Number.parseFloat(process.env.KB_RETRIEVAL_MIN_SCORE || '0.18')
+    const topK = Math.min(14, Math.max(1, requestedTopK))
+    const parsedMinimumScore = Number.parseFloat(process.env.KB_RETRIEVAL_MIN_SCORE || '0.18')
+    const minimumScore = Number.isFinite(parsedMinimumScore) ? parsedMinimumScore : 0.18
     const maxChars = Math.max(1500, Number.parseInt(process.env.KB_RETRIEVAL_MAX_CHARS || '6500', 10) || 6500)
+    const parsedSupport = Number.parseInt(process.env.KB_RETRIEVAL_SUPPORT_PER_QUERY || '0', 10)
+    const supportPerQuery = Math.min(2, Math.max(0, Number.isFinite(parsedSupport) ? parsedSupport : 0))
+    const parsedGap = Number.parseFloat(process.env.KB_RETRIEVAL_SUPPORT_GAP || '0.06')
+    const supportGap = Number.isFinite(parsedGap) ? Math.min(0.2, Math.max(0, parsedGap)) : 0.06
 
-    const selected = []
-    let usedChars = 0
-    for (const candidate of scored) {
-      if (selected.length >= topK) break
-      if (Number.isFinite(minimumScore) && candidate.score < minimumScore && selected.length >= 3) break
-      if (usedChars + candidate.text.length > maxChars && selected.length >= 3) break
-      selected.push(candidate)
-      usedChars += candidate.text.length
-    }
+    const selected = selectEvidenceForQueries(scored, semanticQueries.length, {
+      topK,
+      minimumScore,
+      maxChars,
+      supportPerQuery,
+      supportGap,
+    })
 
     const evidenceText = selected.length
       ? selected.map((item, index) => `[E${index + 1}] ${item.text}`).join('\n')
@@ -256,12 +360,14 @@ async function retrieveKnowledge({ kb, message, understanding, session }) {
         id: `E${index + 1}`,
         path: item.path,
         score: Number(item.score.toFixed(4)),
+        matchedQueries: item.matchedQueryIndexes.map(queryIndex => semanticQueries[queryIndex]),
         text: item.text,
       })),
       semantic: true,
       skipped: false,
       failed: false,
-      query: semanticQuery,
+      queries: semanticQueries,
+      query: semanticQueries.join('\n'),
     }
   } catch (error) {
     logger.error({ error: error?.message }, 'Semantic KB retrieval failed; caller should use safe full-KB fallback')
@@ -286,6 +392,8 @@ module.exports = {
   _private: {
     flattenKnowledge,
     cosineSimilarity,
-    buildSemanticQuery,
+    buildSemanticQueries,
+    scoreChunksAgainstQueries,
+    selectEvidenceForQueries,
   },
 }
