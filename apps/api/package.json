@@ -8,6 +8,7 @@
     "dev": "nodemon --config nodemon.json index.js",
     "test": "node --test test/*.test.js",
     "test:ai-smoke": "node scripts/smoke-ai-receptionist.js",
+    "test:ai-acceptance": "node scripts/production-ai-acceptance.js",
     "seed:buildsworth": "node scripts/seed-buildsworth.js",
     "switch:demo-phone": "node scripts/switch-demo-phone.js"
   },
