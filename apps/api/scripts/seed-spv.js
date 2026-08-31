@@ -27,6 +27,7 @@ const mongoose = require('mongoose')
 const bcrypt   = require('bcryptjs')
 const crypto   = require('crypto')
 const { Business, KnowledgeBase, User, Reseller } = require('@ayka/db')
+const { encrypt } = require('../src/utils/encryption')
 
 const ADMIN_EMAIL    = process.env.SPV_ADMIN_EMAIL    || 'admin@spvschool.in'
 const ADMIN_PASSWORD = process.env.SPV_ADMIN_PASSWORD || crypto.randomBytes(12).toString('base64url')
@@ -63,6 +64,7 @@ async function main() {
   const waAccessToken   = process.env.WA_ACCESS_TOKEN
   const waWabaId        = process.env.WA_WABA_ID         || '918233131133295'
   const waVerifyToken   = process.env.WA_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'spv_webhook_secret_2026'
+  const encryptedAccessToken = waAccessToken ? encrypt(waAccessToken) : null
 
   if (!business && !waAccessToken) {
     console.error('❌ WA_ACCESS_TOKEN is required for SPV onboarding.')
@@ -101,7 +103,7 @@ async function main() {
       vertical:   'school',
       whatsapp: {
         phoneNumberId: waPhoneNumberId,
-        accessToken:   waAccessToken,
+        accessToken:   encryptedAccessToken,
         wabaId:        waWabaId,
         verifyToken:   waVerifyToken,
       },
@@ -133,7 +135,7 @@ async function main() {
       'whatsapp.verifyToken': waVerifyToken,
       resellerId: reseller._id,
     }
-    if (waAccessToken) update['whatsapp.accessToken'] = waAccessToken
+    if (encryptedAccessToken) update['whatsapp.accessToken'] = encryptedAccessToken
     await Business.updateOne({ _id: business._id }, { $set: update })
     console.log(`ℹ️  Business already exists - updated: ${business.name} (${business._id})`)
   }

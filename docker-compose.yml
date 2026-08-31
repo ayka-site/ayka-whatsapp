@@ -12,6 +12,8 @@ services:
       - "3000:3000"
     env_file:
       - apps/api/.env.production
+    volumes:
+      - ./apps/api/public/uploads:/app/apps/api/public/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -28,12 +30,14 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.dashboard
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.ayka.site}
     container_name: ayka-dashboard
     restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.ayka.site}
       - PORT=3001
     depends_on:
       api:

@@ -57,8 +57,8 @@ function markKeyRateLimited(keyIndex) {
 }
 
 // ─── MODEL TIERING ──────────────────────────────────────────────
-const MODEL_FAST    = process.env.GROQ_MODEL_FAST || 'llama-3.1-8b-instant'
-const MODEL_DEFAULT = process.env.GROQ_MODEL_DEFAULT || 'llama-3.3-70b-versatile'
+const MODEL_FAST    = process.env.GROQ_MODEL_FAST || 'openai/gpt-oss-20b'
+const MODEL_DEFAULT = process.env.GROQ_MODEL_DEFAULT || 'openai/gpt-oss-120b'
 
 function selectModel(recentMessages) {
   // Use fast model for short conversations (≤ 3 messages)
@@ -106,7 +106,7 @@ const groqStats = {
   _latencySum: 0,
   resetAt: new Date(),
   // v5.1 additions
-  modelUsage: {},           // { 'llama-3.3-70b-versatile': 42, ... }
+  modelUsage: {},           // { 'openai/gpt-oss-120b': 42, ... }
   peakConcurrency: 0,
   queuedCalls: 0,
 }

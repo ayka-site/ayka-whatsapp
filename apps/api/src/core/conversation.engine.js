@@ -1,5 +1,5 @@
 const sessionService = require('../services/session.service')
-const { KnowledgeBase, Contact, Conversation, Message, Appointment } = require('@ayka/db')
+const { KnowledgeBase, Contact, Conversation, Message, Appointment, Property } = require('@ayka/db')
 const { buildSystemPrompt, sanitizeUserMessageForPrompt } = require('./prompt.builder')
 const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
@@ -9,6 +9,14 @@ const { triggerHandoff }    = require('./handoff.engine')
 const { sendTextMessage, sendImageMessage, markAsRead } = require('../services/whatsapp.service')
 const redis  = require('../config/redis')
 const logger = require('../utils/logger')
+
+function summarizeError(err) {
+  return {
+    message: err?.message,
+    status: err?.response?.status || err?.status,
+    data: err?.response?.data,
+  }
+}
 const { normalizePhoneE164 } = require('../utils/phone')
 
 /**
@@ -28,6 +36,8 @@ const configuredProcessLockTtl = Number.parseInt(process.env.PROCESS_LOCK_TTL_SE
 const PROCESS_LOCK_TTL = Number.isFinite(configuredProcessLockTtl) && configuredProcessLockTtl >= 15
   ? configuredProcessLockTtl
   : 45
+const PROPERTY_IMAGE_BATCH_SIZE = Math.min(Math.max(Number.parseInt(process.env.PROPERTY_IMAGE_BATCH_SIZE || '8', 10) || 8, 1), 10)
+const PROPERTY_IMAGE_MAX_SEND = Math.min(Math.max(Number.parseInt(process.env.PROPERTY_IMAGE_MAX_SEND || '30', 10) || 30, 1), 50)
 
 // In-memory dedup layer - catches race conditions where two webhook calls arrive
 // simultaneously before either's Redis SET NX completes (especially with Upstash HTTP latency)
@@ -58,6 +68,99 @@ function normalizeStudentNameHonorific(text, studentName) {
   return response
     .replace(new RegExp(`(${escaped})\\s+ji\\b`, 'gi'), '$1')
     .replace(new RegExp(`(${escaped})\\s+जी`, 'g'), '$1')
+}
+
+function normalizeRealEstateReply(text) {
+  const lines = String(text || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+  const seenQuestions = new Set()
+  const cleaned = []
+
+  for (const line of lines) {
+    const normalized = line
+      .toLowerCase()
+      .replace(/[?？]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const isQuestion = /[?？]$/.test(line) || /\b(kya|chahenge|chahiye|kar doon|karu|bataun|shall|would you|do you want)\b/i.test(line)
+    if (isQuestion && seenQuestions.has(normalized)) continue
+    if (isQuestion) seenQuestions.add(normalized)
+    cleaned.push(line)
+  }
+
+  return cleaned.join('\n')
+}
+
+function normalizeMatchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function hasWord(text, word) {
+  if (!word) return false
+  return new RegExp(`(^|\\s)${escapeForRegex(word)}(\\s|$)`, 'i').test(text)
+}
+
+function scorePropertyForText(property, text) {
+  const haystack = normalizeMatchText(text)
+  if (!haystack || !property) return 0
+
+  let score = 0
+  const title = normalizeMatchText(property.title)
+  const locality = normalizeMatchText(property.location?.locality)
+  const city = normalizeMatchText(property.location?.city)
+  const type = normalizeMatchText(property.propertyType)
+  const bhk = normalizeMatchText(property.bhk)
+
+  if (locality && haystack.includes(locality)) score += 10
+  for (const token of locality.split(' ').filter(t => t.length >= 4)) {
+    if (hasWord(haystack, token)) score += 4
+  }
+  if (city && haystack.includes(city)) score += 2
+
+  for (const token of title.split(' ').filter(t => t.length >= 4)) {
+    if (hasWord(haystack, token)) score += 3
+  }
+  for (const token of bhk.split(' ').filter(t => t.length >= 2)) {
+    if (hasWord(haystack, token)) score += 2
+  }
+
+  const typeAliases = {
+    apartment: ['apartment', 'flat', 'ghar', 'home'],
+    villa: ['villa', 'kothi', 'bungalow'],
+    plot: ['plot', 'land', 'zameen'],
+    office: ['office'],
+    shop: ['shop', 'dukaan'],
+    commercial: ['commercial', 'showroom'],
+  }
+  for (const alias of typeAliases[type] || [type]) {
+    if (hasWord(haystack, alias)) score += 3
+  }
+
+  return score
+}
+
+function resolveMentionedProperty(properties, userText, assistantText, fallbackPropertyId) {
+  if (!Array.isArray(properties) || properties.length === 0) return null
+
+  const scored = properties
+    .map(property => ({
+      property,
+      score: (scorePropertyForText(property, userText) * 2) + scorePropertyForText(property, assistantText),
+    }))
+    .sort((a, b) => b.score - a.score)
+
+  const top = scored[0]
+  const second = scored[1]
+  if (top?.score >= 8 && top.score >= ((second?.score || 0) + 2)) return top.property
+
+  if (fallbackPropertyId) return properties.find(p => String(p._id) === String(fallbackPropertyId)) || null
+  return null
 }
 
 /**
@@ -550,6 +653,14 @@ async function processMessage(req) {
       }
     }
 
+    if (tenant.vertical === 'realestate') {
+      const properties = await Property.find(
+        { businessId: tenant.businessId, status: { $in: ['available', 'hold'] } },
+      ).sort({ isFeatured: -1, priority: -1, updatedAt: -1 }).limit(12).lean()
+      kb = kb || { content: {} }
+      kb.content = { ...(kb.content || {}), realEstateProperties: properties }
+    }
+
     // ── 5. Build system prompt (pass current message for greeting detection + context) ──
     const systemPrompt = buildSystemPrompt(kb, session, tenant.settings, messageText)
 
@@ -571,9 +682,13 @@ async function processMessage(req) {
       if (isContentFilterError(llmErr)) {
         const digitsOnly = (phone || '').replace(/\D/g, '')
         const isIndian = digitsOnly.startsWith('91')
-        const contentFilterReply = isIndian
-          ? 'Main Priya hoon, aur main sirf school admissions mein help karti hoon. Aap admission, fees, ya school visit ke baare mein pooch sakte hain.'
-          : 'I am Priya, and I can only help with school admissions. You can ask me about admissions, fees, or school visits.'
+        const contentFilterReply = tenant.vertical === 'realestate'
+          ? (isIndian
+              ? 'Main property enquiry mein help karti hoon. Aap budget, location, BHK, ya site visit ke baare mein pooch sakte hain.'
+              : 'I can help with property enquiries. You can ask about budget, location, BHK, or site visits.')
+          : (isIndian
+              ? 'Main Priya hoon, aur main sirf school admissions mein help karti hoon. Aap admission, fees, ya school visit ke baare mein pooch sakte hain.'
+              : 'I am Priya, and I can only help with school admissions. You can ask me about admissions, fees, or school visits.')
         await sendTextMessage(phone, contentFilterReply, tenant.phoneNumberId, tenant.accessToken)
         return contentFilterReply
       }
@@ -591,6 +706,20 @@ async function processMessage(req) {
     const finalFlowState = extractDataFromMessages(messageText, cleanResponse, updatedFlowState, session.recentMessages)
     session.flowState = finalFlowState
     let outboundResponse = normalizeStudentNameHonorific(cleanResponse, finalFlowState.collectedData?.studentName)
+    if (tenant.vertical === 'realestate') outboundResponse = normalizeRealEstateReply(outboundResponse)
+    if (tenant.vertical === 'realestate') {
+      const activeProperties = kb?.content?.realEstateProperties || []
+      const resolvedProperty = resolveMentionedProperty(
+        activeProperties,
+        messageText,
+        outboundResponse,
+        finalFlowState.collectedData?.propertyId,
+      )
+      if (resolvedProperty?._id) {
+        finalFlowState.collectedData.propertyId = String(resolvedProperty._id)
+        session.flowState = finalFlowState
+      }
+    }
 
     // ── 9.5. Compute lead score (pure, deterministic - no I/O) ──
     const { score: leadScore, reason: leadScoreReason } = computeLeadScore(finalFlowState, tenant.vertical)
@@ -697,7 +826,7 @@ async function processMessage(req) {
         }
       ),
       markAsRead(waMessageId, tenant.phoneNumberId, tenant.accessToken),
-    ]).catch(err => logger.error({ err }, 'Non-blocking DB write failed'))
+    ]).catch(err => logger.error({ err: summarizeError(err) }, 'Non-blocking DB write failed'))
 
     // ── 13.5. Handle talent hunt video submission request ──
     if (askedForTalentHuntVideo) {
@@ -714,8 +843,82 @@ async function processMessage(req) {
       }
     }
 
+    let propertyImagePayloads = []
+    if (tenant.vertical === 'realestate') {
+      const propertyId = String(session.flowState?.collectedData?.propertyId || '').trim()
+      const previousPropertyId = String(prevCollectedData.propertyId || '').trim()
+      const askedForPropertyMedia = /\b(photo|photos|pic|pics|picture|image|video|media|bhejo|dikhao|dekhna|फोटो|वीडियो|दिखाओ)\b/i.test(messageText)
+      const askedForMoreMedia = /\b(more|aur|or|all|saari|sari|sab|more photos|aur photo|बाकी|और|सारी|सभी)\b/i.test(messageText)
+      const activeProperties = kb?.content?.realEstateProperties || []
+      const currentTurnProperty = resolveMentionedProperty(activeProperties, messageText, outboundResponse, null)
+      const selectedProperty = currentTurnProperty || (propertyId && (!askedForPropertyMedia || askedForMoreMedia)
+        ? activeProperties.find(p => String(p._id) === propertyId)
+        : null
+      )
+      const images = selectedProperty?.media?.filter(m => m.type === 'image' && /^https?:\/\//i.test(m.url)) || []
+      if (images.length && (propertyId !== previousPropertyId || askedForPropertyMedia || askedForMoreMedia)) {
+        const collected = session.flowState.collectedData || {}
+        const selectedPropertyId = String(selectedProperty._id)
+        const previousMediaPropertyId = String(collected.propertyMediaPropertyId || '')
+        const currentOffset = previousMediaPropertyId === selectedPropertyId ? Number(collected.propertyMediaOffset || 0) : 0
+        const startsFreshGallery = selectedPropertyId !== previousPropertyId || askedForPropertyMedia
+        const start = askedForMoreMedia && !startsFreshGallery ? currentOffset : 0
+        const sendLimit = startsFreshGallery ? PROPERTY_IMAGE_MAX_SEND : PROPERTY_IMAGE_BATCH_SIZE
+        const batch = images.slice(start, start + sendLimit)
+        propertyImagePayloads = batch.map((image, index) => ({
+          imageUrl: image.url,
+          caption: image.caption || `${selectedProperty.title} (${start + index + 1}/${images.length})`,
+        }))
+
+        const nextOffset = Math.min(start + batch.length, images.length)
+        session.flowState.collectedData = {
+          ...collected,
+          propertyId: selectedPropertyId,
+          propertyMediaPropertyId: selectedPropertyId,
+          propertyMediaOffset: nextOffset >= images.length ? 0 : nextOffset,
+        }
+        sessionService.saveSession(session).catch(err => logger.warn({ err }, 'Failed to persist property media offset'))
+        Conversation.updateOne(
+          { _id: conversation._id },
+          { $set: { 'flowState.collectedData.propertyId': selectedPropertyId, 'flowState.collectedData.propertyMediaPropertyId': selectedPropertyId, 'flowState.collectedData.propertyMediaOffset': nextOffset >= images.length ? 0 : nextOffset } },
+        ).catch(err => logger.warn({ err }, 'Failed to persist property media offset to conversation'))
+      }
+    }
+
     // ── 14. Send response to parent ──
     await sendTextMessage(phone, outboundResponse, tenant.phoneNumberId, tenant.accessToken)
+
+    for (const propertyImagePayload of propertyImagePayloads) {
+      try {
+        const imageResult = await sendImageMessage(
+          phone,
+          propertyImagePayload.imageUrl,
+          propertyImagePayload.caption,
+          tenant.phoneNumberId,
+          tenant.accessToken
+        )
+        const sentImageUrl = imageResult?.resolvedMediaUrl || propertyImagePayload.imageUrl
+        Message.create({
+          conversationId: conversation._id,
+          businessId: tenant.businessId,
+          contactId: contact._id,
+          direction: 'outbound',
+          role: 'assistant',
+          content: {
+            contentType: 'image',
+            text: propertyImagePayload.caption || '',
+            url: sentImageUrl,
+            caption: propertyImagePayload.caption || '',
+            mediaType: 'image',
+          },
+          waMessageId: imageResult?.messages?.[0]?.id,
+          status: 'sent',
+          timestamp: new Date(),
+        }).catch(err => logger.warn({ err }, 'Failed to persist property image message'))
+      } catch (err) {
+        logger.warn({ err, phone }, 'Property image send failed')
+      }
+    }
 
     if (qrPayload) {
       await sendImageMessage(
@@ -730,7 +933,7 @@ async function processMessage(req) {
     return outboundResponse
 
   } catch (err) {
-    logger.error({ err, phone, businessId: tenant.businessId }, 'processMessage failed')
+    logger.error({ err: summarizeError(err), phone, businessId: tenant.businessId }, 'processMessage failed')
     try {
       // Language-aware natural error message - never sound robotic
       const hasDevanagari = /[\u0900-\u097F]/.test(messageText || '')
@@ -748,7 +951,7 @@ async function processMessage(req) {
 
       await sendTextMessage(phone, fallback, tenant.phoneNumberId, tenant.accessToken)
     } catch (sendErr) {
-      logger.error({ sendErr }, 'Failed to send fallback message')
+      logger.error({ sendErr: summarizeError(sendErr) }, 'Failed to send fallback message')
     }
   }
   finally {

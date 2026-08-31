@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-const { getUser, removeToken } = require('../lib/api')
+const { apiFetch, getUser, setUser, removeToken } = require('../lib/api')
+
+const REAL_ESTATE_DEMO_BUSINESS_ID = '6a3157f348f8877f957279bd'
 
 const NAV_ITEMS = {
   client: [
@@ -43,11 +45,23 @@ export default function Sidebar() {
     const u = getUser()
     if (!u) { router.push('/login'); return }
     setUserState(u)
+
+    apiFetch('/api/auth/me')
+      .then(freshUser => {
+        setUser(freshUser)
+        setUserState(freshUser)
+      })
+      .catch(() => {})
   }, [router])
 
   if (!user) return null
 
-  const items = NAV_ITEMS[user.role] || []
+  const items = [...(NAV_ITEMS[user.role] || [])]
+  const isRealEstateClient = user.businessVertical === 'realestate'
+    || String(user.businessId || '') === REAL_ESTATE_DEMO_BUSINESS_ID
+  if (user.role === 'client' && isRealEstateClient) {
+    items.splice(2, 0, { href: '/client/properties', label: 'Properties', icon: '🏘️' })
+  }
   const theme = user.themeConfig || {}
 
   function handleLogout() {

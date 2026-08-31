@@ -21,6 +21,16 @@
       "static/chunks/main-app.js",
       "static/chunks/app/client/dashboard/page.js"
     ],
+    "/client/conversations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/client/conversations/page.js"
+    ],
+    "/client/properties/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/client/properties/page.js"
+    ],
     "/client/leads/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -30,21 +40,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/client/appointments/page.js"
-    ],
-    "/client/conversations/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/client/conversations/page.js"
-    ],
-    "/superadmin/dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/superadmin/dashboard/page.js"
-    ],
-    "/superadmin/clients/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/superadmin/clients/page.js"
     ]
   }
 }

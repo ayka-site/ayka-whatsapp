@@ -1,5 +1,5 @@
 const sessionService = require('../services/session.service')
-const { KnowledgeBase, Contact, Conversation, Message } = require('@ayka/db')
+const { KnowledgeBase, Contact, Conversation, Message, Property } = require('@ayka/db')
 const { buildSystemPrompt, sanitizeUserMessageForPrompt } = require('./prompt.builder')
 const { callLLM }           = require('../services/llm.service')
 const { parseAIResponse, extractDataFromMessages } = require('./flow.engine')
@@ -192,6 +192,14 @@ async function processWebMessage(businessId, visitorId, messageText, visitorInfo
           logger.warn({ cacheErr, businessId }, 'Redis KB cache write failed (web widget)')
         }
       }
+    }
+
+    if (tenant.vertical === 'realestate') {
+      const properties = await Property.find(
+        { businessId, status: { $in: ['available', 'hold'] } },
+      ).sort({ isFeatured: -1, priority: -1, updatedAt: -1 }).limit(12).lean()
+      kb = kb || { content: {} }
+      kb.content = { ...(kb.content || {}), realEstateProperties: properties }
     }
 
     // ── 6. Build system prompt ──

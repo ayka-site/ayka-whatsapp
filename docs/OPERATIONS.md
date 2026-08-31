@@ -66,7 +66,7 @@
            ▼                           ▼
 ┌──────────────────┐    ┌──────────────────────┐
 │ MongoDB (Azure VM)│    │ Redis (Azure VM)      │
-│ 20.235.104.28     │    │ Session cache, KB cache│
+│ 20.198.90.26      │    │ Session cache, KB cache│
 │ 8 collections     │    │ Rate limit state       │
 └──────────────────┘    └──────────────────────┘
 ```
@@ -96,7 +96,7 @@
 
 ### Prerequisites
 - Node.js 20+ (via nvm)
-- Access to MongoDB on Azure VM (`20.235.104.28:27017`)
+- Access to MongoDB on Azure VM (`20.198.90.26:27017` — was `20.235.104.28` pre-2026-05)
 - Groq API key(s)
 
 ### Start API Server
@@ -224,12 +224,12 @@ az containerapp update \
   --set-env-vars \
     NODE_ENV=production \
     PORT=3000 \
-    MONGODB_URI="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" \
-    REDIS_URL="redis://20.235.104.28:6379" \
+    MONGODB_URI="mongodb://aykaadmin:AykaDB2026@20.198.90.26:27017/ayka?authSource=admin" \
+    REDIS_URL="redis://20.198.90.26:6379" \
     REDIS_PASSWORD="AykaRedis@2026!" \
     GROQ_API_KEYS="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" \
-    GROQ_MODEL_FAST="llama-3.1-8b-instant" \
-    GROQ_MODEL_DEFAULT="llama-3.3-70b-versatile" \
+    GROQ_MODEL_FAST="openai/gpt-oss-20b" \
+    GROQ_MODEL_DEFAULT="openai/gpt-oss-120b" \
     LLM_MAX_CONCURRENCY=5 \
     JWT_SECRET="a4f9e2c17d3b8a6e5f0c1d9b2e7a4f6c8d3b1e5a9f2c7d4b6e8a1c3f5d7b9e2a4c6f8d1b3e5a7c9f2d4b6e8a1c3f5" \
     ENCRYPTION_KEY="c7ff000224dc186ad77ae46b24f96e897a8b8e6312f82a03c1c6f220877ee564" \
@@ -866,8 +866,8 @@ main()
 ### Model Tiering
 | Scenario | Model | Speed | Quality |
 |---|---|---|---|
-| First 3 messages | llama-3.1-8b-instant | ⚡ Fast | Good |
-| 4+ messages | llama-3.3-70b-versatile | 🐢 Slower | Excellent |
+| First 3 messages | openai/gpt-oss-20b | ⚡ Fast | Good |
+| 4+ messages | openai/gpt-oss-120b | 🐢 Slower | Excellent |
 
 ### API Key Rotation
 - Multiple keys in `GROQ_API_KEYS` (comma-separated)
@@ -1039,7 +1039,7 @@ Returns:
   "failedCalls": 2,
   "rateLimitHits": 3,
   "avgLatencyMs": 1200,
-  "modelUsage": { "llama-3.1-8b-instant": 80, "llama-3.3-70b-versatile": 62 },
+  "modelUsage": { "openai/gpt-oss-20b": 80, "openai/gpt-oss-120b": 62 },
   "fallbackCalls": 0,
   "concurrency": { "current": 1, "max": 5, "peak": 4, "queued": 0 },
   "keyCount": 1,
@@ -1073,16 +1073,16 @@ Returns:
 ### MongoDB Backup (Azure VM)
 Data lives on the Azure VM. Run regular `mongodump` backups and store off-VM. To restore:
 1. Copy a backup directory to the VM
-2. Run `mongorestore --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" ./backup-dir`
+2. Run `mongorestore --uri="mongodb://aykaadmin:AykaDB2026@20.198.90.26:27017/ayka?authSource=admin" ./backup-dir`
 3. Verify collections are intact via MongoDB Compass
 
 ### Manual Data Export
 ```bash
 # Export all collections
-mongodump --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" --out ./backup-$(date +%Y%m%d)
+mongodump --uri="mongodb://aykaadmin:AykaDB2026@20.198.90.26:27017/ayka?authSource=admin" --out ./backup-$(date +%Y%m%d)
 
 # Export specific collection
-mongoexport --uri="mongodb://aykaadmin:AykaDB2026@20.235.104.28:27017/ayka?authSource=admin" --collection=businesses --out=businesses.json
+mongoexport --uri="mongodb://aykaadmin:AykaDB2026@20.198.90.26:27017/ayka?authSource=admin" --collection=businesses --out=businesses.json
 ```
 
 ### Environment Recovery
@@ -1092,6 +1092,57 @@ All env vars are documented in `apps/api/.env.production`. If Azure Container Ap
 3. Create new Container App with env vars from `.env.production`
 4. Update DNS to point to new app
 5. Reconfigure Meta webhook URL
+
+---
+
+## Per-Tenant Credential Management (AyKa BOS)
+
+All AI API keys, WhatsApp secrets, and R2 credentials are stored **per-tenant** in MongoDB,
+encrypted at rest using AES-256-GCM. The encryption key is `AES_ENCRYPTION_KEY` in the BOS API env.
+
+### Setting credentials via the UI (Owner role)
+
+1. Log in to the BOS Dashboard as the tenant owner.
+2. Navigate to **Settings → Credentials**.
+3. Use the **AI Provider Credentials** card to set provider (Groq / Azure OpenAI / Gemini) + API key.
+4. Use the **WhatsApp Secrets** card to set/rotate the Access Token, App Secret, and Webhook Verify Token.
+5. Values are saved encrypted; only a masked preview is shown after saving.
+
+### Setting credentials via migration script (CLI)
+
+```bash
+# Encrypt any existing plaintext WhatsApp tokens for ALL tenants:
+MONGODB_URI="..." AES_ENCRYPTION_KEY="..." \
+  pnpm --filter @ayka-bos/api exec tsx scripts/migrate-tenant-credentials.ts
+
+# Set Groq AI key for a specific tenant:
+MONGODB_URI="..." AES_ENCRYPTION_KEY="..." \
+  pnpm --filter @ayka-bos/api exec tsx scripts/migrate-tenant-credentials.ts \
+  --tenant-slug=ssew --ai-provider=groq --ai-key=gsk_xxx
+
+# Set Azure OpenAI key:
+MONGODB_URI="..." AES_ENCRYPTION_KEY="..." \
+  pnpm --filter @ayka-bos/api exec tsx scripts/migrate-tenant-credentials.ts \
+  --tenant-slug=ssew --ai-provider=azure-openai --ai-key=<key> \
+  --azure-endpoint=https://foo.openai.azure.com \
+  --azure-deployment=gpt-4o --azure-api-version=2024-08-01-preview
+```
+
+### Required BOS env vars
+
+| Variable | Purpose |
+|---|---|
+| `AES_ENCRYPTION_KEY` | 32-byte hex key for AES-256-GCM (generate with `openssl rand -hex 32`) |
+| `WHATSAPP_APP_SECRET` | Platform-level fallback HMAC secret (used if tenant has no per-tenant appSecret) |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Platform-level fallback verify token |
+| `GROQ_API_KEY` | Global Groq key — **deprecated**; only used if tenant has no AI config |
+
+### Fail-closed behaviour
+
+- If a tenant has no AI config → AI endpoints return `503 AI not configured for this tenant`.
+- If a tenant has no WhatsApp apiKey → replies are silently dropped (logged as warning).
+- If a tenant has no appSecret → signature verification falls back to `WHATSAPP_APP_SECRET`.
+  If that is also absent, verification is skipped with a warning (not recommended for production).
 
 ---
 

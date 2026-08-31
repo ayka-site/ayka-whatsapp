@@ -30,6 +30,36 @@ function normalizeRecipient(to) {
   return toWhatsAppRecipient(to)
 }
 
+function summarizeAxiosError(err) {
+  return {
+    message: err?.message,
+    status: err?.response?.status,
+    data: err?.response?.data,
+  }
+}
+
+function resolvePublicMediaUrl(imageUrl) {
+  const raw = String(imageUrl || '').trim()
+  if (!raw) throw new Error('Image URL is empty')
+
+  const parsed = new URL(raw)
+  const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)
+  if (!isLocalhost) return raw
+
+  const publicBase = String(
+    process.env.WHATSAPP_MEDIA_BASE_URL
+    || process.env.API_PUBLIC_URL
+    || process.env.PUBLIC_API_URL
+    || ''
+  ).replace(/\/+$/, '')
+
+  if (!publicBase) {
+    throw new Error('WhatsApp media URL points to localhost. Set WHATSAPP_MEDIA_BASE_URL to your ngrok/API public URL.')
+  }
+
+  return `${publicBase}${parsed.pathname}${parsed.search}`
+}
+
 async function sendTextMessage(to, text, phoneNumberId, accessToken) {
   try {
     const recipient = normalizeRecipient(to)
@@ -47,7 +77,7 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
     )
     return response.data
   } catch (err) {
-    logger.error({ err: err.response?.data || err.message, to }, 'Failed to send text message')
+    logger.error({ err: summarizeAxiosError(err), to }, 'Failed to send text message')
     throw err
   }
 }
@@ -55,7 +85,8 @@ async function sendTextMessage(to, text, phoneNumberId, accessToken) {
 async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToken) {
   try {
     const recipient = normalizeRecipient(to)
-    const image = { link: String(imageUrl || '').trim() }
+    const publicImageUrl = resolvePublicMediaUrl(imageUrl)
+    const image = { link: publicImageUrl }
     if (caption && String(caption).trim()) image.caption = String(caption).trim()
 
     const response = await axios.post(
@@ -70,9 +101,9 @@ async function sendImageMessage(to, imageUrl, caption, phoneNumberId, accessToke
         headers: { Authorization: `Bearer ${accessToken}` }
       }
     )
-    return response.data
+    return { ...response.data, resolvedMediaUrl: publicImageUrl }
   } catch (err) {
-    logger.error({ err: err.response?.data || err.message, to, imageUrl }, 'Failed to send image message')
+    logger.error({ err: summarizeAxiosError(err), to, imageUrl }, 'Failed to send image message')
     throw err
   }
 }
@@ -94,7 +125,7 @@ async function sendInteractiveButtons(to, bodyText, buttons, phoneNumberId, acce
     )
     return response.data
   } catch (err) {
-    logger.error({ err: err.response?.data || err.message, to }, 'Failed to send interactive buttons')
+    logger.error({ err: summarizeAxiosError(err), to }, 'Failed to send interactive buttons')
     throw err
   }
 }
@@ -114,7 +145,7 @@ async function markAsRead(waMessageId, phoneNumberId, accessToken) {
     )
     return response.data
   } catch (err) {
-    logger.error({ err: err.response?.data || err.message, waMessageId }, 'Failed to mark message as read')
+    logger.error({ err: summarizeAxiosError(err), waMessageId }, 'Failed to mark message as read')
     throw err
   }
 }

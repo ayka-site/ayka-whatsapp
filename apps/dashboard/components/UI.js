@@ -253,10 +253,9 @@ export function FormInput({ value, onChange, placeholder, type = 'text', require
 export function FormSelect({ value, onChange, options, placeholder }) {
   return (
     <select value={value || ''} onChange={e => onChange(e.target.value)}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-white/10 outline-none focus:border-white/30"
-      style={{ color: 'var(--color-text)', backgroundColor: '#1a1a2e' }}>
-      {placeholder && <option value="" style={{ background: '#1a1a2e', color: '#e2e8f0' }}>{placeholder}</option>}
-      {options.map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e', color: '#e2e8f0' }}>{o.label}</option>)}
+      className="w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-slate-400">
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   )
 }

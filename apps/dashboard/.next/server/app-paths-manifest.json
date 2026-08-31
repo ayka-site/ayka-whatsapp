@@ -1,7 +1,8 @@
 {
   "/login/page": "app/login/page.js",
-  "/client/leads/page": "app/client/leads/page.js",
+  "/client/dashboard/page": "app/client/dashboard/page.js",
   "/client/conversations/page": "app/client/conversations/page.js",
-  "/superadmin/clients/page": "app/superadmin/clients/page.js",
-  "/superadmin/dashboard/page": "app/superadmin/dashboard/page.js"
+  "/client/properties/page": "app/client/properties/page.js",
+  "/client/leads/page": "app/client/leads/page.js",
+  "/client/appointments/page": "app/client/appointments/page.js"
 }

@@ -1,9 +1,13 @@
 const express = require('express')
 const router = express.Router()
 const mongoose = require('mongoose')
+const crypto = require('crypto')
+const fs = require('fs')
+const path = require('path')
+const multer = require('multer')
 const { authenticateJWT, requireRole, enforceBusinessScope } = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
-const { Conversation, Contact, Message, Appointment, KnowledgeBase, Business } = require('@ayka/db')
+const { Conversation, Contact, Message, Appointment, KnowledgeBase, Business, Property } = require('@ayka/db')
 const { sendTextMessage } = require('../services/whatsapp.service')
 const { decrypt } = require('../utils/encryption')
 const logger = require('../utils/logger')
@@ -58,6 +62,54 @@ async function flushKbCacheForBusiness(businessId) {
 
 const REPLY_WINDOW_MS = 24 * 60 * 60 * 1000
 const MAX_REPLY_TEXT_LENGTH = 2000
+const PROPERTY_STATUS = new Set(['available', 'hold', 'sold', 'rented', 'inactive'])
+const PROPERTY_LISTING_TYPES = new Set(['sale', 'rent', 'lease'])
+const PROPERTY_TYPES = new Set(['apartment', 'villa', 'plot', 'floor', 'commercial', 'office', 'shop', 'farmhouse', 'other'])
+const MEDIA_TYPES = new Set(['image', 'video'])
+const PROPERTY_UPLOAD_ROOT = path.resolve(__dirname, '../../public/uploads/properties')
+const PROPERTY_UPLOAD_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+])
+const PROPERTY_UPLOAD_EXTENSIONS = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+}
+
+const propertyUpload = multer({
+  storage: multer.diskStorage({
+    destination(req, file, cb) {
+      const businessId = String(req.user?.businessId || '').replace(/[^a-fA-F0-9]/g, '')
+      const dest = path.join(PROPERTY_UPLOAD_ROOT, businessId || 'unknown')
+      fs.mkdirSync(dest, { recursive: true })
+      cb(null, dest)
+    },
+    filename(req, file, cb) {
+      const ext = PROPERTY_UPLOAD_EXTENSIONS[file.mimetype] || path.extname(file.originalname || '').toLowerCase()
+      cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`)
+    },
+  }),
+  limits: {
+    files: 20,
+    fileSize: 50 * 1024 * 1024,
+  },
+  fileFilter(req, file, cb) {
+    if (!PROPERTY_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+      return cb(new Error('Only JPG, PNG, WebP, GIF, MP4, WebM, and MOV files are supported'))
+    }
+    cb(null, true)
+  },
+})
 
 function getReplyPolicy({ business, conversation, lastInboundAt }) {
   const settings = business?.settings || {}
@@ -111,6 +163,96 @@ function getDateRange(period) {
       break
   }
   return { start, end: now }
+}
+
+async function requireRealEstateBusiness(businessId, res) {
+  const business = await Business.findById(businessId, { _id: 1, vertical: 1, resellerId: 1 }).lean()
+  if (!business) {
+    res.status(404).json({ error: 'Business not found' })
+    return null
+  }
+  if (business.vertical !== 'realestate') {
+    res.status(403).json({ error: 'Property management is available only for real estate clients' })
+    return null
+  }
+  return business
+}
+
+function parseList(value) {
+  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean)
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean)
+}
+
+function normalizeMedia(media) {
+  if (!Array.isArray(media)) return []
+  return media
+    .map(item => ({
+      type: MEDIA_TYPES.has(String(item?.type || '').toLowerCase()) ? String(item.type).toLowerCase() : 'image',
+      url: String(item?.url || '').trim(),
+      caption: String(item?.caption || '').trim(),
+    }))
+    .filter(item => /^https?:\/\//i.test(item.url))
+    .slice(0, 20)
+}
+
+function getPublicAssetUrl(req, relativePath) {
+  const base = String(
+    process.env.WHATSAPP_MEDIA_BASE_URL
+    || process.env.API_PUBLIC_URL
+    || process.env.PUBLIC_API_URL
+    || process.env.API_URL
+    || ''
+  ).replace(/\/+$/, '')
+  if (base) return `${base}${relativePath}`
+  return `${req.protocol}://${req.get('host')}${relativePath}`
+}
+
+function normalizePropertyPayload(body, existing = {}) {
+  const input = body || {}
+  const locationInput = input.location || {}
+  const location = {
+    city: String(locationInput.city ?? input.city ?? existing.location?.city ?? '').trim(),
+    locality: String(locationInput.locality ?? input.locality ?? existing.location?.locality ?? '').trim(),
+    address: String(locationInput.address ?? input.address ?? existing.location?.address ?? '').trim(),
+    landmark: String(locationInput.landmark ?? input.landmark ?? existing.location?.landmark ?? '').trim(),
+    mapUrl: String(locationInput.mapUrl ?? input.mapUrl ?? existing.location?.mapUrl ?? '').trim(),
+  }
+
+  const status = String(input.status || existing.status || 'available').toLowerCase()
+  const listingType = String(input.listingType || existing.listingType || 'sale').toLowerCase()
+  const propertyType = String(input.propertyType || existing.propertyType || 'apartment').toLowerCase()
+  const media = input.media !== undefined ? normalizeMedia(input.media) : existing.media
+
+  return {
+    title: String(input.title ?? existing.title ?? '').trim(),
+    slug: String(input.slug ?? existing.slug ?? '').trim(),
+    status: PROPERTY_STATUS.has(status) ? status : 'available',
+    listingType: PROPERTY_LISTING_TYPES.has(listingType) ? listingType : 'sale',
+    propertyType: PROPERTY_TYPES.has(propertyType) ? propertyType : 'other',
+    bhk: String(input.bhk ?? existing.bhk ?? '').trim(),
+    carpetArea: input.carpetArea === '' || input.carpetArea === undefined ? null : Number(input.carpetArea),
+    builtUpArea: input.builtUpArea === '' || input.builtUpArea === undefined ? null : Number(input.builtUpArea),
+    areaUnit: ['sqft', 'sqyd', 'sqm', 'acre', 'bigha'].includes(String(input.areaUnit || existing.areaUnit || 'sqft')) ? String(input.areaUnit || existing.areaUnit || 'sqft') : 'sqft',
+    price: input.price === '' || input.price === undefined ? null : Number(input.price),
+    priceLabel: String(input.priceLabel ?? existing.priceLabel ?? '').trim(),
+    maintenance: input.maintenance === '' || input.maintenance === undefined ? null : Number(input.maintenance),
+    negotiable: Boolean(input.negotiable ?? existing.negotiable ?? false),
+    location,
+    possession: String(input.possession ?? existing.possession ?? '').trim(),
+    furnishing: ['', 'unfurnished', 'semi-furnished', 'fully-furnished'].includes(String(input.furnishing ?? existing.furnishing ?? '')) ? String(input.furnishing ?? existing.furnishing ?? '') : '',
+    facing: String(input.facing ?? existing.facing ?? '').trim(),
+    floor: String(input.floor ?? existing.floor ?? '').trim(),
+    amenities: input.amenities !== undefined ? parseList(input.amenities) : existing.amenities,
+    highlights: input.highlights !== undefined ? parseList(input.highlights) : existing.highlights,
+    description: String(input.description ?? existing.description ?? '').trim(),
+    media,
+    contactPhone: String(input.contactPhone ?? existing.contactPhone ?? '').trim(),
+    isFeatured: Boolean(input.isFeatured ?? existing.isFeatured ?? false),
+    priority: Number(input.priority ?? existing.priority ?? 0),
+  }
 }
 
 function getPreviousPeriodRange(period) {
@@ -494,7 +636,27 @@ router.get('/conversations', asyncHandler(async (req, res) => {
   const lastMessages = await Message.aggregate([
     { $match: { conversationId: { $in: convoIds } } },
     { $sort: { timestamp: -1 } },
-    { $group: { _id: '$conversationId', lastMsg: { $first: '$content.text' }, lastTime: { $first: '$timestamp' } } },
+    {
+      $group: {
+        _id: '$conversationId',
+        lastMsg: {
+          $first: {
+            $cond: [
+              { $eq: ['$content.contentType', 'image'] },
+              { $concat: ['Photo: ', { $ifNull: ['$content.caption', '$content.text'] }] },
+              {
+                $cond: [
+                  { $eq: ['$content.contentType', 'video'] },
+                  { $concat: ['Video: ', { $ifNull: ['$content.caption', '$content.text'] }] },
+                  '$content.text',
+                ],
+              },
+            ],
+          },
+        },
+        lastTime: { $first: '$timestamp' },
+      },
+    },
   ])
 
   const lastMsgMap = {}
@@ -659,6 +821,142 @@ router.get('/appointments', asyncHandler(async (req, res) => {
     page,
     totalPages: Math.ceil(total / limit),
   })
+}))
+
+// GET /api/client/properties
+router.get('/properties', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  const page = Math.max(parseInt(req.query.page) || 1, 1)
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 25, 1), 100)
+  const skip = (page - 1) * limit
+
+  const filter = { businessId }
+  if (req.query.status) filter.status = { $in: String(req.query.status).split(',').filter(Boolean) }
+  if (req.query.type) filter.propertyType = req.query.type
+  if (req.query.listingType) filter.listingType = req.query.listingType
+  if (req.query.search) {
+    const s = String(req.query.search).trim()
+    filter.$or = [
+      { title: { $regex: s, $options: 'i' } },
+      { 'location.locality': { $regex: s, $options: 'i' } },
+      { 'location.city': { $regex: s, $options: 'i' } },
+      { bhk: { $regex: s, $options: 'i' } },
+    ]
+  }
+
+  const [properties, total] = await Promise.all([
+    Property.find(filter).sort({ isFeatured: -1, priority: -1, updatedAt: -1 }).skip(skip).limit(limit).lean(),
+    Property.countDocuments(filter),
+  ])
+
+  res.json({ properties, total, page, totalPages: Math.ceil(total / limit) })
+}))
+
+// POST /api/client/properties/media
+router.post('/properties/media', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  try {
+    await new Promise((resolve, reject) => {
+      propertyUpload.array('media', 20)(req, res, (err) => {
+        if (err) return reject(err)
+        resolve()
+      })
+    })
+  } catch (err) {
+    const message = err?.code === 'LIMIT_FILE_SIZE'
+      ? 'Each upload must be 50 MB or smaller'
+      : err?.message || 'Unable to upload files'
+    return res.status(400).json({ error: message })
+  }
+
+  const files = req.files || []
+  if (!files.length) return res.status(400).json({ error: 'Select at least one photo or video' })
+
+  const media = files.map(file => {
+    const businessFolder = String(req.user.businessId).replace(/[^a-fA-F0-9]/g, '')
+    const relativePath = `/assets/uploads/properties/${businessFolder}/${file.filename}`
+    return {
+      type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+      url: getPublicAssetUrl(req, relativePath),
+      caption: '',
+      originalName: file.originalname,
+      size: file.size,
+    }
+  })
+
+  res.status(201).json({ media })
+}))
+
+// GET /api/client/properties/:propertyId
+router.get('/properties/:propertyId', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  const property = await Property.findOne({ _id: req.params.propertyId, businessId }).lean()
+  if (!property) return res.status(404).json({ error: 'Property not found' })
+  res.json(property)
+}))
+
+// POST /api/client/properties
+router.post('/properties', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  const payload = normalizePropertyPayload(req.body)
+  if (!payload.title) return res.status(400).json({ error: 'Property title is required' })
+  if (!payload.location.locality && !payload.location.city) {
+    return res.status(400).json({ error: 'Locality or city is required' })
+  }
+
+  const property = await Property.create({
+    ...payload,
+    businessId,
+    resellerId: business.resellerId || null,
+  })
+  res.status(201).json(property)
+}))
+
+// PATCH /api/client/properties/:propertyId
+router.patch('/properties/:propertyId', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  const existing = await Property.findOne({ _id: req.params.propertyId, businessId }).lean()
+  if (!existing) return res.status(404).json({ error: 'Property not found' })
+
+  const payload = normalizePropertyPayload(req.body, existing)
+  if (!payload.title) return res.status(400).json({ error: 'Property title is required' })
+
+  const property = await Property.findOneAndUpdate(
+    { _id: req.params.propertyId, businessId },
+    { $set: payload },
+    { new: true, runValidators: true },
+  )
+  res.json(property)
+}))
+
+// DELETE /api/client/properties/:propertyId
+router.delete('/properties/:propertyId', asyncHandler(async (req, res) => {
+  const businessId = toObjectId(req.user.businessId)
+  const business = await requireRealEstateBusiness(businessId, res)
+  if (!business) return
+
+  const property = await Property.findOneAndUpdate(
+    { _id: req.params.propertyId, businessId },
+    { $set: { status: 'inactive' } },
+    { new: true },
+  )
+  if (!property) return res.status(404).json({ error: 'Property not found' })
+  res.json({ success: true, property })
 }))
 
 // GET /api/client/settings

@@ -21,8 +21,12 @@ const messageSchema = new Schema({
   direction: { type: String, enum: ['inbound','outbound'], required: true },
   role: { type: String, enum: ['user','assistant'], required: true },
   content: {
-  contentType: { type: String, default: 'text' },
-  text:        { type: String }
+  contentType: { type: String, enum: ['text', 'image', 'video', 'document'], default: 'text' },
+  text:        { type: String },
+  url:         { type: String },
+  caption:     { type: String },
+  mediaType:   { type: String },
+  fileName:    { type: String }
 },
   waMessageId: { type: String },
   status: { type: String, enum: ['sent','delivered','read','failed'], default: 'sent' },

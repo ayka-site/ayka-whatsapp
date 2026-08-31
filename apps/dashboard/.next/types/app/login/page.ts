@@ -1,4 +1,4 @@
-// File: /home/rudra/Ayka/ayka/apps/dashboard/app/login/page.js
+// File: /home/rudra/Projects/AyKa/ayka/apps/dashboard/app/login/page.js
 import * as entry from '../../../../app/login/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

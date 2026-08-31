@@ -54,6 +54,7 @@ async function buildAuthUserPayload(user) {
 
   const business = await Business.findById(user.businessId, {
     name: 1,
+    vertical: 1,
     settings: 1,
     widget: 1,
   }).lean()
@@ -73,6 +74,7 @@ async function buildAuthUserPayload(user) {
       || existingTheme.faviconUrl
       || '',
   }
+  payload.businessVertical = business.vertical || null
 
   return payload
 }

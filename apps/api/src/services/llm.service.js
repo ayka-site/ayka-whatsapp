@@ -3,9 +3,9 @@ const logger  = require('../utils/logger')
 const { callGroq } = require('./groq.service')
 
 /**
- * llm.service.js v4.0 - Azure OpenAI gateway (gpt-4.1-mini)
+ * llm.service.js v4.1 - Azure OpenAI gateway
  *
- * Primary provider: Azure OpenAI via openai npm SDK with baseURL + apiKey.
+ * Primary provider: Azure OpenAI via chat-completions or responses endpoint.
  * Fallback provider: Groq when Azure retries are exhausted.
  */
 
@@ -13,6 +13,7 @@ const { callGroq } = require('./groq.service')
 const AZURE_OPENAI_KEY = process.env.AZURE_OPENAI_KEY || process.env.AZURE_OPENAI_API_KEY || ''
 const DEPLOYMENT       = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1-mini'
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || 'https://aykachatbot-resource.cognitiveservices.azure.com'
+const AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-05-01-preview'
 
 /**
  * buildAzureOpenAIBaseUrl - Normalize endpoint/deployment into Azure Chat Completions base URL.
@@ -22,11 +23,28 @@ const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || 'https://ayka
  */
 function buildAzureOpenAIBaseUrl(endpoint, deployment) {
   const cleaned = String(endpoint || '').trim().replace(/\/+$/, '')
+  if (cleaned.endsWith('/responses')) return cleaned.replace(/\/responses$/, '')
+  if (cleaned.endsWith('/openai/v1')) return cleaned
   if (cleaned.includes('/openai/deployments/')) return cleaned
   return `${cleaned}/openai/deployments/${deployment}`
 }
 
+function isResponsesEndpoint(endpoint) {
+  const cleaned = String(endpoint || '').trim().replace(/\/+$/, '')
+  return cleaned.endsWith('/responses') || cleaned.endsWith('/openai/v1')
+}
+
+function buildResponsesUrl(endpoint) {
+  const cleaned = String(endpoint || '').trim().replace(/\/+$/, '')
+  if (cleaned.endsWith('/responses')) return cleaned
+  if (cleaned.endsWith('/openai/v1')) return `${cleaned}/responses`
+  return `${cleaned}/openai/v1/responses`
+}
+
 const AZURE_OPENAI_BASE_URL = buildAzureOpenAIBaseUrl(AZURE_OPENAI_ENDPOINT, DEPLOYMENT)
+const USE_RESPONSES_API = String(process.env.AZURE_OPENAI_API_MODE || '').toLowerCase() === 'responses'
+  || isResponsesEndpoint(AZURE_OPENAI_ENDPOINT)
+const AZURE_RESPONSES_URL = buildResponsesUrl(AZURE_OPENAI_ENDPOINT)
 
 if (!AZURE_OPENAI_KEY) {
   logger.error('AZURE_OPENAI_KEY not set - LLM calls will fail')
@@ -35,11 +53,11 @@ if (!AZURE_OPENAI_KEY) {
 const client = new OpenAI({
   apiKey:  AZURE_OPENAI_KEY,
   baseURL: AZURE_OPENAI_BASE_URL,
-  defaultQuery:   { 'api-version': '2024-05-01-preview' },
+  defaultQuery:   USE_RESPONSES_API ? undefined : { 'api-version': AZURE_OPENAI_API_VERSION },
   defaultHeaders: { 'api-key': AZURE_OPENAI_KEY },
 })
 
-logger.info({ deployment: DEPLOYMENT }, 'Azure OpenAI initialized')
+logger.info({ deployment: DEPLOYMENT, apiMode: USE_RESPONSES_API ? 'responses' : 'chat-completions' }, 'Azure OpenAI initialized')
 
 // ─── CONCURRENCY LIMITER ────────────────────────────────────────
 const MAX_CONCURRENT = parseInt(process.env.LLM_MAX_CONCURRENCY) || 5
@@ -123,6 +141,10 @@ async function _callAzure(systemPrompt, recentMessages) {
     ...trimRecentMessagesToTokenBudget(recentMessages.slice(-20), MAX_CONTEXT_TOKENS),
   ]
 
+  if (USE_RESPONSES_API) {
+    return _callAzureResponses(messages)
+  }
+
   const response = await client.chat.completions.create({
     model: DEPLOYMENT,
     messages,
@@ -133,6 +155,52 @@ async function _callAzure(systemPrompt, recentMessages) {
   const content = response.choices?.[0]?.message?.content
   if (!content?.trim()) throw new Error('Azure OpenAI returned empty response')
   return content.trim()
+}
+
+function extractResponsesText(response) {
+  if (response?.output_text?.trim()) return response.output_text.trim()
+
+  const textParts = []
+  for (const item of response?.output || []) {
+    for (const content of item?.content || []) {
+      if (content?.type === 'output_text' && content?.text) textParts.push(content.text)
+      if (content?.type === 'text' && content?.text) textParts.push(content.text)
+    }
+  }
+
+  const text = textParts.join('\n').trim()
+  if (!text) throw new Error('Azure OpenAI returned empty response')
+  return text
+}
+
+async function _callAzureResponses(messages) {
+  const response = await fetch(AZURE_RESPONSES_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': AZURE_OPENAI_KEY,
+      Authorization: `Bearer ${AZURE_OPENAI_KEY}`,
+    },
+    body: JSON.stringify({
+      model: DEPLOYMENT,
+      input: messages.map(message => ({
+        role: message.role,
+        content: String(message.content || ''),
+      })),
+      max_output_tokens: 400,
+      temperature: LLM_TEMPERATURE,
+    }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const message = data?.error?.message || data?.message || response.statusText
+    const err = new Error(`${response.status} ${message}`)
+    err.status = response.status
+    throw err
+  }
+
+  return extractResponsesText(data)
 }
 
 // ─── UNIFIED CALL ───────────────────────────────────────────────

@@ -111,6 +111,37 @@ export default function ClientConversations() {
     }
   }
 
+  function renderMessageContent(msg) {
+    const content = msg.content || {}
+    if (content.contentType === 'image' && content.url) {
+      return (
+        <div className="space-y-2">
+          <a href={content.url} target="_blank" rel="noreferrer" className="block">
+            <img
+              src={content.url}
+              alt={content.caption || 'Sent image'}
+              className="block h-48 w-72 max-w-full rounded-lg object-cover bg-slate-200"
+              loading="lazy"
+            />
+          </a>
+          <a href={content.url} target="_blank" rel="noreferrer" className="block text-[11px] underline opacity-60">Open photo</a>
+          {(content.caption || content.text) && <p style={{ whiteSpace: 'pre-wrap' }}>{content.caption || content.text}</p>}
+        </div>
+      )
+    }
+    if (content.contentType === 'video' && content.url) {
+      return (
+        <div className="space-y-2">
+          <a href={content.url} target="_blank" rel="noreferrer" className="block rounded-lg border border-black/10 px-3 py-2 underline">
+            Open video
+          </a>
+          {(content.caption || content.text) && <p style={{ whiteSpace: 'pre-wrap' }}>{content.caption || content.text}</p>}
+        </div>
+      )
+    }
+    return <p style={{ whiteSpace: 'pre-wrap' }}>{content.text || ''}</p>
+  }
+
   return (
     <DashboardLayout requiredRole="client">
       <TopBar title="Conversations" breadcrumbs={['Home', 'Conversations']} />
@@ -220,7 +251,7 @@ export default function ClientConversations() {
                       )}
                       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[75%] px-3.5 py-2.5 text-sm ${isUser ? 'bubble-user' : 'bubble-assistant'}`}>
-                          <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content?.text || ''}</p>
+                          {renderMessageContent(msg)}
                           <p className="text-[10px] opacity-40 mt-1 text-right">
                             {new Date(msg.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                           </p>

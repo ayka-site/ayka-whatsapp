@@ -14,6 +14,7 @@ const realestateConfig = {
   goals: [
     'inquiryUnderstood',
     'buyerNameCollected',
+    'propertyTypeCollected',
     'budgetCollected',
     'timelineCollected',
     'locationPreferenceCollected',
@@ -31,7 +32,9 @@ const realestateConfig = {
   },
   maxMessagesBeforeHandoffSuggestion: 12,
 
-  // ── Visit Scheduling (disabled - site visits handled by agents) ──
+  // Site visits are qualified by the bot and handed off to the sales team.
+  // The generic Appointment model is school-shaped, so keep hard scheduling off
+  // until a real-estate visit model is introduced.
   scheduling: {
     enabled: false,
   },
@@ -45,15 +48,18 @@ const realestateConfig = {
       const budget   = _parseBudgetLakhs(cd.budget)
       const timeline = _parseTimelineMonths(cd.timeline)
 
+      if (cd.preferredVisitTime || flowState.handoffTriggered) {
+        const reasons = []
+        if (cd.preferredVisitTime) reasons.push(`Site visit: ${cd.preferredVisitTime}`)
+        if (flowState.handoffTriggered) reasons.push('Handoff triggered')
+        if (cd.propertyId) reasons.push(`Property matched: ${cd.propertyId}`)
+        return reasons.join(', ')
+      }
+
       if (budget !== null && timeline !== null) {
         if (budget > 50 && timeline <= 3) {
           return `Budget ${budget}L, timeline ${timeline} months`
         }
-      }
-
-      // Handoff always makes it hot regardless of budget/timeline
-      if (flowState.handoffTriggered) {
-        return 'Handoff triggered'
       }
 
       return null
@@ -72,6 +78,16 @@ const realestateConfig = {
       if (timeline !== null && timeline <= 3 && (budget === null || budget <= 50)) {
         return `Timeline ${timeline} months, budget ${budget !== null ? budget + 'L' : 'unknown'}`
       }
+
+      const filled = [
+        cd.propertyType,
+        cd.locationPreference,
+        cd.bhk,
+        cd.budget,
+        cd.timeline,
+        cd.purpose,
+      ].filter(Boolean)
+      if (filled.length >= 3) return `Qualified preference: ${filled.join(', ')}`
 
       return null
     },

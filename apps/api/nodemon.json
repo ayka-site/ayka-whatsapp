@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "index.js",
+    "src",
+    "../../packages/db"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/**",
+    "../../node_modules/**",
+    "public/uploads/**",
+    "tmp/**",
+    "*.log"
+  ],
+  "legacyWatch": true,
+  "delay": "300ms"
+}

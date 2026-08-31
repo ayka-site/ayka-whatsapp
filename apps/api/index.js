@@ -8,6 +8,7 @@ const { decrypt } = require('./src/utils/encryption')
 const { sendTextMessage } = require('./src/services/whatsapp.service')
 const { validateEnv } = require('./src/config/env')
 const { connectDB } = require('./src/config/db')
+const { startFollowUpWorker } = require('./src/core/followup.engine')
 const logger = require('./src/utils/logger')
 
 process.on('unhandledRejection', (reason) => {
@@ -20,6 +21,7 @@ process.on('uncaughtException', (err) => {
 
 validateEnv()
 connectDB()
+startFollowUpWorker()
 
 const app = express()
 
@@ -132,7 +134,12 @@ app.use((err, req, res, next) => {
 })
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
-const outboundSubscriber = new Redis(REDIS_URL)
+const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined
+const outboundSubscriber = new Redis(REDIS_URL, {
+  password: REDIS_PASSWORD,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 200, 5000),
+})
 
 async function resolveTenantForOutbound(phoneNumberId) {
   const redis = require('./src/config/redis')

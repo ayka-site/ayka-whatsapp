@@ -61,7 +61,7 @@ async function publishInboundToBos(req, msgObj, value) {
   if (!tenant) return false
   if (tenant.vertical !== 'msme') return false
   if (msgObj.type !== 'text') return false
-  if (!isBosBridgeEnabledForTenant(tenant)) return false
+  if (!(await isBosBridgeEnabledForTenant(tenant))) return false
 
   const text = msgObj.text?.body?.trim()
   if (!text) return false

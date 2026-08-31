@@ -2,6 +2,15 @@
   "name": "ayka",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "dev": "npm run dev:api & npm run dev:dashboard",
+    "dev:api": "npm run dev --workspace @ayka/api",
+    "dev:dashboard": "npm run dev --workspace @ayka/dashboard",
+    "build": "npm run build --workspace @ayka/dashboard",
+    "start": "npm run start:api & npm run start:dashboard",
+    "start:api": "npm run start --workspace @ayka/api",
+    "start:dashboard": "npm run start --workspace @ayka/dashboard"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

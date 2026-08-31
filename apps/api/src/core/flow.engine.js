@@ -57,6 +57,23 @@ function parseAIResponse(rawResponse, flowState) {
 
   const llmParentName = parseNameMarker('NAME_PARENT')
   const llmStudentName = parseNameMarker('NAME_STUDENT')
+  const markerMap = {
+    BUYER_NAME: 'buyerName',
+    PROPERTY_TYPE: 'propertyType',
+    LISTING_TYPE: 'listingType',
+    BHK: 'bhk',
+    BUDGET: 'budget',
+    LOCATION: 'locationPreference',
+    TIMELINE: 'timeline',
+    PURPOSE: 'purpose',
+    SITE_VISIT: 'preferredVisitTime',
+    PROPERTY_ID: 'propertyId',
+  }
+  const realEstateHints = {}
+  for (const [label, field] of Object.entries(markerMap)) {
+    const value = parseNameMarker(label)
+    if (value) realEstateHints[field] = value
+  }
   if (llmParentName || llmStudentName) {
     updatedFlowState.llmNameHints = {
       parentName: llmParentName || null,
@@ -66,6 +83,14 @@ function parseAIResponse(rawResponse, flowState) {
       .replace(/(^|\n)\s*NAME_PARENT\s*:\s*.+?(?=\n|$)/gi, '')
       .replace(/(^|\n)\s*NAME_STUDENT\s*:\s*.+?(?=\n|$)/gi, '')
       .trim()
+  }
+  if (Object.keys(realEstateHints).length > 0) {
+    if (!updatedFlowState.collectedData) updatedFlowState.collectedData = {}
+    Object.assign(updatedFlowState.collectedData, realEstateHints)
+    for (const label of Object.keys(markerMap)) {
+      cleanResponse = cleanResponse.replace(new RegExp(`(^|\\n)\\s*${label}\\s*:\\s*.+?(?=\\n|$)`, 'gi'), '')
+    }
+    cleanResponse = cleanResponse.trim()
   }
 
   // Require HANDOFF: YES to appear on its own line - prevents embedded/quoted triggers
@@ -261,6 +286,57 @@ function extractDataFromMessages(userMessage, aiResponse, flowState, recentMessa
   if (!updated.goals)         updated.goals = {}
 
   const llmHints = updated.llmNameHints || {}
+
+  const propertyIntent = /\b(flat|apartment|villa|plot|floor|commercial|office|shop|farmhouse|property|ghar|makaan|makan|dukaan|plot|bhk|rent|lease|buy|purchase|investment|site\s*visit|location|budget|lakh|lac|crore|cr)\b/i.test(userMessage)
+  if (propertyIntent) {
+    if (!updated.goals.inquiryUnderstood) updated.goals.inquiryUnderstood = true
+    if (!updated.collectedData.buyerName) {
+      const buyerName = userMessage.match(/\b(?:mera naam|my name is|i am|main)\s+([A-Za-z][A-Za-z .'-]{1,40})\b/i)
+      if (buyerName) updated.collectedData.buyerName = buyerName[1].trim()
+    }
+    if (!updated.collectedData.propertyType) {
+      const propertyTypeMap = [
+        ['apartment', /\b(flat|apartment|society flat)\b/i],
+        ['villa', /\b(villa|kothi|independent house|bungalow)\b/i],
+        ['plot', /\b(plot|land|zameen|zameen)\b/i],
+        ['floor', /\b(builder floor|independent floor|floor)\b/i],
+        ['commercial', /\b(commercial|showroom|warehouse)\b/i],
+        ['office', /\b(office)\b/i],
+        ['shop', /\b(shop|dukaan)\b/i],
+        ['farmhouse', /\b(farmhouse|farm house)\b/i],
+      ]
+      for (const [label, rx] of propertyTypeMap) {
+        if (rx.test(userMessage)) {
+          updated.collectedData.propertyType = label
+          break
+        }
+      }
+    }
+    if (!updated.collectedData.listingType) {
+      if (/\b(rent|rental|kiraya|lease)\b/i.test(userMessage)) updated.collectedData.listingType = 'rent'
+      if (/\b(buy|purchase|sale|sell|kharid|investment)\b/i.test(userMessage)) updated.collectedData.listingType = 'sale'
+    }
+    if (!updated.collectedData.bhk) {
+      const bhk = userMessage.match(/\b([1-6])\s*(?:bhk|bedroom|bed room|br)\b/i)
+      if (bhk) updated.collectedData.bhk = `${bhk[1]} BHK`
+    }
+    if (!updated.collectedData.budget) {
+      const budget = userMessage.match(/\b(\d+(?:\.\d+)?)\s*(cr|crore|crores|lakh|lakhs|lac|lacs|k|thousand)\b/i)
+      if (budget) updated.collectedData.budget = `${budget[1]} ${budget[2]}`
+    }
+    if (!updated.collectedData.timeline) {
+      const timeline = userMessage.match(/\b(immediate|asap|today|tomorrow|this week|this month|next month|within\s+\d+\s+(?:days?|weeks?|months?)|\d+\s*(?:days?|weeks?|months?))\b/i)
+      if (timeline) updated.collectedData.timeline = timeline[0]
+    }
+    if (!updated.collectedData.purpose) {
+      if (/\b(investment|invest)\b/i.test(userMessage)) updated.collectedData.purpose = 'investment'
+      if (/\b(live|self use|end use|family|shift)\b/i.test(userMessage)) updated.collectedData.purpose = 'self-use'
+    }
+    if (!updated.collectedData.preferredVisitTime && /\b(site\s*visit|visit|dekhna|dikhao|tour|milna|schedule)\b/i.test(userMessage)) {
+      updated.collectedData.preferredVisitTime = userMessage.slice(0, 120)
+      updated.goals.visitSuggested = true
+    }
+  }
 
   // Wrap all extraction in try/finally to guarantee recentMessages cleanup (Problem 13)
   try {

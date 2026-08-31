@@ -39,15 +39,31 @@ const conversationSchema = new Schema({
     },
     collectedData: {
       parentName: { type: String },
+      buyerName: { type: String },
       studentName: { type: String },
       interestedClass: { type: String },
       preferredVisitTime: { type: String },
-      altPhone: { type: String }
+      altPhone: { type: String },
+      propertyType: { type: String },
+      listingType: { type: String },
+      bhk: { type: String },
+      budget: { type: String },
+      locationPreference: { type: String },
+      timeline: { type: String },
+      purpose: { type: String },
+      propertyId: { type: String },
+      propertyMediaOffset: { type: Number, default: 0 },
+      propertyMediaPropertyId: { type: String }
     },
     handoffTriggered: { type: Boolean, default: false },
     handoffAt: { type: Date, default: null },
     visitConfirmed: { type: Boolean, default: false },
     visitConfirmedAt: { type: Date, default: null },
+    followUps: {
+      sentCount: { type: Number, default: 0 },
+      lastSentAt: { type: Date, default: null },
+      disabled: { type: Boolean, default: false },
+    },
     sentiment: { type: String, default: 'neutral' }
   },
   source: {

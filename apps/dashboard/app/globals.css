@@ -8,11 +8,30 @@
   --color-background: #0f0f13;
   --color-sidebar: #18181f;
   --color-text: #f1f5f9;
+  --select-background: #ffffff;
+  --select-text: #0f172a;
+  --select-border: rgba(15, 23, 42, 0.18);
 }
 
 body {
   background: var(--color-background);
   color: var(--color-text);
+}
+
+select {
+  background-color: var(--select-background) !important;
+  color: var(--select-text) !important;
+  border-color: var(--select-border) !important;
+}
+
+select option,
+select optgroup {
+  background: var(--select-background);
+  color: var(--select-text);
+}
+
+select:disabled {
+  opacity: 0.55;
 }
 
 /* Skeleton animation */
