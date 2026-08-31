@@ -48,8 +48,9 @@ function splitFacts(section, prefix) {
  * class-wise fee table and a derived "simple totals" representation. The
  * latter amortizes one-time/annual charges into an approximate monthly figure,
  * which is useful only for old KBs that lack structured fees. When structured
- * class-wise fees are present, keep them as the single fee source of truth for
- * semantic retrieval so derived totals cannot compete as independent evidence.
+ * class-wise fees are present, keep them as the fee amount source of truth for
+ * semantic retrieval while retaining separate frequency notes that explain
+ * which charges are monthly, one-time or annual.
  */
 function suppressShadowedLegacyFeeChunks(chunks) {
   const values = Array.isArray(chunks) ? chunks : []
@@ -61,9 +62,7 @@ function suppressShadowedLegacyFeeChunks(chunks) {
 
   return values.filter(chunk => {
     const text = String(chunk?.text || '')
-    if (/^KNOWN FACT:\s*Fees\s*\(SIMPLE TOTALS\b/i.test(text)) return false
-    if (/^KNOWN FACT:\s*Fee Note\s*:/i.test(text)) return false
-    return true
+    return !/^KNOWN FACT:\s*Fees\s*\(SIMPLE TOTALS\b/i.test(text)
   })
 }
 
