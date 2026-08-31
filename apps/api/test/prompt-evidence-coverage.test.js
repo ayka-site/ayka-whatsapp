@@ -3,8 +3,8 @@ const assert = require('node:assert/strict')
 
 const { _private } = require('../src/services/prompt.evidence.service')
 
-test('compatibility prompt retrieval preserves separate semantic needs', () => {
-  const queries = _private.buildPromptSemanticQueries(
+test('compatibility prompt retrieval preserves explicit request ownership', () => {
+  const groups = _private.buildPromptSemanticQueryGroups(
     'Please share timing, uniform source and lab availability.',
     {
       requests: [
@@ -13,47 +13,24 @@ test('compatibility prompt retrieval preserves separate semantic needs', () => {
         { need: 'computer lab availability', entities: [] },
       ],
       retrievalQueries: [
-        'verified school opening time',
-        'where students obtain the uniform',
-        'computer lab availability',
+        { requestIndex: 0, query: 'verified school opening time' },
+        { requestIndex: 1, query: 'where students obtain the uniform' },
+        { requestIndex: 2, query: 'computer lab availability' },
       ],
       shouldHandoff: false,
-    }
+    },
   )
 
-  assert.deepEqual(queries, [
-    'verified school opening time',
-    'where students obtain the uniform',
-    'computer lab availability',
-  ])
+  assert.equal(groups.length, 3)
+  assert.equal(groups[0].requestIndex, 0)
+  assert.equal(groups[1].requestIndex, 1)
+  assert.equal(groups[2].requestIndex, 2)
+  assert.equal(groups[0].variants.some(query => query.includes('verified school opening time')), true)
+  assert.equal(groups[1].variants.some(query => query.includes('where students obtain the uniform')), true)
 })
 
-test('compatibility prompt retrieval falls back to request needs when expansion count is short', () => {
-  const queries = _private.buildPromptSemanticQueries(
-    'three independent parent questions',
-    {
-      requests: [
-        { need: 'hostel availability for son', entities: [] },
-        { need: 'number of meals per day', entities: [] },
-        { need: 'school closing time', entities: [] },
-      ],
-      retrievalQueries: [
-        'boys hostel availability',
-        'daily hostel meal frequency',
-      ],
-      shouldHandoff: false,
-    }
-  )
-
-  assert.deepEqual(queries, [
-    'hostel availability for son',
-    'number of meals per day',
-    'school closing time',
-  ])
-})
-
-test('compatibility prompt retrieval ignores extra expansions rather than shifting entities', () => {
-  const queries = _private.buildPromptSemanticQueries(
+test('multiple expansions for one request cannot shift later request context', () => {
+  const groups = _private.buildPromptSemanticQueryGroups(
     'three independent parent questions',
     {
       requests: [
@@ -62,37 +39,41 @@ test('compatibility prompt retrieval ignores extra expansions rather than shifti
         { need: 'school closing time', entities: ['school', 'closing time'] },
       ],
       retrievalQueries: [
-        'is boarding available',
-        'can this student stay in boarding',
-        'what meals are served',
-        'when does school close',
+        { requestIndex: 0, query: 'is boarding available' },
+        { requestIndex: 0, query: 'can this child stay in boarding' },
+        { requestIndex: 1, query: 'hostel meal arrangement' },
+        { requestIndex: 2, query: 'when does school close' },
       ],
       shouldHandoff: false,
-    }
+    },
   )
 
-  assert.equal(queries.length, 3)
-  assert.match(queries[0], /^hostel availability for child/)
-  assert.match(queries[0], /Relevant entities: hostel, child/)
-  assert.match(queries[1], /^hostel food arrangement/)
-  assert.match(queries[1], /Relevant entities: hostel, food/)
-  assert.match(queries[2], /^school closing time/)
-  assert.match(queries[2], /Relevant entities: school, closing time/)
+  assert.equal(groups.length, 3)
+  assert.equal(groups[0].variants.length, 3)
+  assert.equal(groups[1].variants.length, 2)
+  assert.equal(groups[2].variants.length, 2)
+  assert.equal(groups[0].variants.every(query => query.includes('Relevant entities: hostel, child')), true)
+  assert.equal(groups[1].variants.every(query => query.includes('Relevant entities: hostel, food')), true)
+  assert.equal(groups[2].variants.every(query => query.includes('Relevant entities: school, closing time')), true)
 })
 
-test('explicit handoff adds one contact grounding query without collapsing other needs', () => {
-  const queries = _private.buildPromptSemanticQueries(
+test('explicit handoff gets an independent contact-grounding action group', () => {
+  const groups = _private.buildPromptSemanticQueryGroups(
     'Please ask someone to call me and also share the document requirements.',
     {
       requests: [
         { need: 'admission document requirements', entities: [] },
       ],
-      retrievalQueries: ['verified admission document requirements'],
+      retrievalQueries: [
+        { requestIndex: 0, query: 'verified admission document requirements' },
+      ],
       shouldHandoff: true,
-    }
+    },
   )
 
-  assert.equal(queries[0], 'verified admission document requirements')
-  assert.equal(queries.includes('school staff contact information and contact hours'), true)
-  assert.equal(queries.length, 2)
+  assert.equal(groups.length, 2)
+  assert.equal(groups[0].requestIndex, 0)
+  assert.equal(groups[1].requestIndex, -2)
+  assert.equal(groups[1].action, 'handoff')
+  assert.match(groups[1].core, /staff contact information/i)
 })
