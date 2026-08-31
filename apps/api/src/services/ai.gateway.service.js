@@ -161,7 +161,12 @@ function getProviderRouting() {
   const routing = {
     allow_fallbacks: parseBoolean(process.env.OPENROUTER_ALLOW_PROVIDER_FALLBACKS, true),
     data_collection: process.env.OPENROUTER_DATA_COLLECTION || 'deny',
-    require_parameters: true,
+    // Keep this false by default. When true, OpenRouter rejects any provider
+    // endpoint that does not advertise support for every request parameter.
+    // That is useful for tightly pinned production routes, but it is too strict
+    // for heterogeneous/free-model routing where OpenRouter can otherwise
+    // normalize or ignore unsupported optional parameters safely.
+    require_parameters: parseBoolean(process.env.OPENROUTER_REQUIRE_PARAMETERS, false),
   }
 
   const sort = String(process.env.OPENROUTER_PROVIDER_SORT || '').trim()
