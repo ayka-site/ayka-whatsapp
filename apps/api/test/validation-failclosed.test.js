@@ -94,6 +94,7 @@ test('safe validator with no unsupported claims cannot downgrade a supported dra
     approvedReply: 'हॉस्टल की पुष्टि स्कूल टीम से करनी होगी।',
     unsupportedClaims: [],
     needsHuman: true,
+    draftCriticalUnsupported: false,
   })
 
   assert.equal(selected, draft)
@@ -108,10 +109,27 @@ test('validator repair is used when unsupported claims were actually found', () 
       approvedReply: 'दिन में 4 बार भोजन मिलता है।',
       unsupportedClaims: ['दिन में 5 बार भोजन मिलता है'],
       needsHuman: false,
+      draftCriticalUnsupported: false,
     },
   )
 
   assert.equal(selected, 'दिन में 4 बार भोजन मिलता है।')
+})
+
+test('unsupported critical draft values can never be restored after validation repair', () => {
+  const selected = receptionistPrivate.selectValidatedReply(
+    'कुल फीस ₹9999 है।',
+    {
+      safe: true,
+      failed: false,
+      approvedReply: 'कुल फीस ₹1800 है।',
+      unsupportedClaims: [],
+      needsHuman: false,
+      draftCriticalUnsupported: true,
+    },
+  )
+
+  assert.equal(selected, 'कुल फीस ₹1800 है।')
 })
 
 test('receptionist prompt answers directly when verified evidence supports the request', () => {
