@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 
 const { _private: retrievalPrivate } = require('../src/services/kb.retrieval.service')
 
-test('semantic retrieval keeps distinct model-planned queries separate', () => {
+test('semantic retrieval keeps distinct model-planned queries separate when counts align', () => {
   const queries = retrievalPrivate.buildSemanticQueries({
     message: 'तीन अलग चीज़ों की जानकारी चाहिए',
     understanding: {
@@ -32,7 +32,7 @@ test('semantic retrieval keeps distinct model-planned queries separate', () => {
   assert.equal(queries.some(query => query.includes('तीन अलग चीज़ों')), false)
 })
 
-test('semantic requests retain coverage when the model emits fewer retrieval expansions', () => {
+test('mismatched short expansion list falls back to one query per semantic request', () => {
   const queries = retrievalPrivate.buildSemanticQueries({
     message: 'multi-part parent question',
     understanding: {
@@ -41,18 +41,51 @@ test('semantic requests retain coverage when the model emits fewer retrieval exp
         'daily hostel meal frequency',
       ],
       requests: [
-        { need: 'hostel availability for son', entities: [] },
-        { need: 'number of meals per day', entities: [] },
-        { need: 'school closing time', entities: [] },
+        { need: 'hostel availability for son', entities: ['son'] },
+        { need: 'number of meals per day', entities: ['hostel meals'] },
+        { need: 'school closing time', entities: ['school'] },
       ],
     },
     session: { flowState: { collectedData: {} } },
   })
 
   assert.equal(queries.length, 3)
-  assert.equal(queries[0], 'boys hostel availability')
-  assert.equal(queries[1], 'daily hostel meal frequency')
-  assert.equal(queries[2], 'school closing time')
+  assert.match(queries[0], /^hostel availability for son/)
+  assert.match(queries[0], /Relevant entities: son/)
+  assert.match(queries[1], /^number of meals per day/)
+  assert.match(queries[1], /Relevant entities: hostel meals/)
+  assert.match(queries[2], /^school closing time/)
+  assert.match(queries[2], /Relevant entities: school/)
+  assert.equal(queries.some(query => query.includes('boys hostel availability')), false)
+})
+
+test('extra model expansions cannot shift request entity context positionally', () => {
+  const queries = retrievalPrivate.buildSemanticQueries({
+    message: 'three parent needs',
+    understanding: {
+      requests: [
+        { need: 'hostel availability for child', entities: ['hostel', 'child'] },
+        { need: 'hostel food arrangement', entities: ['hostel', 'food'] },
+        { need: 'school closing time', entities: ['school', 'closing time'] },
+      ],
+      retrievalQueries: [
+        'is boarding available',
+        'can this student stay in boarding',
+        'what meals are served',
+        'when does school close',
+      ],
+    },
+    session: { flowState: { collectedData: {} } },
+  })
+
+  assert.equal(queries.length, 3)
+  assert.match(queries[0], /^hostel availability for child/)
+  assert.match(queries[0], /Relevant entities: hostel, child/)
+  assert.match(queries[1], /^hostel food arrangement/)
+  assert.match(queries[1], /Relevant entities: hostel, food/)
+  assert.match(queries[2], /^school closing time/)
+  assert.match(queries[2], /Relevant entities: school, closing time/)
+  assert.equal(queries.some(query => /can this student stay in boarding/.test(query)), false)
 })
 
 test('coverage retrieval does not pad top-K with unrelated school facts', () => {
