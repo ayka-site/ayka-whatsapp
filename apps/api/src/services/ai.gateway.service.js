@@ -55,6 +55,9 @@ const FALLBACK_MODELS = parseList(process.env.LLM_FALLBACK_MODELS)
 const MAX_CONCURRENT = Math.max(1, Number.parseInt(process.env.LLM_MAX_CONCURRENCY || '5', 10) || 5)
 const REQUEST_TIMEOUT_MS = Math.max(5000, Number.parseInt(process.env.LLM_REQUEST_TIMEOUT_MS || '30000', 10) || 30000)
 const MAX_RETRIES = Math.min(3, Math.max(0, Number.parseInt(process.env.LLM_MAX_RETRIES || '2', 10) || 2))
+const SEND_TEMPERATURE = parseBoolean(process.env.LLM_SEND_TEMPERATURE, false)
+const REASONING_EFFORT = String(process.env.LLM_REASONING_EFFORT || 'minimal').trim().toLowerCase()
+const ALLOWED_REASONING_EFFORTS = new Set(['none', 'minimal', 'low', 'medium', 'high', 'xhigh'])
 
 const defaultHeaders = {}
 if (PROVIDER === 'openrouter') {
@@ -102,6 +105,7 @@ const stats = {
   promptTokens: 0,
   completionTokens: 0,
   cachedTokens: 0,
+  reasoningTokens: 0,
   modelUsage: {},
   peakConcurrency: 0,
   resetAt: new Date(),
@@ -109,17 +113,23 @@ const stats = {
 
 function recordUsage(response) {
   const usage = response?.usage || {}
-  const prompt = Number(usage.prompt_tokens || usage.input_tokens || 0)
+  const prompt = Number(usage.prompt_tokens || usage.input_tokens || usage.total_tokens || 0)
   const completion = Number(usage.completion_tokens || usage.output_tokens || 0)
   const cached = Number(
     usage.prompt_tokens_details?.cached_tokens ||
     usage.input_tokens_details?.cached_tokens ||
     0
   )
+  const reasoning = Number(
+    usage.completion_tokens_details?.reasoning_tokens ||
+    usage.output_tokens_details?.reasoning_tokens ||
+    0
+  )
 
   stats.promptTokens += Number.isFinite(prompt) ? prompt : 0
   stats.completionTokens += Number.isFinite(completion) ? completion : 0
   stats.cachedTokens += Number.isFinite(cached) ? cached : 0
+  stats.reasoningTokens += Number.isFinite(reasoning) ? reasoning : 0
 
   const model = response?.model || 'unknown'
   stats.modelUsage[model] = (stats.modelUsage[model] || 0) + 1
@@ -135,6 +145,7 @@ function getGatewayStats() {
     validationModel: VALIDATION_MODEL,
     embeddingModel: EMBEDDING_MODEL,
     fallbackModels: FALLBACK_MODELS,
+    reasoningEffort: REASONING_EFFORT,
     concurrency: {
       current: activeCalls,
       max: MAX_CONCURRENT,
@@ -251,10 +262,23 @@ function parseJsonContent(raw) {
   }
 }
 
+function addModelControls(body, temperature) {
+  // GPT-5.6 Luna on OpenRouter exposes reasoning controls but not temperature.
+  // We therefore do not send sampling temperature by default. It can be enabled
+  // explicitly for models/providers that support it.
+  if (SEND_TEMPERATURE && Number.isFinite(temperature)) body.temperature = temperature
+
+  if (PROVIDER === 'openrouter' && ALLOWED_REASONING_EFFORTS.has(REASONING_EFFORT)) {
+    body.reasoning = { effort: REASONING_EFFORT }
+  } else if (PROVIDER === 'openai' && ALLOWED_REASONING_EFFORTS.has(REASONING_EFFORT)) {
+    body.reasoning_effort = REASONING_EFFORT
+  }
+}
+
 async function chatCompletion({
   model = DEFAULT_MODEL,
   messages,
-  maxTokens = 450,
+  maxTokens = 700,
   temperature = 0.35,
   responseFormat,
   fallbackModels,
@@ -275,7 +299,7 @@ async function chatCompletion({
         ...buildOpenRouterExtras(model, fallbackModels),
       }
 
-      if (Number.isFinite(temperature)) body.temperature = temperature
+      addModelControls(body, temperature)
       if (responseFormat) body.response_format = responseFormat
 
       return client.chat.completions.create(body)
@@ -308,7 +332,7 @@ async function structuredCompletion({
   userPrompt,
   schema,
   schemaName = 'ayka_structured_response',
-  maxTokens = 500,
+  maxTokens = 900,
   temperature = 0.15,
   fallbackModels,
   task = 'structured',
