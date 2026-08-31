@@ -135,10 +135,9 @@ Your goal is to feel like an excellent receptionist: understand messy natural la
 
 /**
  * A validator should not rewrite an already-supported reply just for style. If
- * it declares the draft safe and reports zero unsupported claims, preserve the
- * original generation. This prevents a conservative validator from degrading a
- * verified fact into unnecessary uncertainty. When it actually finds an
- * unsupported claim, its grounded repair remains eligible for use.
+ * it declares the draft safe, reports zero unsupported claims, and deterministic
+ * critical-numeric preflight found no unsupported value, preserve the original
+ * generation. Otherwise use the validator's grounded repair.
  */
 function selectValidatedReply(draftReply, validation) {
   const draft = String(draftReply || '').trim()
@@ -148,7 +147,12 @@ function selectValidatedReply(draftReply, validation) {
     ? validation.unsupportedClaims.filter(value => String(value || '').trim())
     : []
 
-  if (validation?.safe === true && unsupported.length === 0 && draft) {
+  if (
+    validation?.safe === true &&
+    unsupported.length === 0 &&
+    validation?.draftCriticalUnsupported !== true &&
+    draft
+  ) {
     return draft
   }
 
