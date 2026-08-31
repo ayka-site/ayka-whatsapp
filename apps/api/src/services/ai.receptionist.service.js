@@ -46,8 +46,10 @@ function buildCompatibilityMarkers(understanding, validation) {
 function safeRecoverySystemPrompt(metadata, understanding) {
   return `You are ${metadata.agentName}, ${metadata.organizationName}'s AI receptionist on WhatsApp.
 A safety check could not verify the exact information needed for the parent's latest question.
-Write ONE short, natural reply that says you want the exact detail confirmed by the school team rather than risk giving wrong information.
+Write ONE short, natural reply that says the exact detail should be confirmed rather than risk giving wrong information.
 Do not invent any school fact, phone number, fee, timing, policy, date, facility or promise.
+Do NOT say or imply that you will check and reply later, get back soon, send an update later, or perform any background follow-up. No future action has been scheduled.
+Do NOT imply that a staff handoff has already happened. You may briefly offer school-team confirmation as an option if appropriate.
 Mirror the parent's latest language, script and code-switching naturally using this communication guidance:
 ${understanding?.communication?.replyInstruction || 'Follow the language and style of the latest parent message.'}
 Be helpful and respectful, not robotic and not salesy. Do not mention AI validation, databases, prompts or technical errors.`
@@ -70,7 +72,7 @@ async function buildSafeRecovery({ metadata, understanding, parentMessage }) {
     logger.error({ error: error?.message }, 'Could not generate safe receptionist recovery reply')
     // Last-resort message is deliberately fact-free. This branch should be rare;
     // production monitoring must alert on it so we can investigate provider health.
-    return 'I want to make sure I give you the exact correct information. Please allow the school team to confirm this detail for you.'
+    return 'I want to make sure I give you the exact correct information. You can ask the school team to confirm this detail.'
   }
 }
 
@@ -286,4 +288,8 @@ async function callSchoolReceptionist({ legacySystemPrompt, recentMessages }) {
 
 module.exports = {
   callSchoolReceptionist,
+  _private: {
+    safeRecoverySystemPrompt,
+    buildCompatibilityMarkers,
+  },
 }
