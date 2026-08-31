@@ -16,6 +16,20 @@ test('json-object structured mode receives an explicit schema instruction', () =
   assert.match(prompt, /"required":\["safe"\]/)
 })
 
+test('validator plain-text JSON is parsed without relying on response_format', () => {
+  const parsed = validationPrivate.parseValidationJson(`\n\`\`\`json\n{
+    "safe": true,
+    "approvedReply": "Verified reply",
+    "unsupportedClaims": [],
+    "reason": "grounded",
+    "needsHuman": false
+  }\n\`\`\`\n`)
+
+  assert.equal(parsed.safe, true)
+  assert.equal(parsed.approvedReply, 'Verified reply')
+  assert.match(validationPrivate.validationOutputContract(), /Return exactly ONE JSON object/i)
+})
+
 test('validator payload shape is checked deterministically', () => {
   const normalized = validationPrivate.normalizeValidationData({
     safe: true,
