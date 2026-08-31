@@ -44,19 +44,44 @@ function splitFacts(section, prefix) {
 }
 
 /**
+ * The legacy school prompt can contain both an authoritative structured
+ * class-wise fee table and a derived "simple totals" representation. The
+ * latter amortizes one-time/annual charges into an approximate monthly figure,
+ * which is useful only for old KBs that lack structured fees. When structured
+ * class-wise fees are present, keep them as the single fee source of truth for
+ * semantic retrieval so derived totals cannot compete as independent evidence.
+ */
+function suppressShadowedLegacyFeeChunks(chunks) {
+  const values = Array.isArray(chunks) ? chunks : []
+  const hasStructuredClassWiseFees = values.some(chunk =>
+    /^KNOWN FACT:\s*Fees\s*\([^)]*class-wise[^)]*\):/i.test(String(chunk?.text || ''))
+  )
+
+  if (!hasStructuredClassWiseFees) return values
+
+  return values.filter(chunk => {
+    const text = String(chunk?.text || '')
+    if (/^KNOWN FACT:\s*Fees\s*\(SIMPLE TOTALS\b/i.test(text)) return false
+    if (/^KNOWN FACT:\s*Fee Note\s*:/i.test(text)) return false
+    return true
+  })
+}
+
+/**
  * Compatibility bridge while the legacy prompt builder remains the envelope
  * between conversation.engine and the v3 receptionist. Only fact-bearing
  * sections are admitted as evidence; persona, sales rules and prompt policy are
  * never factual sources.
  */
 function extractEvidenceChunks(systemPrompt) {
-  const chunks = [
+  const rawChunks = [
     ...splitFacts(extractSection(systemPrompt, 'KNOWN FACTS (say ONLY what is here - never invent)'), 'KNOWN FACT'),
     ...splitFacts(extractSection(systemPrompt, 'SPECIAL EVENT FACTS (use when asked about Talent Hunt / event / 28 March)'), 'SPECIAL EVENT'),
     ...splitFacts(extractSection(systemPrompt, 'HOSTEL FAQ (answer hostel questions from here FIRST)'), 'HOSTEL FAQ'),
     ...splitFacts(extractSection(systemPrompt, 'GENERAL PARENT FAQ (check here FIRST for ratio, computer, optional subjects, achievements, session, development, communication questions)'), 'GENERAL FAQ'),
   ]
 
+  const chunks = suppressShadowedLegacyFeeChunks(rawChunks)
   const unique = []
   const seen = new Set()
   for (const chunk of chunks) {
@@ -199,5 +224,6 @@ module.exports = {
   extractEvidenceChunks,
   _private: {
     buildPromptSemanticQueryGroups,
+    suppressShadowedLegacyFeeChunks,
   },
 }
