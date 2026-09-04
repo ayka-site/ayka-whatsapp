@@ -69,6 +69,7 @@ function graphRequest(url, accessToken, body) {
       path: `${parsed.pathname}${parsed.search}`,
       method: 'POST',
       family: GRAPH_IP_FAMILY,
+      agent: false,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
