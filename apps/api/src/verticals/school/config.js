@@ -1,23 +1,8 @@
-// Export a JavaScript object called schoolConfig with these exact fields:
-// vertical: 'school'
-// persona: { name: 'Priya', role: 'Senior Admissions Counsellor' }
-// goals: array of strings: ['inquiryUnderstood', 'parentNameCollected',
-//   'studentInfoCollected', 'infoShared', 'visitSuggested', 'contactDetailsCollected']
-// handoffTriggerPhrases: array of lowercase strings that mean a parent wants a human:
-//   include variants of: speak to someone, talk to someone, real person, call me,
-//   phone number, contact number, human, manager, not helpful, frustrated,
-//   baat karni hai, number do, koi insaan
-// quickReplies: {
-//   greeting: ['Admission enquiry', 'Fee structure', 'Visit the school'],
-//   afterFees: ['Schedule a visit', 'Talk to admissions team', 'More questions']
-// }
-// maxMessagesBeforeHandoffSuggestion: 10
-// module.exports = schoolConfig
 const schoolConfig = {
   vertical: 'school',
   persona: {
     name: 'Priya',
-    role: 'Senior Admissions Counsellor'
+    role: 'Admissions Counsellor',
   },
   goals: [
     'inquiryUnderstood',
@@ -25,20 +10,16 @@ const schoolConfig = {
     'studentInfoCollected',
     'infoShared',
     'visitSuggested',
-    'contactDetailsCollected'
-  ],
-  handoffTriggerPhrases: [
-    'speak to someone', 'talk to someone', 'real person', 'call me', 'phone number', 'contact number',
-    'human', 'manager', 'not helpful', 'frustrated', 'baat karni hai', 'number do', 'koi insaan',
-    'kisi se baat', 'insaan chahiye', 'aadmi se baat', 'principal se milna'
+    'contactDetailsCollected',
   ],
   quickReplies: {
-    greeting: ['Admission enquiry / दाखिला', 'Fee structure / फीस', 'Visit the school / स्कूल देखना'],
-    afterFees: ['Schedule a visit / स्कूल आना', 'Talk to admissions team / बात करना', 'More questions / और जानकारी']
+    greeting: ['Admission enquiry', 'Fee structure', 'Visit the school'],
+    afterFees: ['Schedule a visit', 'Talk to admissions team', 'More questions'],
   },
   maxMessagesBeforeHandoffSuggestion: 10,
 
-  // ── Visit Scheduling ──
+  // Operational scheduling constraints. School factual/marketing knowledge does
+  // not belong here; it must come from the tenant KnowledgeBase document.
   scheduling: {
     enabled: true,
     visitHours: '9 AM – 2 PM, Mon–Sat',
@@ -51,73 +32,47 @@ const schoolConfig = {
     ],
   },
 
-  // ── Lead Scoring Rules ──
-  // Each rule receives flowState and returns a reason string (truthy = match) or null.
-  // Evaluated in order: hot → warm → cold.
   scoringRules: {
     hot(flowState) {
       const cd = flowState.collectedData || {}
+      const semantic = flowState.semanticContext?.conversationState || {}
       const reasons = []
-      if (flowState.visitConfirmed)       reasons.push('Visit confirmed')
-      if (cd.preferredVisitTime)           reasons.push(`Visit time: ${cd.preferredVisitTime}`)
-      if (flowState.handoffTriggered)      reasons.push('Handoff triggered')
+
+      if (flowState.visitConfirmed) reasons.push('Visit confirmed')
+      if (cd.preferredVisitTime) reasons.push(`Visit interest/time: ${cd.preferredVisitTime}`)
+      if (flowState.handoffTriggered) reasons.push('Admissions handoff triggered')
+      if (semantic.salesReadiness === 'high' && cd.interestedClass) reasons.push('High admission readiness with target class known')
+
       return reasons.length > 0 ? reasons.join(', ') : null
     },
+
     warm(flowState) {
       const cd = flowState.collectedData || {}
-      if (cd.parentName && cd.studentName && cd.interestedClass) {
-        return `Parent: ${cd.parentName}, Student: ${cd.studentName}, Class: ${cd.interestedClass}`
+      const goals = flowState.goals || {}
+      const semantic = flowState.semanticContext?.conversationState || {}
+      const known = [cd.parentName, cd.studentName, cd.interestedClass].filter(Boolean)
+
+      if (semantic.salesReadiness === 'medium') {
+        return 'Parent is actively evaluating admission options'
       }
+      if (cd.interestedClass && (cd.parentName || cd.studentName)) {
+        return `Target class known with ${cd.studentName ? 'student' : 'parent'} identity collected`
+      }
+      if (cd.interestedClass && goals.infoShared) {
+        return `Target class ${cd.interestedClass} known and school information shared`
+      }
+      if (known.length >= 2) {
+        return `${known.length} key admission details collected`
+      }
+
       return null
     },
+
     cold(flowState) {
       const cd = flowState.collectedData || {}
       const known = [cd.parentName, cd.studentName, cd.interestedClass].filter(Boolean)
-      if (known.length === 0) return 'No lead info collected yet'
-      return `Partial info: ${known.join(', ')} - missing ${3 - known.length} key fields`
-    },
-  },
-
-  // ── Special Knowledge Packs (fallback facts if present in KB or needed in prompt context) ──
-  specialKnowledge: {
-    talentHunt2026: {
-      name: 'Sant Pathik Talent Hunt 2026',
-      scope: 'City-level talent platform to encourage confidence, creativity, and self-expression',
-      participation: {
-        ageGroup: '3 to 12 years',
-        openForAll: true,
-        fee: 'Free (no registration fee)',
-      },
-      categories: [
-        'Fancy Dress with Rhymes (Age 3-5): National Leaders / Save Earth',
-        'Ad Mad (Age 6-7)',
-        'Storytelling with Props (Age 8-9): Open',
-        'Singing (Age 10-12): Open',
-        'Dancing (Age 10-12): Open',
-      ],
-      process: [
-        'Record a clear performance video',
-        'Send the video to official school WhatsApp',
-        'Upload the same video on Instagram',
-        'Tag Sant Pathik Talent Hunt Instagram page',
-        'School accepts as collaboration',
-      ],
-      judging: [
-        'Final score = Judges evaluation + Instagram engagement points',
-        'Every 100 likes = 10 points',
-      ],
-      awards: {
-        cashPrizePool: '₹21,000',
-        perCategory: '1st, 2nd, 3rd positions',
-        allParticipants: 'Certificate of Participation & Appreciation',
-        firstPlaceTitles: {
-          adMad: 'Pathik Ad Star',
-          fancyDress: 'Pathik Costume Icon',
-          storytelling: 'Pathik Kahani Samrat',
-          singing: 'Pathik Sursamrat',
-          dancing: 'Pathik Nrityangna',
-        },
-      },
+      if (known.length === 0) return 'Initial enquiry - no lead profile collected yet'
+      return `Early enquiry with ${known.length} key admission detail${known.length === 1 ? '' : 's'} collected`
     },
   },
 }

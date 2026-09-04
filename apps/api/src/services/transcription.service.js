@@ -1,93 +1,119 @@
-const Groq   = require('groq-sdk')
-const axios  = require('axios')
 const logger = require('../utils/logger')
 
-/**
- * transcription.service.js v4.0 - Groq Whisper audio transcription
- *
- * Flow:
- *   1. Get media URL from Meta (using mediaId + accessToken)
- *   2. Download the audio binary from Meta CDN
- *   3. Send to Groq Whisper (whisper-large-v3-turbo) for transcription
- *   4. Return transcribed text
- *
- * On any failure: returns '__VOICE_TRANSCRIPTION_FAILED__' (never throws)
- * conversation.engine.js handles the failure message to the user.
- */
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-
-// Timeout for downloading audio from Meta CDN (15 seconds)
-const DOWNLOAD_TIMEOUT_MS = 15000
-// Max audio file size we'll process (25MB - Groq's limit)
+const GRAPH_API_VERSION = String(process.env.WHATSAPP_GRAPH_API_VERSION || 'v25.0')
+  .trim()
+  .replace(/^\/+|\/+$/g, '')
+const GRAPH_BASE_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`
+const DOWNLOAD_TIMEOUT_MS = Math.max(
+  5000,
+  Number.parseInt(process.env.WHATSAPP_MEDIA_DOWNLOAD_TIMEOUT_MS || '15000', 10) || 15000,
+)
+const TRANSCRIPTION_TIMEOUT_MS = Math.max(
+  10000,
+  Number.parseInt(process.env.GROQ_TRANSCRIPTION_TIMEOUT_MS || '30000', 10) || 30000,
+)
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
-/**
- * transcribeAudio - download WhatsApp voice note and transcribe via Groq Whisper
- *
- * @param {string} mediaId - WhatsApp media ID from the message payload
- * @param {string} accessToken - Meta API access token for this business
- * @returns {string} - transcribed text, or failure marker
- */
+async function parseJsonSafe(response) {
+  const text = await response.text()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch (_) {
+    return { text }
+  }
+}
+
 async function transcribeAudio(mediaId, accessToken) {
   try {
-    // ── Step 1: Get the download URL from Meta ──
-    const mediaInfoRes = await axios.get(
-      `https://graph.facebook.com/v21.0/${mediaId}`,
+    const token = String(accessToken || '').trim()
+    const groqKey = String(process.env.GROQ_API_KEY || '').trim()
+    if (!mediaId || !token || !groqKey) {
+      logger.warn({ mediaId: Boolean(mediaId), hasMetaToken: Boolean(token), hasGroqKey: Boolean(groqKey) }, 'Voice transcription is not fully configured')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
+
+    const mediaInfoResponse = await fetch(
+      `${GRAPH_BASE_URL}/${encodeURIComponent(String(mediaId))}`,
       {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 5000,
-      }
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(5000),
+      },
     )
-
-    const mediaUrl  = mediaInfoRes.data?.url
-    const mimeType  = mediaInfoRes.data?.mime_type || 'audio/ogg'
-    const fileSize  = mediaInfoRes.data?.file_size || 0
-
-    if (!mediaUrl) {
-      logger.error({ mediaId }, 'No download URL returned from Meta for media')
+    const mediaInfo = await parseJsonSafe(mediaInfoResponse)
+    if (!mediaInfoResponse.ok) {
+      logger.error({ mediaId, status: mediaInfoResponse.status, data: mediaInfo }, 'Meta media lookup failed')
       return '__VOICE_TRANSCRIPTION_FAILED__'
     }
 
-    // Guard: reject files that are too large
-    if (fileSize > MAX_AUDIO_BYTES) {
-      logger.warn({ mediaId, fileSize }, 'Audio file too large for transcription')
+    const mediaUrl = String(mediaInfo?.url || '').trim()
+    const mimeType = String(mediaInfo?.mime_type || 'audio/ogg').trim()
+    const declaredFileSize = Number(mediaInfo?.file_size || 0)
+
+    if (!mediaUrl || !/^https:\/\//i.test(mediaUrl)) {
+      logger.error({ mediaId }, 'Meta returned an invalid media download URL')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
+    if (declaredFileSize > MAX_AUDIO_BYTES) {
+      logger.warn({ mediaId, declaredFileSize }, 'Audio file exceeds transcription size limit')
       return '__VOICE_TRANSCRIPTION_FAILED__'
     }
 
-    // ── Step 2: Download the audio binary ──
-    const audioRes = await axios.get(mediaUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      responseType: 'arraybuffer',
-      timeout: DOWNLOAD_TIMEOUT_MS,
+    const audioResponse = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+      redirect: 'error',
     })
+    if (!audioResponse.ok) {
+      logger.error({ mediaId, status: audioResponse.status }, 'WhatsApp media download failed')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
 
-    const audioBuffer = Buffer.from(audioRes.data)
+    const contentLength = Number(audioResponse.headers.get('content-length') || 0)
+    if (contentLength > MAX_AUDIO_BYTES) {
+      logger.warn({ mediaId, contentLength }, 'Downloaded audio exceeds transcription size limit')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
 
-    // Determine file extension from MIME type
+    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer())
+    if (!audioBuffer.length || audioBuffer.length > MAX_AUDIO_BYTES) {
+      logger.warn({ mediaId, bytes: audioBuffer.length }, 'Downloaded audio size is invalid')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
+
     const extMap = {
-      'audio/ogg':  'ogg',
+      'audio/ogg': 'ogg',
       'audio/mpeg': 'mp3',
-      'audio/mp4':  'mp4',
+      'audio/mp4': 'mp4',
       'audio/opus': 'opus',
-      'audio/wav':  'wav',
+      'audio/wav': 'wav',
       'audio/webm': 'webm',
     }
     const ext = extMap[mimeType] || 'ogg'
 
-    // ── Step 3: Send to Groq Whisper for transcription ──
-    // Groq SDK expects a File-like object. We construct one from the buffer.
-    const file = new File([audioBuffer], `voice.${ext}`, { type: mimeType })
+    const form = new FormData()
+    form.append('file', new Blob([audioBuffer], { type: mimeType }), `voice.${ext}`)
+    form.append('model', 'whisper-large-v3-turbo')
+    form.append('response_format', 'json')
+    // Do not force a language. Parents may send Hindi, English, Hinglish or
+    // code-switched audio; Whisper should detect the spoken language naturally.
 
-    const transcription = await groq.audio.transcriptions.create({
-      file,
-      model: 'whisper-large-v3-turbo',
-      language: 'hi', // Default to Hindi - most WhatsApp voice notes in India are Hindi/Hinglish
-      response_format: 'text',
-    })
+    const transcriptionResponse = await fetch(
+      'https://api.groq.com/openai/v1/audio/transcriptions',
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groqKey}` },
+        body: form,
+        signal: AbortSignal.timeout(TRANSCRIPTION_TIMEOUT_MS),
+      },
+    )
+    const transcription = await parseJsonSafe(transcriptionResponse)
+    if (!transcriptionResponse.ok) {
+      logger.error({ mediaId, status: transcriptionResponse.status, data: transcription }, 'Groq transcription request failed')
+      return '__VOICE_TRANSCRIPTION_FAILED__'
+    }
 
-    const text = (typeof transcription === 'string' ? transcription : transcription.text || '').trim()
-
+    const text = String(transcription?.text || '').trim()
     if (!text) {
       logger.warn({ mediaId }, 'Whisper returned empty transcription')
       return '__VOICE_TRANSCRIPTION_EMPTY__'
@@ -95,9 +121,8 @@ async function transcribeAudio(mediaId, accessToken) {
 
     logger.info({ mediaId, textLength: text.length }, 'Audio transcribed successfully')
     return text
-
   } catch (err) {
-    logger.error({ err, mediaId }, 'Audio transcription failed')
+    logger.error({ err: { message: err?.message, name: err?.name }, mediaId }, 'Audio transcription failed')
     return '__VOICE_TRANSCRIPTION_FAILED__'
   }
 }
