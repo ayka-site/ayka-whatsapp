@@ -78,7 +78,7 @@ async function seed() {
   }
   if (!spvBusiness) {
     console.log('⚠️  No SPV business found. Creating a placeholder...')
-    const spvPhoneNumberId = process.env.WA_PHONE_NUMBER_ID || '1021773934354033'
+    const spvPhoneNumberId = process.env.WA_PHONE_NUMBER_ID || '1019091434619192'
     const spvWabaId = process.env.WA_WABA_ID || '918233131133295'
     const spvAccessToken = process.env.WA_ACCESS_TOKEN || 'placeholder'
     const spvVerifyToken = process.env.WA_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'spv_webhook_secret_2026'
