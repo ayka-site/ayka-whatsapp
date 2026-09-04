@@ -14,7 +14,7 @@
  *   MONGODB_URI="$(grep MONGODB_URI .env.production | cut -d= -f2-)" node scripts/seed-spv.js
  *
  * WhatsApp credentials (set via env when ready):
- *   WA_PHONE_NUMBER_ID=1019091434619192
+ *   WA_PHONE_NUMBER_ID=1021773934354033
  *   WA_ACCESS_TOKEN=<real-token>
  *   WA_WABA_ID=918233131133295
  *   WA_VERIFY_TOKEN=<your-verify-token>
@@ -60,7 +60,7 @@ async function main() {
       { name: { $regex: /sant\s*pathik/i } },
     ],
   })
-  const waPhoneNumberId = process.env.WA_PHONE_NUMBER_ID || '1019091434619192'
+  const waPhoneNumberId = process.env.WA_PHONE_NUMBER_ID || '1021773934354033'
   const waAccessToken   = process.env.WA_ACCESS_TOKEN
   const waWabaId        = process.env.WA_WABA_ID         || '918233131133295'
   const waVerifyToken   = process.env.WA_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'spv_webhook_secret_2026'

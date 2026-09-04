@@ -9,7 +9,7 @@ const redis = require('../src/config/redis');
 
 const NEW_TOKEN = process.env.WA_ACCESS_TOKEN;
 const SPV_ID = process.env.SPV_BUSINESS_ID;
-const PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID || '1019091434619192';
+const PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID || '1021773934354033';
 
 if (!NEW_TOKEN || !SPV_ID) {
   console.error('Usage: WA_ACCESS_TOKEN=<token> SPV_BUSINESS_ID=<businessId> [WA_PHONE_NUMBER_ID=<id>] node scripts/fix-spv-token.js');
