@@ -1,3 +1,4 @@
+const https = require('https')
 const logger = require('../utils/logger')
 const { toWhatsAppRecipient } = require('../utils/phone')
 
@@ -9,6 +10,8 @@ const REQUEST_TIMEOUT_MS = Math.max(
   5000,
   Number.parseInt(process.env.WHATSAPP_REQUEST_TIMEOUT_MS || '15000', 10) || 15000,
 )
+const configuredGraphIpFamily = Number.parseInt(process.env.WHATSAPP_GRAPH_IP_FAMILY || '4', 10)
+const GRAPH_IP_FAMILY = [4, 6].includes(configuredGraphIpFamily) ? configuredGraphIpFamily : 4
 
 function normalizeRecipient(to) {
   return toWhatsAppRecipient(to)
@@ -42,8 +45,7 @@ function messageUrl(phoneNumberId) {
   return `${GRAPH_BASE_URL}/${encodeURIComponent(id)}/messages`
 }
 
-async function parseResponseBody(response) {
-  const text = await response.text()
+function parseResponseText(text) {
   if (!text) return null
   try {
     return JSON.parse(text)
@@ -52,28 +54,53 @@ async function parseResponseBody(response) {
   }
 }
 
-async function graphRequest(url, accessToken, body) {
+function graphRequest(url, accessToken, body) {
   const token = String(accessToken || '').trim()
-  if (!token) throw new Error('WhatsApp access token is missing')
+  if (!token) return Promise.reject(new Error('WhatsApp access token is missing'))
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  const payload = JSON.stringify(body)
+  const parsed = new URL(url)
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || 443,
+      path: `${parsed.pathname}${parsed.search}`,
+      method: 'POST',
+      family: GRAPH_IP_FAMILY,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, response => {
+      let text = ''
+      response.setEncoding('utf8')
+      response.on('data', chunk => { text += chunk })
+      response.on('end', () => {
+        const data = parseResponseText(text)
+        const status = Number(response.statusCode || 0)
+        if (status < 200 || status >= 300) {
+          const error = new Error(`WhatsApp Graph API request failed with HTTP ${status || 'UNKNOWN'}`)
+          error.status = status || undefined
+          error.data = data
+          return reject(error)
+        }
+        resolve(data)
+      })
+    })
+
+    req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      const error = new Error(`WhatsApp Graph API request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+      error.code = 'ETIMEDOUT'
+      req.destroy(error)
+    })
+
+    req.on('error', reject)
+    req.write(payload)
+    req.end()
   })
-
-  const data = await parseResponseBody(response)
-  if (!response.ok) {
-    const error = new Error(`WhatsApp Graph API request failed with HTTP ${response.status}`)
-    error.status = response.status
-    error.data = data
-    throw error
-  }
-  return data
 }
 
 function summarizeRequestError(err) {
@@ -82,6 +109,8 @@ function summarizeRequestError(err) {
     status: err?.status,
     data: err?.data,
     name: err?.name,
+    code: err?.code,
+    causeCode: err?.cause?.code,
   }
 }
 
@@ -173,5 +202,6 @@ module.exports = {
     resolvePublicMediaUrl,
     graphRequest,
     GRAPH_API_VERSION,
+    GRAPH_IP_FAMILY,
   },
 }
