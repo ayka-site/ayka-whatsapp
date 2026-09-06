@@ -58,4 +58,13 @@ jobs:
             az containerapp update \
               --name ayka-api \
               --resource-group ayka-rg \
-              --image aykaregistry.azurecr.io/ayka-api:${{ github.sha }}
+              --image aykaregistry.azurecr.io/ayka-api:${{ github.sha }} \
+              --min-replicas 1 \
+              --max-replicas 2 \
+              --cpu 0.5 \
+              --memory 1Gi \
+              --set-env-vars \
+                API_PUBLIC_URL=https://aykabot.ayka.site \
+                PUBLIC_API_URL=https://aykabot.ayka.site \
+                WHATSAPP_MEDIA_BASE_URL=https://aykabot.ayka.site \
+                ALLOWED_ORIGINS=https://bot.ayka.site,https://aykabot.ayka.site
