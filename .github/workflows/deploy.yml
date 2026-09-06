@@ -2,11 +2,14 @@ name: Deploy AyKa API
 
 on:
   push:
-    branches: [master]
+    branches: [spv-ai-receptionist-v2]
     paths:
       - 'apps/api/**'
+      - 'apps/widget/**'
       - 'packages/db/**'
       - 'infra/docker/Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 env:
@@ -51,7 +54,7 @@ jobs:
               --server aykaregistry.azurecr.io \
               --username ${{ secrets.REGISTRY_USERNAME }} \
               --password ${{ secrets.REGISTRY_PASSWORD }}
-            
+
             az containerapp update \
               --name ayka-api \
               --resource-group ayka-rg \
