@@ -85,8 +85,3 @@ export default function LoginPage() {
     </div>
   )
 }
-// Credentials
-// Role	Email	Password
-// Superadmin	superadmin@ayka.in	AyKaSuperAdmin2026!
-// Reseller	admin@welltechup.com	WellTechUp2026!
-// Client	admin@santpathik.in	SPV2026!
