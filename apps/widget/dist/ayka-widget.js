@@ -360,6 +360,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessId: BUSINESS_ID,
+          visitorId,
           message: text,
           visitorInfo: infoCollected ? visitorInfo : {},
         }),
