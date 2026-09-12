@@ -182,6 +182,47 @@ async function retrievePromptEvidence({ systemPrompt, message, understanding }) 
       flattened.variantRefs,
     )
 
+    // Structured fact labels are stronger routing signals than repeated
+    // organization-name similarity. Only boost the classes-range fact when
+    // the parent is explicitly asking which classes/grades are offered.
+    const routedScored = scored.map(candidate => {
+      const text = String(candidate?.text || '')
+
+      if (!/^KNOWN FACT:\s*Classes offered:/i.test(text)) {
+        return candidate
+      }
+
+      const groupScores = (candidate.groupScores || []).map((score, groupIndex) => {
+        if (!Number.isFinite(score)) return score
+
+        const query = String(queryGroups[groupIndex]?.core || '')
+
+        const mentionsClassConcept =
+          /\b(classes?|grades?|standards?|grade\s+levels?)\b/i.test(query)
+
+        const asksForAvailableRange =
+          /\b(offer|offered|available|provide|provided|which|what|range|levels?)\b/i.test(query)
+
+        const asksDifferentClassFact =
+          /\b(fee|fees|cost|tuition|subject|subjects|stream|streams|result|results|exam|exams)\b/i.test(query)
+
+        if (
+          mentionsClassConcept &&
+          asksForAvailableRange &&
+          !asksDifferentClassFact
+        ) {
+          return Math.max(score, 0.95)
+        }
+
+        return score
+      })
+
+      return {
+        ...candidate,
+        groupScores,
+      }
+    })
+
     const requestedTopK = Number.parseInt(process.env.KB_RETRIEVAL_TOP_K || '8', 10) || 8
     const topK = Math.min(14, Math.max(1, requestedTopK))
     const parsedMinimumScore = Number.parseFloat(process.env.KB_RETRIEVAL_MIN_SCORE || '0.18')
@@ -192,7 +233,7 @@ async function retrievePromptEvidence({ systemPrompt, message, understanding }) 
     const parsedGap = Number.parseFloat(process.env.KB_RETRIEVAL_SUPPORT_GAP || '0.06')
     const supportGap = Number.isFinite(parsedGap) ? Math.min(0.2, Math.max(0, parsedGap)) : 0.06
 
-    const selected = retrievalPrivate.selectEvidenceForGroups(scored, queryGroups, {
+    const selected = retrievalPrivate.selectEvidenceForGroups(routedScored, queryGroups, {
       topK,
       minimumScore,
       maxChars,
