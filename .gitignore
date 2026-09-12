@@ -1,2 +1,35 @@
-node_modules
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Framework/build output
+.next/
+**/.next/
+dist/
+build/
+coverage/
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# Temporary/cache files
+.tmp/
+tmp/
+.cache/
+.DS_Store
+
+# Local archives
 Archive.zip
+*.tgz
+*.tar.gz

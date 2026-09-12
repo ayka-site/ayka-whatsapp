@@ -10,6 +10,9 @@ SPV/
 docs/
 *.md
 
-# Widget not used in any Docker build yet
-apps/widget
+# Widget source is not needed in container builds, but the compiled embed asset is
+# served by the API at /widget/embed/ayka-widget.js.
+apps/widget/*
 !apps/widget/package.json
+!apps/widget/dist/
+!apps/widget/dist/**

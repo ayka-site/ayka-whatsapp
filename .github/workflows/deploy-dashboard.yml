@@ -2,15 +2,16 @@ name: Deploy AyKa Dashboard
 
 on:
   push:
-    branches: [master]
+    branches: [spv-ai-receptionist-v2]
     paths:
       - 'apps/dashboard/**'
       - 'packages/shared/**'
       - 'infra/docker/Dockerfile.dashboard'
+      - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
 env:
-  REGISTRY: aykaregistry.azurecr.io
+  REGISTRY: aykaacr3c24cc61.azurecr.io
   IMAGE_NAME: ayka-dashboard
 
 jobs:
@@ -23,7 +24,7 @@ jobs:
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
-          registry: aykaregistry.azurecr.io
+          registry: aykaacr3c24cc61.azurecr.io
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
@@ -33,9 +34,9 @@ jobs:
           context: .
           file: infra/docker/Dockerfile.dashboard
           push: true
-          tags: aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }}
+          tags: aykaacr3c24cc61.azurecr.io/ayka-dashboard:${{ github.sha }}
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.ayka.site
+            NEXT_PUBLIC_API_URL=https://aykabot.ayka.site
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -47,15 +48,14 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            # Check if container app exists, create if not
             if ! az containerapp show --name ayka-dashboard --resource-group ayka-rg &>/dev/null; then
               echo "Creating container app ayka-dashboard..."
               az containerapp create \
                 --name ayka-dashboard \
                 --resource-group ayka-rg \
-                --environment "$(az containerapp env list -g ayka-rg --query '[0].name' -o tsv)" \
-                --image aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }} \
-                --registry-server aykaregistry.azurecr.io \
+                --environment ayka-env \
+                --image aykaacr3c24cc61.azurecr.io/ayka-dashboard:${{ github.sha }} \
+                --registry-server aykaacr3c24cc61.azurecr.io \
                 --registry-username ${{ secrets.REGISTRY_USERNAME }} \
                 --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
                 --target-port 3001 \
@@ -72,12 +72,12 @@ jobs:
               az containerapp registry set \
                 --name ayka-dashboard \
                 --resource-group ayka-rg \
-                --server aykaregistry.azurecr.io \
+                --server aykaacr3c24cc61.azurecr.io \
                 --username ${{ secrets.REGISTRY_USERNAME }} \
                 --password ${{ secrets.REGISTRY_PASSWORD }}
-              
+
               az containerapp update \
                 --name ayka-dashboard \
                 --resource-group ayka-rg \
-                --image aykaregistry.azurecr.io/ayka-dashboard:${{ github.sha }}
+                --image aykaacr3c24cc61.azurecr.io/ayka-dashboard:${{ github.sha }}
             fi
